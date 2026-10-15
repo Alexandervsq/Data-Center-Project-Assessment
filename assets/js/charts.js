@@ -39,7 +39,7 @@
   /* columns for annual cash flow + cumulative line */
   function cashflow(rows, opt) {
     opt = opt || {};
-    var W = 760, H = 260, pl = 54, pr = 14, pt = 14, pb = 34;
+    var W = 760, H = 270, pl = 54, pr = 14, pt = 24, pb = 34;
     var vals = rows.map(function (r) { return r.cf; }), cum = rows.map(function (r) { return r.cum; });
     var mx = Math.max.apply(null, vals.concat(cum).concat([0])), mn = Math.min.apply(null, vals.concat(cum).concat([0]));
     if (mx === mn) mx = mn + 1;
@@ -61,7 +61,7 @@
     var path = rows.map(function (r, i) { return (i ? 'L' : 'M') + (pl + i * bw + bw / 2) + ',' + y(r.cum); }).join('');
     out += '<path d="' + path + '" fill="none" stroke="#3f3cbb" stroke-width="2.5"/>';
     rows.forEach(function (r, i) { out += '<circle cx="' + (pl + i * bw + bw / 2) + '" cy="' + y(r.cum) + '" r="2.6" fill="#3f3cbb"><title>Cum. ' + F(r.cum / 1e6, 1) + ' M</title></circle>'; });
-    out += '<text x="' + 6 + '" y="' + (pt + 2) + '" font-size="10" fill="#5d6280">' + e(opt.unit || 'M') + '</text>';
+    out += '<text x="' + 6 + '" y="11" font-size="10" font-weight="700" fill="#5d6280">' + e(opt.unit || 'M') + '</text>';
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>';
   }
 
@@ -77,8 +77,9 @@
     tasks.forEach(function (t, i) {
       var y = i * rowH + 6, x = 10 + t.s * sc, w = Math.max(t.d * sc, 6);
       out += '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + (rowH - 10) + '" rx="5" fill="' + (GC[t.c] || '#3f3cbb') + '"><title>' + e(t.text) + ' — M' + t.s + ' → M' + (t.s + t.d) + '</title></rect>';
-      var inside = w > 150;
-      out += '<text x="' + (inside ? x + 8 : x + w + 6) + '" y="' + (y + rowH / 2) + '" font-size="11" fill="' + (inside ? '#fff' : '#161936') + '" font-weight="600">' + e(t.text) + '</text>';
+      var tw = String(t.text).split('').reduce(function (a, ch) { return a + (ch.charCodeAt(0) > 0x2e80 ? 11.5 : 6.4); }, 0);
+      var pos = w >= tw + 16 ? 'in' : (x + w + 6 + tw <= W - 4 ? 'right' : 'left');
+      out += '<text x="' + (pos === 'in' ? x + 8 : (pos === 'right' ? x + w + 6 : x - 6)) + '" y="' + (y + rowH / 2) + '"' + (pos === 'left' ? ' text-anchor="end"' : '') + ' font-size="11" fill="' + (pos === 'in' ? '#fff' : '#161936') + '" font-weight="600">' + e(t.text) + '</text>';
     });
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '">' + out + '</svg>';
   }

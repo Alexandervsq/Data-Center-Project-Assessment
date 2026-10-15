@@ -610,6 +610,36 @@
     t: [['Calibration certificate before use.', '使用前提供校准证书。']] },
 
   /* ------------------------------------------------------------------ */
+  { id: 'EL-23', sys: 'EL', cls: 'M', en: 'Battery Energy Storage System (BESS)', zh: '电池储能系统（BESS）',
+    fn: ['Grid-scale LFP storage that smooths AI/GPU load swings, shaves utility peaks, firms on-site solar and supports the grid connection — complementary to (not a replacement for) UPS and generators.',
+         '电网级磷酸铁锂储能，用于平抑AI/GPU负荷波动、削减市电峰值、稳定现场光伏出力并支撑并网——是UPS和发电机的补充而非替代。'],
+    ty: ['Containerised 20-ft LFP blocks of ≈ 3.5–5 MWh with 0.5C–1C PCS; 10–25% of IT MW for 1–2 h is typical for AI campuses.', '20英尺集装箱式LFP单元约3.5–5 MWh，PCS 0.5C–1C；AI园区通常按IT MW的10–25%、1–2 h配置。'],
+    s: [
+      ['LFP cells, liquid-cooled battery containers, UL 9540 / UL 9540A tested system with IEC 62619 cells and IEC 62933 system design.', '磷酸铁锂电芯、液冷电池集装箱，系统通过UL 9540/UL 9540A测试，电芯符合IEC 62619，系统设计符合IEC 62933。'],
+      ['Grid-forming capable PCS with fast frequency response (< 100 ms) for GPU power-transient buffering.', 'PCS具备构网能力及快速频率响应（<100 ms），用于缓冲GPU功率瞬变。'],
+      ['Energy management system integrated with EPMS/BMS: peak shaving (PLN WBP hours), solar firming, ramp-rate control.', '能量管理系统与EPMS/BMS集成：峰值削减（PLN峰时段）、光伏稳定、爬坡率控制。'],
+      ['Separation distances, deflagration venting and fire suppression per NFPA 855; off-gas detection in each container.', '按NFPA 855设置安全间距、泄爆及灭火；每个集装箱设逸出气体探测。'],
+      ['Capacity guarantee: usable energy at end of contract ≥ 70–80% of BOL; augmentation plan included.', '容量保证：合同期末可用能量≥初期的70–80%；包含扩容补充计划。']
+    ],
+    tpg: [
+      ['Manufacturer (cells / container / PCS)', '制造商（电芯/集装箱/PCS）', '-', BID],
+      ['Rated power / usable energy (BOL)', '额定功率/初期可用能量', 'MW / MWh', 'Per assessment'],
+      ['Duration at rated power', '额定功率持续时间', 'h', '1 – 2'],
+      ['Cell chemistry', '电芯化学体系', '-', 'LFP'],
+      ['Round-trip efficiency (AC–AC)', '往返效率（交流-交流）', '%', '≥ 87'],
+      ['Response time (0 → 100% power)', '响应时间（0→100%功率）', 'ms', '≤ 100'],
+      ['Cycle life at 80% DoD', '80%放电深度循环寿命', 'cycles', '≥ 6,000'],
+      ['Design life / energy retention at end', '设计寿命/期末容量保持', 'years / %', '≥ 15 / ≥ 70'],
+      ['Container energy & dimensions', '集装箱能量及尺寸', 'MWh / ft', '3.5 – 5 / 20'],
+      ['Thermal management', '热管理', '-', 'Liquid-cooled'],
+      ['Fire testing', '火灾测试', '-', 'UL 9540A (cell/module/unit/installation)'],
+      ['Grid code compliance', '并网规范符合性', '-', 'PLN grid code / IEC 62933'],
+      ['Communication', '通讯', '-', 'Modbus TCP / IEC 61850 / DNP3']
+    ],
+    std: ['IEC 62933', 'IEC 62619', 'UL 9540', 'UL 9540A', 'NFPA 855', 'IEC 62477-1'],
+    t: [['FAT of PCS and containers; site commissioning incl. capacity test, response-time test and EMS functions.', 'PCS及集装箱工厂测试；现场调试含容量测试、响应时间测试及EMS功能测试。']] },
+
+  /* ------------------------------------------------------------------ */
   { id: 'EL-22', sys: 'EL', cls: 'S', en: 'Power Cable Containment (Tray, Ladder & Trunking)', zh: '电力电缆桥架（托盘、梯架及线槽）',
     fn: ['Supports and segregates power cables between plant rooms and the data hall.', '在设备间与数据机房之间支撑并分隔电力电缆。'],
     ty: ['Hot-dip galvanised or stainless ladder 300–900 mm, max 40–50% fill.', '热镀锌或不锈钢梯架300–900 mm，填充率≤40–50%。'],
