@@ -25,7 +25,8 @@
     play: '<path d="m5 3 14 9-14 9z"/>', plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
     trash: '<path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/>', folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>', grid: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
-    map: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>'
+    map: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    cards: '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>'
   };
   function ic(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (IP[n] || '') + '</svg>'; }
   var SYS_IC = { EL: 'bolt', ME: 'snow', IT: 'server', FP: 'flame', SC: 'shield', MC: 'monitor', CS: 'building' };
@@ -68,7 +69,7 @@
   function safeName(s) { return String(s || 'project').replace(/[^\w\-]+/g, '_').slice(0, 60); }
 
   /* ------------------------------------------------------------ header & routing */
-  var TABS = [['home', 'home', 'Overview', '概览'], ['assess', 'gauge', 'Project Assessment', '项目评估'], ['refs', 'building', 'Reference Projects', '参考项目'],
+  var TABS = [['home', 'home', 'Overview', '概览'], ['assess', 'gauge', 'Project Assessment', '项目评估'], ['cards', 'cards', 'Technology Cards', '技术卡片'], ['refs', 'building', 'Reference Projects', '参考项目'],
               ['equip', 'cpu', 'Equipment & Racks', '设备与机柜'], ['know', 'book', 'Knowledge Base', '知识库'], ['std', 'scale', 'Standards & Regulations', '标准与法规'],
               ['gloss', 'list', 'Glossary', '术语表'], ['about', 'info', 'About', '关于']];
   function renderHeader() {
@@ -85,7 +86,8 @@
     $$('.view').forEach(function (v) { v.classList.toggle('on', v.id === 'view-' + view); });
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.view === view); });
     $('#tabs').classList.remove('open');
-    if (location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
+    if (location.hash.split('/')[0] !== '#' + view) history.replaceState(null, '', '#' + view);
+    if (window.TC) TC.onShow(view === 'cards');
     window.scrollTo({ top: 0 });
   }
 
@@ -97,6 +99,7 @@
       ['gauge', '#3f3cbb', 'Assess a project', '评估项目', 'Enter location, type and IT load — every other parameter is proposed from references and standards, and you can override any of them.', '输入地点、类型及IT负载——其余参数均依据参考与标准自动提出，并可随时修改。', 'assess'],
       ['building', '#0ea5c6', 'Benchmark', '对标', nArch + ' Indonesian benchmark designs and ' + nReal + ' real projects in Indonesia and worldwide.', nArch + '个印尼基准设计及' + nReal + '个印尼与全球真实项目。', 'refs'],
       ['cpu', '#f0544f', 'Racks & equipment', '机柜与设备', DB.platforms.length + ' IT rack platforms (e.g. NVIDIA GB300 NVL72), ' + DB.cabinets.length + ' cabinet ranges, ' + nEq + ' equipment specs with ' + nTpg + ' TPG parameters.', DB.platforms.length + '种IT机柜平台（如NVIDIA GB300 NVL72）、' + DB.cabinets.length + '类机柜、' + nEq + '项设备规范及' + nTpg + '项TPG参数。', 'equip'],
+      ['cards', '#2a2785', 'Technology cards', '技术卡片', 'One-slide interactive explainers of the whole facility, critical power, chilled-water cooling, liquid cooling and fire · security · monitoring — built on the knowledge base.', '以一页交互幻灯片讲解整体设施、关键供电、冷冻水风冷、液冷及消防·安防·监控——基于知识库生成。', 'cards'],
       ['file', '#16a34a', 'Proposal report', '项目建议书', 'Export a complete project proposal as Word, Excel or PDF for each project in your workspace.', '为工作区内每个项目导出完整的项目建议书（Word、Excel或PDF）。', 'assess']
     ];
     var projs = DBS.projects.slice().sort(function (a, b) { return b.updated - a.updated; }).slice(0, 6);
@@ -734,7 +737,8 @@
   }
 
   /* ========================================================== wiring */
-  function renderAll() { renderHeader(); renderHome(); renderAssess(); renderRefs(); renderEquip(); renderKnow(); renderStd(); renderGloss(); renderAbout(); show(S.view); }
+  function renderCards() { if (window.TC && TC.cards.length) TC.mount($('#view-cards')); }
+  function renderAll() { renderHeader(); renderHome(); renderAssess(); renderCards(); renderRefs(); renderEquip(); renderKnow(); renderStd(); renderGloss(); renderAbout(); show(S.view); }
   document.addEventListener('click', function (ev) {
     var l = ev.target.closest('.lang'); if (l) { I18N.set(l.dataset.lang); renderAll(); return; }
     var t = ev.target.closest('.tab'); if (t) { show(t.dataset.view); return; }
@@ -758,8 +762,19 @@
     if (id === 'eqSys') { S.eq.sys = ev.target.value; renderEquip(); } if (id === 'stdR') { S.std.r = ev.target.value; renderStd(); } if (id === 'stdA') { S.std.a = ev.target.value; renderStd(); }
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeModal(); });
-  window.addEventListener('hashchange', function () { var h = location.hash.replace('#', ''); if (h && document.getElementById('view-' + h)) show(h); });
+  window.addEventListener('hashchange', function () {
+    var parts = location.hash.replace('#', '').split('/'), h = parts[0];
+    if (h === 'cards' && window.TC) { TC.route(parts.slice(1)); if (S.view === 'cards') TC.render(); }
+    if (h && document.getElementById('view-' + h) && h !== S.view) show(h);
+  });
 
-  var h0 = location.hash.replace('#', ''); if (h0 && document.getElementById('view-' + h0)) S.view = h0;
+  var h0 = location.hash.replace('#', '').split('/'); if (h0[0] && document.getElementById('view-' + h0[0])) S.view = h0[0];
+  if (h0[0] === 'cards' && window.TC) TC.route(h0.slice(1));
+  /* bridge used by the technology cards (assets/js/techcard.js) */
+  window.DCApp = {
+    activeInput: function () { return JSON.parse(JSON.stringify(inp())); }, activeName: function () { return active().name; },
+    openEquipment: function (id) { S.eq.sel = id; S.eqTab = 'eq'; S.eq.q = ''; S.eq.sys = 'all'; renderEquip(); show('equip'); },
+    setLang: function (l) { I18N.set(l); renderAll(); }, show: function (v) { show(v); }
+  };
   recompute(); bindAssess(); renderAll();
 })();

@@ -39,6 +39,28 @@
   var TIER_CAPEX = { 1: 0.62, 2: 0.78, 3: 1.0, 4: 1.28 };
   var COOL_CAPEX = { DX: 0.95, ACCH: 0.97, WCCH: 1.0, IEC: 1.03, DLC: 1.08, IMM: 1.10 };
   var ID_CAPEX = 10.5;          /* USD M per MW IT, Tier III, Greater Jakarta, 10–30 MW (shell + MEP) */
+  /* sizing constants shared with the technology-card calculators (assets/js/techcard.js reads DCEngine.K) */
+  var K = {
+    PF: 0.95,              /* facility power factor (kVA = kW / PF) */
+    TX_LOAD: 0.85,         /* transformer loading limit */
+    GEN_LOAD: 0.95,        /* generator loading limit (continuous rating) */
+    UPS_LOAD: 0.9,         /* UPS module loading limit */
+    UPS_LOSS: 0.05,        /* UPS losses + battery recharge, share of UPS load */
+    FUEL_L_KWH: 0.27,      /* diesel consumption, L per kWh generated */
+    BATT_AGE: 1.25,        /* battery end-of-life / ageing factor */
+    BATT_EFF: 0.95,        /* inverter / DC efficiency for battery sizing */
+    BW_V: 0.4, BW_F: 0.8,  /* busway: 400 V, 80 % loading */
+    CHW_DT: 8,             /* chilled-water ΔT (K) used for thermal storage */
+    TES_S: 600,            /* thermal storage ride-through (s) */
+    CP_W: 4186,            /* water specific heat (J/kg·K) */
+    RT_KW: 3.517,          /* 1 refrigeration ton = 3.517 kW */
+    REJ: 1.18,             /* heat rejected at towers per kW of chilled-water load (incl. compressor heat) */
+    AGENT_KG_M3: 0.592,    /* HFC-227ea at ≈ 7.5 % design concentration, 20 °C (NFPA 2001 flooding factor) */
+    ASD_M2: 1500,          /* white space per aspirating detector */
+    CDU_N_PER_R: 4,        /* one standby CDU per four duty units */
+    DC_KW: 1500, CRAH_KW: 150, FANWALL_KW: 400, INROW_KW: 50, IEC_KW: 400, BESS_MWH_BOX: 5,
+    MECH: MECH, LIQ: LIQ, WUE: WUE, PEAK: PEAK, ELEC: ELEC
+  };
   var BESS_USD_KWH = 280;       /* installed LFP BESS incl. PCS, indicative 2026 */
   var BREAKDOWN = [
     ['EL', 'Electrical systems', '电气系统', 0.42], ['ME', 'Mechanical / cooling', '暖通/制冷', 0.20],
@@ -179,8 +201,8 @@
     /* ------------------------------------------------ electrical */
     var mechUPS = ((p.tier === 4 || avgDens >= 25) ? 0.06 * airKW : 0) + 0.025 * liquidKW;
     var upsLoad = itKW + mechUPS;
-    var demandKW = itKW * m.puePeak + 0.05 * upsLoad + Math.max(50, 0.01 * itKW);
-    var demandKVA = demandKW / 0.95, mva = demandKVA / 1000;
+    var demandKW = itKW * m.puePeak + K.UPS_LOSS * upsLoad + Math.max(50, 0.01 * itKW);
+    var demandKVA = demandKW / K.PF, mva = demandKVA / 1000;
     var volt, vclass;
     if (mva <= 2) { volt = ['LV/MV service (≤ 20 kV, PLN TM)', '低压/中压供电（≤20 kV，PLN中压）']; vclass = 'TM'; }
     else if (mva <= 30) { volt = ['MV 20 kV (PLN TM), dedicated feeders', '中压20 kV（PLN中压），专用馈线']; vclass = 'TM'; }
@@ -188,23 +210,23 @@
     else { volt = ['EHV 500 kV / multiple 150 kV substations', '超高压500 kV/多座150 kV变电站']; vclass = 'TT'; }
     var feeds = p.tier >= 3 ? 2 : 1;
     var txSize = demandKVA <= 1600 ? pick([500, 630, 800, 1000, 1250, 1600], demandKVA / 0.8) : (demandKVA > 40000 ? 3150 : 2500);
-    var txN = ceil(demandKVA / (txSize * 0.85)), txR = redundancy(p.tier, txN, 'tx'); if (p.tier === 3 && txN === 1) txR = 1;
+    var txN = ceil(demandKVA / (txSize * K.TX_LOAD)), txR = redundancy(p.tier, txN, 'tx'); if (p.tier === 3 && txN === 1) txR = 1;
     var genSize;
     if (demandKW <= 1500) genSize = pick([300, 500, 800, 1000, 1250, 1500], demandKW / 0.95);
     else if (demandKW <= 12000) genSize = 2000; else if (demandKW <= 60000) genSize = 2500; else genSize = 3000;
-    var genN = ceil(demandKW / (genSize * 0.95)), genR = redundancy(p.tier, genN, 'gen');
-    var fuelLph = demandKW * 0.27, fuelL = fuelLph * p.fuelH;
+    var genN = ceil(demandKW / (genSize * K.GEN_LOAD)), genR = redundancy(p.tier, genN, 'gen');
+    var fuelLph = demandKW * K.FUEL_L_KWH, fuelL = fuelLph * p.fuelH;
     var tankSize = fuelL > 400000 ? 200 : (fuelL > 100000 ? 100 : (fuelL > 20000 ? 50 : 20));
     var tanks = Math.max(p.tier >= 3 ? 2 : 1, ceil(fuelL / 1000 / tankSize));
     var upsSize = upsLoad <= 250 ? 300 : (upsLoad <= 1000 ? 500 : (upsLoad <= 6000 ? 1200 : 1600));
-    var upsN = ceil(upsLoad / (upsSize * 0.9)), upsR = redundancy(p.tier, upsN, 'ups');
-    var battKWh = (upsN + upsR) * upsSize * (p.upsMin / 60) * 1.25 / 0.95;
+    var upsN = ceil(upsLoad / (upsSize * K.UPS_LOAD)), upsR = redundancy(p.tier, upsN, 'ups');
+    var battKWh = (upsN + upsR) * upsSize * (p.upsMin / 60) * K.BATT_AGE / K.BATT_EFF;
     var feedsPerRack = p.tier >= 2 ? 2 : 1;
     var stdW = p.rackW || sp.w || 600, stdD = p.rackD || sp.d || 1200;
     var rows = ceil(racks / (stdW >= 800 ? 16 : 20));
     var useBusway = itKW >= 1000 || avgDens >= 10;
     var rowKW = itKW / rows;
-    var bwA = pick([160, 250, 400, 630, 800, 1000, 1250, 1600], rowKW / (0.4 * 1.732 * 0.8));
+    var bwA = pick([160, 250, 400, 630, 800, 1000, 1250, 1600], rowKW / (K.BW_V * 1.732 * K.BW_F));
     var busways = useBusway ? rows * (feedsPerRack === 2 ? 2 : 1) : 0;
     var pdus = useBusway ? 0 : ceil(itKW / 120) * (feedsPerRack === 2 ? 2 : 1);
     function rpduType(d, pl) {
@@ -219,7 +241,7 @@
     var bess = null;
     if (p.bessOn && p.bessMW > 0) {
       var mwh = p.bessMW * Math.max(0.25, p.bessH);
-      bess = { mw: p.bessMW, mwh: mwh, h: p.bessH, containers: ceil(mwh / 5), area: ceil(mwh / 5) * 40, capex: mwh * 1000 * BESS_USD_KWH };
+      bess = { mw: p.bessMW, mwh: mwh, h: p.bessH, containers: ceil(mwh / K.BESS_MWH_BOX), area: ceil(mwh / K.BESS_MWH_BOX) * 40, capex: mwh * 1000 * BESS_USD_KWH };
     }
     R.el = { upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, mva: mva, volt: volt, vclass: vclass, feeds: feeds,
              txSize: txSize, txN: txN, txR: txR, txTotal: txN + txR, genSize: genSize, genN: genN, genR: genR, genTotal: genN + genR,
@@ -232,15 +254,15 @@
     var greyHeat = itKW * (m.elec + m.misc * 0.5);
     var chwLoad = (airTech === 'DX' || airTech === 'IEC' ? 0 : airKW + greyHeat);
     var M = { chwLoad: chwLoad, totalHeat: itKW + greyHeat };
-    M.tr = M.totalHeat / 3.517;
+    M.tr = M.totalHeat / K.RT_KW;
     if (airTech === 'DX') { var crac = (airKW + greyHeat) <= 500 ? 50 : 100; M.cracSize = crac; M.cracN = ceil((airKW + greyHeat) / crac); M.cracR = redundancy(p.tier, M.cracN, 'term'); }
     else if (airTech === 'IEC') { M.iecN = ceil((airKW + greyHeat) / 400); M.iecR = redundancy(p.tier, M.iecN, 'plant'); }
     else {
       var chSize = airTech === 'WCCH' ? (chwLoad >= 20000 ? 3517 : (chwLoad >= 6000 ? 2461 : 1407)) : (chwLoad >= 3000 ? 1000 : 500);
       M.chSize = chSize; M.chN = Math.max(1, ceil(chwLoad / chSize)); M.chR = redundancy(p.tier, M.chN, 'plant'); M.chLabel = redLabel(M.chN, M.chR);
-      if (airTech === 'WCCH') { M.ctN = M.chN; M.ctR = M.chR; M.rejKW = chwLoad * 1.18; }
+      if (airTech === 'WCCH') { M.ctN = M.chN; M.ctR = M.chR; M.rejKW = chwLoad * K.REJ; }
       M.pumps = (M.chN + M.chR) * (airTech === 'WCCH' ? 2 : 1);
-      M.tesM3 = (p.tier >= 3 || avgDens >= 15) ? chwLoad * 600 / (4186 * 8) : 0;
+      M.tesM3 = (p.tier >= 3 || avgDens >= 15) ? chwLoad * K.TES_S / (K.CP_W * K.CHW_DT) : 0;
       var airRackDens = (cool === 'DLC' || cool === 'IMM') ? sd : avgDens, term;
       if (airRackDens > 25) term = { en: 'In-row coolers (50 kW)', zh: '列间空调（50 kW）', size: 50, id: 'ME-10' };
       else if (itMW / Math.max(1, ceil(itMW / 4)) >= 2) term = { en: 'Fan walls (400 kW)', zh: '风墙（400 kW）', size: 400, id: 'ME-08' };
@@ -251,8 +273,8 @@
     }
     if (liquidKW > 0) {
       var cduSize = liquidKW >= 3000 ? 1500 : 800;
-      M.cduSize = cduSize; M.cduN = ceil(liquidKW / cduSize); M.cduR = Math.max(1, ceil(M.cduN / 4));
-      M.dcN = ceil(liquidKW * 1.05 / 1500); M.dcR = redundancy(p.tier, M.dcN, 'plant');
+      M.cduSize = cduSize; M.cduN = ceil(liquidKW / cduSize); M.cduR = Math.max(1, ceil(M.cduN / K.CDU_N_PER_R));
+      M.dcN = ceil(liquidKW * 1.05 / K.DC_KW); M.dcR = redundancy(p.tier, M.dcN, 'plant');
       if (cool === 'IMM') M.tanks = ceil(liquidKW / 100);
     }
     M.waterDay = itKW * (num(p.targetOcc, 90) / 100) * 24 * m.wue / 1000;
@@ -292,8 +314,8 @@
       suppression: bigHall
         ? ['Pre-action (double-interlock) sprinklers in data halls (hyperscale practice) + aspirating smoke detection; clean-agent gas in MMR, electrical and battery rooms.', '数据机房采用预作用（双连锁）喷淋（超大规模常用做法）+吸气式烟雾探测；运营商交汇间、电气室及电池室采用洁净气体灭火。']
         : ['Clean-agent (FK-5-1-12 / HFC-227ea) or inert-gas (IG-541) total flooding in white space, MMR and electrical rooms, plus pre-action sprinklers where the AHJ requires.', '白区、运营商交汇间及电气室采用洁净气体（全氟己酮/七氟丙烷）或惰性气体（IG-541）全淹没灭火，并按消防主管部门要求增设预作用喷淋。'],
-      gasZones: bigHall ? 0 : ceil(ws / 800), agentKg: bigHall ? 0 : vol * 0.592, vol: vol,
-      asd: ceil(ws / 1500) + ceil((elecRoom + mechRoom) / 2000),
+      gasZones: bigHall ? 0 : ceil(ws / 800), agentKg: bigHall ? 0 : vol * K.AGENT_KG_M3, vol: vol,
+      asd: ceil(ws / K.ASD_M2) + ceil((elecRoom + mechRoom) / 2000),
       cams: Math.round(60 + 45 * Math.min(itMW, 200) + 15 * Math.max(0, itMW - 200) + 2 * racks / 10), readers: Math.round(30 + 6 * halls + 2 * Math.min(itMW, 200)),
       bmsPts: Math.round(400 + 450 * itMW), meters: Math.round(20 + R.el.txTotal * 12 + R.el.upsTotal * 4 + busways * 2), securityLayers: p.tier >= 3 ? 7 : 5
     };
@@ -572,5 +594,5 @@
   }
 
   g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, find: find, capacity: capacity, coolingMatrix: coolingMatrix,
-                 loc: loc, plat: plat, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH };
+                 loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K };
 })(typeof window !== 'undefined' ? window : globalThis);
