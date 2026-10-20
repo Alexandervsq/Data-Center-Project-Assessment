@@ -460,7 +460,7 @@
   /* ============================================================== slide furniture */
   var LOGO = 'assets/img/ccepc_logo_strip.png';
   var UI = {
-    eyebrow: ['Technology Card · Data Center', '技术卡片 · 数据中心'], org: ['PT CCEPC Indonesia · Data Center', 'PT CCEPC Indonesia · 数据中心业务'],
+    eyebrow: ['Project Technology Simulation · Data Center', '项目技术模拟 · 数据中心'], org: ['PT CCEPC Indonesia · Data Center', 'PT CCEPC Indonesia · 数据中心业务'],
     click: ['Click any part for details', '点击任意部分查看详情'], basis: ['Design basis', '设计基准'], gloss: ['Abbreviations & sources', '缩写与来源'],
     how: ['How it works', '工作原理'], forBasis: ['In this design basis', '本设计基准中'], ratings: ['Typical ratings', '典型规格'],
     params: ['Design parameters (TPG excerpt)', '设计参数（TPG摘录）'], req: ['Key technical requirements', '主要技术要求'], stds: ['Applicable standards', '适用标准'],
@@ -468,7 +468,7 @@
     calc: ['Step-by-step calculation', '分步计算'], calcHint: ['Drag or type an input; every step recalculates immediately.', '拖动或输入数值，每一步即时重算。'],
     theory: ['Short theory & calculation', '原理简述与计算'], fullSpec: ['Full specification & TPG', '完整技术规范及TPG'], relEq: ['Related equipment', '相关设备'],
     desc: ['Description', '描述'], unit: ['Unit', '单位'], req2: ['Required', '要求值'], faq: ['Frequently asked questions', '常见问题'], faqSub: ['Short answers for owners and clients', '面向业主与客户的简要解答'],
-    prev: ['Previous', '上一个'], next: ['Next', '下一个'], close: ['Close', '关闭'], openCard: ['Open card', '打开卡片'], note: ['Results are design checks for explanation, not detailed design.', '计算结果用于讲解与校核，并非详细设计。']
+    prev: ['Previous', '上一个'], next: ['Next', '下一个'], close: ['Close', '关闭'], openCard: ['Open simulation', '打开模拟'], note: ['Results are design checks for explanation, not detailed design.', '计算结果用于讲解与校核，并非详细设计。']
   };
   function langSwitch() { return '<button type="button" class="tc-lang" data-lang-btn aria-label="Language / 语言"><b class="' + (lang() === 'en' ? 'on' : '') + '">EN</b><b class="' + (lang() === 'zh' ? 'on' : '') + '">中文</b></button>'; }
   function header(card) {
@@ -540,10 +540,12 @@
     if (!items || !items.length) return '';
     return '<div class="tc-rel"><span>' + te(UI.see) + '</span>' + items.map(function (r) {
       if (r.card) return '<button type="button" class="tc-ext" data-card="' + r.card + '">' + te(UI.openCard) + ': ' + te(r.label) + ' →</button>';
-      if (r.eq) return '<button type="button" class="tc-ext" data-eqlink="' + r.eq + '">' + te(r.label) + ' →</button>';
+      if (r.eq) return '<a class="tc-ext" href="#equip/' + r.eq + '" target="_blank" rel="noopener">' + te(r.label) + ' ↗</a>';
       return '<button type="button" data-tco="' + r[0] + '">' + te(r[1]) + ' →</button>';
     }).join('') + '</div>';
   }
+  var ILL = null;
+  function setIllustrator(fn) { ILL = fn; }
   function illSvg(body, vb) { return '<svg viewBox="' + vb + '" role="img" aria-hidden="true">' + body + '</svg>'; }
   function eqOf(id) { return E.find(DB.equipment, id); }
   function sysOf(id) { return E.find(DB.systems, id) || {}; }
@@ -557,17 +559,17 @@
     if (u.key) right += '<div class="tc-key"><span class="f">' + t(u.key[0]) + '</span><span class="e">' + t(typeof u.key[1] === 'function' ? u.key[1](ctx) : u.key[1]) + '</span></div>';
     if (u.basis) { var b = u.basis(ctx); if (b) right += '<div class="tc-basisbox"><b>' + te(UI.forBasis) + ' (' + e(ctx.name) + '):</b> ' + t(b) + '</div>'; }
     right += '</div>';
-    var ill = u.ill ? u.ill(ctx) : '';
+    var ill = u.ill ? u.ill(ctx) : (ILL ? ILL(u, ctx) : '');
     var body = '<div class="tc-hero"><div class="tc-ill">' + ill + '</div>' + right + '</div>';
     if (u.calc) body += calcBox(u.calc);
     if (q) {
       var rows = q.tpg.filter(function (r) { return !r.g; }).slice(0, u.tpgN || 12).map(function (r) { return [t([r[0], r[1]]), e(r[2]), e(r[3])]; });
       var left = '<div><h3>' + te(UI.params) + '</h3>' + ptable([UI.desc, UI.unit, UI.req2], rows) +
-        '<div class="tc-rel" style="margin-top:10px"><button type="button" class="tc-ext" data-eqlink="' + q.id + '">' + te(UI.fullSpec) + ' · ' + q.id + ' →</button></div></div>';
+        '<div class="tc-rel" style="margin-top:10px"><a class="tc-ext" href="#equip/' + q.id + '" target="_blank" rel="noopener" title="' + te(['Opens in a new tab', '在新标签页打开']) + '">' + te(UI.fullSpec) + ' · ' + q.id + ' ↗</a></div></div>';
       var rt = '<div style="display:grid;gap:16px;align-content:start"><div><h3>' + te(UI.ratings) + '</h3><p>' + t(q.ty) + '</p></div>' +
         '<div><h3>' + te(UI.req) + '</h3><ul class="tc-li">' + q.s.map(function (c) { return '<li>' + te(c) + '</li>'; }).join('') + '</ul></div>' +
         '<div><h3>' + te(UI.stds) + '</h3><div class="tc-stds">' + q.std.map(function (s) { return '<span>' + e(s) + '</span>'; }).join('') + '</div></div>';
-      if (u.more && u.more.length) rt += '<div><h3>' + te(UI.relEq) + '</h3><div class="tc-rel">' + u.more.map(function (id) { var m = eqOf(id); return m ? '<button type="button" class="tc-ext" data-eqlink="' + id + '">' + id + ' · ' + te([m.en, m.zh]) + ' →</button>' : ''; }).join('') + '</div></div>';
+      if (u.more && u.more.length) rt += '<div><h3>' + te(UI.relEq) + '</h3><div class="tc-rel">' + u.more.map(function (id) { var m = eqOf(id); return m ? '<a class="tc-ext" href="#equip/' + id + '" target="_blank" rel="noopener">' + id + ' · ' + te([m.en, m.zh]) + ' ↗</a>' : ''; }).join('') + '</div></div>';
       body += '<div class="tc-g2">' + left + rt + '</div></div>';
     }
     if (u.extra) body += u.extra(ctx);
@@ -606,7 +608,7 @@
     var stds = DB.standards.filter(function (s) { var c = s.c.replace(/[:\s]\d{4}.*$/, '').trim(); return Object.keys(codes).some(function (k) { return k && (c.indexOf(k) === 0 || k.indexOf(c) === 0); }); });
     if (stds.length) body += '<div><h3>' + te(UI.stds) + '</h3>' + ptable(null, stds.map(function (s) { return [e(s.c), te([s.en, s.zh])]; })) + '</div>';
     body += '<div class="tc-src"><b>' + te(['Sources:', '来源：']) + '</b> ' + (card.sources || []).map(te).join(' · ') + '</div>';
-    return freePanel('gloss', 'Aa', UI.gloss, ['Terms, standards and sources used on this card', '本卡片使用的术语、标准与来源'], body, 'x');
+    return freePanel('gloss', 'Aa', UI.gloss, ['Terms, standards and sources used in this simulation', '本模拟使用的术语、标准与来源'], body, 'x');
   }
   function basisPanel(card, ctx) {
     var R = ctx.R, p = ctx.p, c = R.cap;
@@ -614,8 +616,8 @@
       [['Design IT load', '设计IT负载'], F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + te(['racks', '个机柜']) + ' · ' + F(c.avgDens, 1) + ' kW/' + te(['rack', '柜'])], [['Resilience', '韧性等级'], te([c.tier.en, c.tier.zh])],
       [['Cooling', '制冷'], te([R.cool.obj.en, R.cool.obj.zh]) + ' · PUE ' + F(R.eff.pue, 2)], [['PLN demand', 'PLN需量'], F(R.el.mva, 1) + ' MVA · ' + te(R.el.volt)],
       [['Backup', '备用电源'], R.el.genTotal + ' × ' + F(R.el.genSize) + ' kWe (' + R.el.genLabel + ') · ' + p.fuelH + ' h · UPS ' + R.el.upsTotal + ' × ' + F(R.el.upsSize) + ' kW, ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')]];
-    var body = '<p class="tc-lead">' + te(['The numbers on this card are computed by the assessment engine for the design basis selected above the card. Choose another benchmark, or your active project, to see the card for that design.', '本卡片上的数值由评估引擎针对卡片上方所选的设计基准计算得出。选择其他基准或当前项目，即可查看该设计对应的卡片。']) + '</p>' +
-      ptable(null, rows.map(function (r) { return [te(r[0]), r[1]]; })) + '<div class="tc-rel"><button type="button" class="tc-ext" data-goassess>' + te(['Open Project Assessment', '打开项目评估']) + ' →</button></div>';
+    var body = '<p class="tc-lead">' + te(['The numbers in this simulation are computed by the assessment engine for the design basis selected above the slide. Choose another benchmark, or a project from your workspace, to simulate that design.', '本模拟中的数值由评估引擎针对幻灯片上方所选的设计基准计算得出。选择其他基准或工作区中的项目，即可模拟该设计。']) + '</p>' +
+      ptable(null, rows.map(function (r) { return [te(r[0]), r[1]]; })) + '<div class="tc-rel"><a class="tc-ext" href="#assess" target="_blank" rel="noopener">' + te(['Open Project Assessment (new tab)', '打开项目评估（新标签页）']) + ' ↗</a></div>';
     return freePanel('basis', 'B', UI.basis, [ctx.name, ctx.name], body, 'x');
   }
 
@@ -633,7 +635,7 @@
   function cardById(id) { return CARDS.filter(function (c) { return c.id === id; })[0] || CARDS[0]; }
   function archList() { return DB.references.filter(function (r) { return r.kind === 'arch'; }); }
   function basisInput(card, key) {
-    if (key === 'ACTIVE' && g.DCApp && g.DCApp.activeInput) return { input: g.DCApp.activeInput(), name: t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName() };
+    if (key === 'ACTIVE' && g.DCApp && g.DCApp.activeInput && g.DCApp.activeInput()) return { input: g.DCApp.activeInput(), name: t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName() };
     var r = E.find(DB.references, key) || E.find(DB.references, card.basis);
     return { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) };
   }
@@ -645,7 +647,7 @@
   function basisSelect(card) {
     var cur = ST.basis[card.id] || card.basis;
     var opts = archList().map(function (r) { return '<option value="' + r.id + '"' + (r.id === cur ? ' selected' : '') + '>' + e(r.id + ' · ' + t([r.en, r.zh])) + '</option>'; }).join('');
-    if (g.DCApp && g.DCApp.activeName) opts = '<option value="ACTIVE"' + (cur === 'ACTIVE' ? ' selected' : '') + '>' + e(t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName()) + '</option>' + opts;
+    if (g.DCApp && g.DCApp.activeName && g.DCApp.activeName()) opts = '<option value="ACTIVE"' + (cur === 'ACTIVE' ? ' selected' : '') + '>' + e(t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName()) + '</option>' + opts;
     return '<select data-basis aria-label="' + te(UI.basis) + '">' + opts + '</select>';
   }
   var BTN_EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
@@ -665,18 +667,16 @@
     }).join('') + '</div>';
     var bar = '<div class="tc-bar"><span>' + te(UI.basis) + ':</span>' + basisSelect(card) + (CTX.fell ? '<span style="color:#B0302A">' + te(card.fallNote || ['The selected design does not use this technology; the card shows its benchmark.', '所选设计未采用该技术；卡片显示其基准设计。']) + '</span>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
-    VIEW.innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Technology cards', '技术卡片']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
-      te(['One-slide explainers of data center technologies, built on the knowledge base and the assessment engine. Click any part of a card for the detailed panel; ← → move between panels, Esc closes, F expands.', '以一页幻灯片讲解数据中心技术，内容基于知识库与评估引擎。点击卡片任意部分查看详细面板；← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' +
-      sel + bar +
-      '<div class="tc-wrap' + (ST.focus ? ' tc-focus' : '') + '"><div class="tc-bg"></div><main class="tc-stage" aria-label="' + te(card.title) + '">' + stage + '</main>' +
-      '<div class="tc-ctl" hidden><button type="button" data-unexpand title="' + te(UI.close) + '">' + BTN_X + '</button><button type="button" data-rot title="' + te(['Rotate view', '旋转视图']) + '">' + BTN_ROT + '</button></div>' +
-      '<div class="tc-ov" hidden></div></div>' +
-      '<div class="tc-hint">' + te(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library.', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库。']) + '</div>';
+    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
+    VIEW.querySelector('.tc-head').innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Project Technology Simulation', '项目技术模拟']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
+      te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. Choose a system and a design basis, then click any part of the slide for the detailed panel; ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。选择系统与设计基准后，点击幻灯片任意部分查看详细面板；← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
+    var wrapEl = VIEW.querySelector('.tc-wrap'), stEl = VIEW.querySelector('.tc-stage');
+    wrapEl.classList.toggle('tc-focus', !!ST.focus);
+    stEl.setAttribute('aria-label', t(card.title)); stEl.innerHTML = stage; stEl.__s = null;
+    VIEW.querySelector('.tc-ctl').innerHTML = '<button type="button" data-unexpand title="' + te(UI.close) + '">' + BTN_X + '</button><button type="button" data-rot title="' + te(['Rotate view', '旋转视图']) + '">' + BTN_ROT + '</button>';
+    VIEW.querySelector('.tc-hint').textContent = t(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library (links open in a new tab).', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库（链接在新标签页打开）。']);
     if (!DEFS_ADDED) { document.body.insertAdjacentHTML('beforeend', DEFS); DEFS_ADDED = true; }
-    if (ST.focus) {   /* re-render in expanded mode (e.g. language switch): keep full screen on the new frame */
-      document.documentElement.style.overflow = 'hidden'; ST.ignoreFsUntil = Date.now() + 1200;
-      if (ST.fsWanted) { var nw = VIEW.querySelector('.tc-wrap'); try { var rq0 = (nw.requestFullscreen || nw.webkitRequestFullscreen).call(nw); if (rq0 && rq0.catch) rq0.catch(function () { }); } catch (x) { } }
-    }
+    if (ST.focus) document.documentElement.style.overflow = 'hidden';
     fit(); motion();
     if (ST.open) openPanel(ST.open, true); else syncHash();
   }
@@ -815,7 +815,7 @@
   /* routing */
   function syncHash() {
     if (!visible) return;
-    var h = '#cards/' + ST.card + (ST.open ? '/' + ST.open : '');
+    var h = '#sim/' + ST.card + (ST.open ? '/' + ST.open : '');
     if (location.hash !== h) try { history.replaceState(null, '', h); } catch (x) { }
   }
   function route(parts) {
@@ -880,6 +880,6 @@
     header: header, footer: footer, principle: principle, chips: chips, kpis: kpis, tile: tile, miniBars: miniBars, donut: donut, legend: legend, facts: facts, mtable: mtable, note: note,
     unitPanel: unitPanel, theoryPanel: theoryPanel, freePanel: freePanel, faqPanel: faqPanel, ptable: ptable, illSvg: illSvg, related: related, eq: eqOf, UI: UI, PIPE: PIPE, mulberry: mulberry
   };
-  g.TC = { register: register, mount: mount, render: render, route: route, onShow: onShow, cards: CARDS, lib: LIB, state: ST,
+  g.TC = { setIllustrator: setIllustrator, register: register, mount: mount, render: render, route: route, onShow: onShow, cards: CARDS, lib: LIB, state: ST,
            panelIds: function () { return PANELS.map(function (p) { return p.id; }); }, open: function (id) { openPanel(id); }, close: function () { closePanel(); } };
 })(window);

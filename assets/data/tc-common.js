@@ -519,8 +519,8 @@
       var o = L.text(20, 24, ['Vapour-compression cycle', '蒸气压缩制冷循环'], 'tc-lt');
       o += L.R(30, 60, 170, 70, '#0EA5C6', ' rx="12"') + L.text(115, 92, ['Evaporator', '蒸发器'], 'tc-lw', ' text-anchor="middle" style="font-size:14px"') + L.text(115, 112, ['CHW 22 → 14 °C', '冷冻水 22→14 °C'], 'tc-lw', ' text-anchor="middle"');
       o += L.R(330, 60, 170, 70, '#3F3CBB', ' rx="12"') + L.text(415, 92, ['Condenser', '冷凝器'], 'tc-lw', ' text-anchor="middle" style="font-size:14px"') + L.text(415, 112, ['CW 32 → 37 °C', '冷却水 32→37 °C'], 'tc-lw', ' text-anchor="middle"');
-      o += '<circle cx="265" cy="190" r="34" fill="#17153F"/>' + L.text(265, 186, ['Compressor', '压缩机'], 'tc-lw', ' text-anchor="middle" style="font-size:12px"') + L.text(265, 202, ['magnetic bearing', '磁悬浮'], 'tc-lw', ' text-anchor="middle" style="font-size:10px"');
       o += L.pipe('M200 110Q235 170 235 180', '#E5806E', 5, true) + L.pipe('M295 180Q300 150 330 110', '#E5534B', 5, true) + L.pipe('M330 70H200', '#9AA0BC', 4, true, true);
+      o += '<circle cx="265" cy="192" r="42" fill="#17153F"/>' + L.text(265, 189, ['Compressor', '压缩机'], 'tc-lw', ' text-anchor="middle" style="font-size:12px"') + L.text(265, 205, ['magnetic bearing', '磁悬浮'], 'tc-lw', ' text-anchor="middle" style="font-size:9.5px"');
       o += '<path d="M258 64l14 12M272 64l-14 12" stroke="#17153F" stroke-width="3"/>' + L.text(265, 52, ['Expansion valve', '膨胀阀'], 'tc-ls', ' text-anchor="middle" style="font-weight:700"');
       o += L.text(265, 250, ['COP = cooling ÷ compressor power ≈ 6–8 at elevated chilled water', '提高冷冻水温度时 COP = 制冷量 ÷ 压缩机功率 ≈ 6–8'], 'tc-ls', ' text-anchor="middle"');
       return L.illSvg(o, '0 0 530 262');
@@ -589,9 +589,9 @@
     },
     pueBar: function (c) {
       var e = c.R.eff, W = 480, sc = W / (1 + e.mech + e.elec + e.misc), x = 25, o = L.text(20, 24, ['Facility energy per unit of IT energy', '单位IT能耗对应的设施能耗'], 'tc-lt');
-      [[['IT', 'IT'], 1, '#3F3CBB'], [['Cooling', '制冷'], e.mech, '#0EA5C6'], [['Electrical', '电气'], e.elec, '#E39B1B'], [['Other', '其他'], e.misc, '#5D6280']].forEach(function (p) {
+      [[['IT', 'IT'], 1, '#3F3CBB'], [['Cooling', '制冷'], e.mech, '#0EA5C6'], [['Electrical', '电气'], e.elec, '#E39B1B'], [['Other', '其他'], e.misc, '#5D6280']].forEach(function (p, i) {
         o += L.R(x, 50, p[1] * sc, 44, p[2]) + (p[1] * sc > 50 ? L.text(x + p[1] * sc / 2, 77, F(p[1], 2), 'tc-lw', ' text-anchor="middle"') : '');
-        o += L.R(x, 108, 10, 10, p[2]) + L.text(x + 14, 118, p[0], 'tc-ls', ' style="font-weight:700"'); x += p[1] * sc;
+        o += L.R(25 + i * 124, 108, 10, 10, p[2]) + L.text(39 + i * 124, 118, [t(p[0]) + ' ' + F(p[1], 2), t(p[0]) + ' ' + F(p[1], 2)], 'tc-ls', ' style="font-weight:700"'); x += p[1] * sc;
       });
       o += L.text(265, 160, ['PUE = ' + F(e.pue, 2) + ' (annual) · ' + F(e.puePeak, 2) + ' (design day)', 'PUE = ' + F(e.pue, 2) + '（年均）· ' + F(e.puePeak, 2) + '（设计日）'], 'tc-lt', ' text-anchor="middle"');
       return L.illSvg(o, '0 0 530 180');
@@ -599,16 +599,16 @@
     densRanges: function () {
       var o = L.text(20, 24, ['Cooling technology by rack density (knowledge base)', '按机柜密度的制冷技术（知识库）'], 'tc-lt'), max = 210;
       DB.cooling.forEach(function (q, i) {
-        var y = 44 + i * 30, w = q.maxDens / max * 360;
-        o += L.text(10, y + 15, [q.en.replace(/ \(.*\)/, '').slice(0, 28), q.zh.replace(/（.*）/, '').slice(0, 12)], 'tc-ls', ' style="font-weight:700"');
-        o += L.R(160, y + 2, w, 18, ['#8B8FBF', '#3F3CBB', '#2A2785', '#0B7F99', '#0EA5C6', '#E39B1B'][i % 6], ' rx="5"') + L.text(166 + w, y + 16, '≤ ' + q.maxDens + ' kW', 'tc-ls');
+        var y = 44 + i * 30, w = q.maxDens / max * 300;
+        o += L.text(10, y + 15, [q.en.replace(/ \(.*\)/, '').slice(0, 30), q.zh.replace(/（.*）/, '').slice(0, 12)], 'tc-ls', ' style="font-weight:700;font-size:11.5px"');
+        o += L.R(185, y + 2, w, 18, ['#8B8FBF', '#3F3CBB', '#2A2785', '#0B7F99', '#0EA5C6', '#E39B1B'][i % 6], ' rx="5"') + L.text(191 + w, y + 16, '≤ ' + q.maxDens + ' kW', 'tc-ls');
       });
       return L.illSvg(o, '0 0 560 230');
     },
     layers: function (c) {
       var o = L.text(20, 24, ['Security layers from fence to rack', '从围栏到机柜的安防层级'], 'tc-lt'), labs = [['Perimeter fence & detection', '周界围栏与探测'], ['Gate & vehicle barriers', '入口与车辆路障'], ['Building envelope & reception', '建筑围护与前台'], ['Mantrap', '防尾随通道'], ['Data hall door', '机房门'], ['Customer cage', '客户笼位'], ['Locked rack', '机柜锁']];
-      labs.forEach(function (l, i) { var p = i * 22; o += '<rect x="' + (20 + p) + '" y="' + (40 + p * .55) + '" width="' + (490 - 2 * p) + '" height="' + (200 - p * 1.1) + '" rx="10" fill="' + ['#ECECFB', '#E2E3F8', '#D8D9F4', '#CBCCF0', '#BBBDEA', '#A9ABE3', '#3F3CBB'][i] + '" stroke="#fff"/>' + L.text(30 + p, 56 + p * .55, (i + 1) + ' · ' + t(l), i === 6 ? 'tc-lw' : 'tc-ls', ' style="font-weight:700"'); });
-      return L.illSvg(o, '0 0 530 250');
+      var lt = ''; labs.forEach(function (l, i) { var p = i * 22; o += '<rect x="' + (20 + p) + '" y="' + (40 + p * .75) + '" width="' + (490 - 2 * p) + '" height="' + (230 - p * 1.5) + '" rx="10" fill="' + ['#ECECFB', '#E2E3F8', '#D8D9F4', '#CBCCF0', '#BBBDEA', '#A9ABE3', '#3F3CBB'][i] + '" stroke="#fff"/>'; lt += L.text(30 + p, 56 + p * .75, (i + 1) + ' · ' + t(l), i === 6 ? 'tc-lw' : 'tc-ls', ' style="font-weight:700"'); }); o += lt;
+      return L.illSvg(o, '0 0 530 280');
     },
     timeline: function (c) {
       var o = L.text(20, 24, ['Utility failure: who carries the IT load', '市电失电：由谁承担IT负荷'], 'tc-lt');

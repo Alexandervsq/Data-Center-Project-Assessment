@@ -26,6 +26,8 @@
     trash: '<path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/>', folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>', grid: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
     map: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+    coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>', sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
     cards: '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>'
   };
   function ic(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (IP[n] || '') + '</svg>'; }
@@ -35,19 +37,15 @@
 
   /* ------------------------------------------------------------ project database */
   var LS_DB = 'dcpa_db';
-  var S = { view: 'home', rtab: 'sum', x: null, cur: 'USD', cny: 7.1, showAll: false, eqTab: 'eq',
+  var S = { view: 'home', asub: '', preview: null, x: null, cur: 'USD', cny: 7.1, showAll: false, eqTab: 'eq',
             ref: { q: '', kind: 'all', type: 'all' }, eq: { sel: 'EL-01', q: '', sys: 'all' }, std: { r: 'all', a: 'all', q: '' }, gl: { q: '' } };
   function uid() { return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function newInput(base) { var i = Object.assign(E.defaults(), base || {}); i.ov = Object.assign({}, (base && base.ov) || {}); return i; }
   function loadDB() {
     var db = null;
     try { db = JSON.parse(localStorage.getItem(LS_DB)); } catch (e) { }
-    if (!db || !db.projects || !db.projects.length) {
-      db = { active: null, projects: [] };
-      var first = { id: uid(), name: 'Colocation 10 MW — Cikarang', created: Date.now(), updated: Date.now(), input: newInput({ name: 'Colocation 10 MW — Cikarang', loc: 'JB-BKS', type: 'COLO', itMW: 10 }) };
-      db.projects.push(first); db.active = first.id;
-    }
-    if (!find(db.projects, db.active).id) db.active = db.projects[0].id;
+    if (!db || !db.projects) db = { active: null, projects: [] };
+    if (!find(db.projects, db.active).id) db.active = db.projects.length ? db.projects[0].id : null;
     return db;
   }
   var DBS = loadDB();
@@ -69,7 +67,7 @@
   function safeName(s) { return String(s || 'project').replace(/[^\w\-]+/g, '_').slice(0, 60); }
 
   /* ------------------------------------------------------------ header & routing */
-  var TABS = [['home', 'home', 'Overview', '概览'], ['assess', 'gauge', 'Project Assessment', '项目评估'], ['cards', 'cards', 'Technology Cards', '技术卡片'], ['refs', 'building', 'Reference Projects', '参考项目'],
+  var TABS = [['home', 'home', 'Overview', '概览'], ['sim', 'cards', 'Project Technology Simulation', '项目技术模拟'], ['assess', 'gauge', 'Project Assessment', '项目评估'],
               ['equip', 'cpu', 'Equipment & Racks', '设备与机柜'], ['know', 'book', 'Knowledge Base', '知识库'], ['std', 'scale', 'Standards & Regulations', '标准与法规'],
               ['gloss', 'list', 'Glossary', '术语表'], ['about', 'info', 'About', '关于']];
   function renderHeader() {
@@ -86,8 +84,9 @@
     $$('.view').forEach(function (v) { v.classList.toggle('on', v.id === 'view-' + view); });
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.view === view); });
     $('#tabs').classList.remove('open');
-    if (location.hash.split('/')[0] !== '#' + view) history.replaceState(null, '', '#' + view);
-    if (window.TC) TC.onShow(view === 'cards');
+    var want = '#' + view + (view === 'assess' ? '/' + S.asub : '');
+    if (location.hash.split('/')[0] !== '#' + view || (view === 'assess' && location.hash !== want)) history.replaceState(null, '', want);
+    if (window.TC) TC.onShow(view === 'sim');
     window.scrollTo({ top: 0 });
   }
 
@@ -95,29 +94,42 @@
   function renderHome() {
     var nEq = DB.equipment.length, nTpg = DB.equipment.reduce(function (s, e) { return s + e.tpg.filter(function (r) { return !r.g; }).length; }, 0);
     var nArch = DB.references.filter(function (r) { return r.kind === 'arch'; }).length, nReal = DB.references.length - nArch;
-    var feats = [
-      ['gauge', '#3f3cbb', 'Assess a project', '评估项目', 'Enter location, type and IT load — every other parameter is proposed from references and standards, and you can override any of them.', '输入地点、类型及IT负载——其余参数均依据参考与标准自动提出，并可随时修改。', 'assess'],
-      ['building', '#0ea5c6', 'Benchmark', '对标', nArch + ' Indonesian benchmark designs and ' + nReal + ' real projects in Indonesia and worldwide.', nArch + '个印尼基准设计及' + nReal + '个印尼与全球真实项目。', 'refs'],
-      ['cpu', '#f0544f', 'Racks & equipment', '机柜与设备', DB.platforms.length + ' IT rack platforms (e.g. NVIDIA GB300 NVL72), ' + DB.cabinets.length + ' cabinet ranges, ' + nEq + ' equipment specs with ' + nTpg + ' TPG parameters.', DB.platforms.length + '种IT机柜平台（如NVIDIA GB300 NVL72）、' + DB.cabinets.length + '类机柜、' + nEq + '项设备规范及' + nTpg + '项TPG参数。', 'equip'],
-      ['cards', '#2a2785', 'Technology cards', '技术卡片', 'One-slide interactive explainers of the whole facility, critical power, chilled-water cooling, liquid cooling and fire · security · monitoring — built on the knowledge base.', '以一页交互幻灯片讲解整体设施、关键供电、冷冻水风冷、液冷及消防·安防·监控——基于知识库生成。', 'cards'],
-      ['file', '#16a34a', 'Proposal report', '项目建议书', 'Export a complete project proposal as Word, Excel or PDF for each project in your workspace.', '为工作区内每个项目导出完整的项目建议书（Word、Excel或PDF）。', 'assess']
-    ];
-    var projs = DBS.projects.slice().sort(function (a, b) { return b.updated - a.updated; }).slice(0, 6);
+    var cards = (window.TC && TC.cards) || [];
     var html = '<div class="hero">' + heroArt() + '<h1>' + L('Plan a data center in Indonesia with confidence', '科学规划印尼数据中心项目') + '</h1>' +
-      '<p>' + L('An interactive planning & feasibility assessment for data center owners and developers. Choose the province and location, the facility type and the IT load — the tool proposes the IT platforms, resilience, power, energy storage, cooling, building, cost, schedule and risks, and produces a proposal report.', '面向数据中心业主与开发商的交互式规划与可行性评估工具。选择省份与地点、设施类型及IT负载——工具即提出IT平台、韧性、供电、储能、制冷、建筑、投资、进度与风险，并生成项目建议书。') + '</p>' +
+      '<p>' + L('Two ways to start: explore how every data center system works in the interactive Project Technology Simulation, or assess a specific project — province, location, facility type and IT load in; IT platforms, resilience, power, storage, cooling, building, cost, schedule, risks and a proposal report out.', '两种开始方式：在交互式“项目技术模拟”中了解数据中心各系统的工作原理；或评估具体项目——输入省份、地点、设施类型及IT负载，即得出IT平台、韧性、供电、储能、制冷、建筑、投资、进度、风险及项目建议书。') + '</p>' +
       '<div class="kpis">' + [[DB.idProvinces.length, 'provinces', '个省份'], [DB.idLocs.length, 'DC locations', '个选址地点'], [DB.platforms.length, 'IT platforms', '种IT平台'], [DB.references.length, 'reference projects', '个参考项目'], [DB.standards.length, 'codes & regulations', '项规范法规']].map(function (k) {
-        return '<div class="kpi"><b>' + k[0] + '</b><span>' + L(k[1], k[2]) + '</span></div>'; }).join('') + '</div>' +
-      '<div class="row"><button class="btn cyan" data-go="assess">' + ic('play') + L('Open project assessment', '打开项目评估') + '</button><button class="btn ghost" data-act="newproj">' + ic('plus') + L('New project', '新建项目') + '</button></div></div>';
+        return '<div class="kpi"><b>' + k[0] + '</b><span>' + L(k[1], k[2]) + '</span></div>'; }).join('') + '</div></div>';
+    /* quick access: choose how to start */
+    html += '<h2 class="sec" style="margin-bottom:12px">' + L('How would you like to start?', '您希望如何开始？') + '</h2><div class="start2">' +
+      '<div class="startc sim"><div class="sc-top"><div class="ficon">' + ic('cards') + '</div><div><div class="sc-k">' + L('Explore & learn', '探索与学习') + '</div><h3>' + L('Project Technology Simulation', '项目技术模拟') + '</h3></div></div>' +
+      '<p>' + L('Interactive one-slide simulations of the data center and its systems. Click any equipment for its function, ratings, step-by-step calculations, specification and TPG — numbers are computed for the design basis you choose.', '以一页交互幻灯片模拟数据中心及其各系统。点击任意设备即可查看功能、规格、分步计算、技术规范及TPG——数值按所选设计基准计算。') + '</p>' +
+      '<ul class="sc-li"><li>' + L(cards.length + ' systems · 120+ detail panels with calculators', cards.length + '个系统 · 120余个含计算器的详细面板') + '</li><li>' + L('Benchmark designs or your own project as the design basis', '以基准设计或您自己的项目作为设计基准') + '</li><li>' + L('Full-screen presentation mode in English or Chinese', '中英文全屏演示模式') + '</li></ul>' +
+      '<div class="sc-sys">' + cards.map(function (c) { return '<button type="button" class="chip ind" data-go="sim/' + c.id + '">' + L(c.short[0], c.short[1]) + '</button>'; }).join('') + '</div>' +
+      '<button type="button" class="btn big" data-go="sim">' + ic('play') + L('Start Project Technology Simulation', '开始项目技术模拟') + '</button></div>' +
+      '<div class="startc as"><div class="sc-top"><div class="ficon">' + ic('gauge') + '</div><div><div class="sc-k">' + L('Plan & evaluate', '规划与评估') + '</div><h3>' + L('Project Assessment', '项目评估') + '</h3></div></div>' +
+      '<p>' + L('Assess a specific data center project in Indonesia. Enter the essentials — every other parameter is proposed from references and standards with its reasoning, and you can override any of them. Export the proposal as Word, Excel or PDF.', '评估印尼的具体数据中心项目。输入关键信息——其余参数均依据参考与标准自动提出并附依据，且可随时修改。可将建议书导出为Word、Excel或PDF。') + '</p>' +
+      '<ul class="sc-li"><li>' + L('5 input steps · 13 result pages · proposal report', '5个输入步骤 · 13个结果页面 · 项目建议书') + '</li><li>' + L(nArch + ' benchmark designs to view or use as templates, ' + nReal + ' real projects', nArch + '个可查看或用作模板的基准设计，' + nReal + '个真实项目') + '</li><li>' + L('Multi-project workspace saved in your browser', '多项目工作区，保存在浏览器中') + '</li></ul>' +
+      '<div class="sc-sys"><button type="button" class="chip cyan" data-go="assess/library">' + L('Reference library', '参考项目库') + '</button><button type="button" class="chip cyan" data-go="assess/projects">' + L('My projects', '我的项目') + ' (' + DBS.projects.length + ')</button></div>' +
+      '<button type="button" class="btn big cyan" data-go="assess">' + ic('play') + L('Start Project Assessment', '开始项目评估') + '</button></div></div>';
+    var feats = [
+      ['building', '#0ea5c6', 'Reference library', '参考项目库', nArch + ' Indonesian benchmark designs with complete assessments and ' + nReal + ' real projects in Indonesia and worldwide.', nArch + '个含完整评估的印尼基准设计及' + nReal + '个印尼与全球真实项目。', 'assess/library'],
+      ['cpu', '#f0544f', 'Racks & equipment', '机柜与设备', DB.platforms.length + ' IT rack platforms (e.g. NVIDIA GB300 NVL72), ' + DB.cabinets.length + ' cabinet ranges, ' + nEq + ' equipment specs with ' + nTpg + ' TPG parameters.', DB.platforms.length + '种IT机柜平台（如NVIDIA GB300 NVL72）、' + DB.cabinets.length + '类机柜、' + nEq + '项设备规范及' + nTpg + '项TPG参数。', 'equip'],
+      ['book', '#7c3aed', 'Knowledge base', '知识库', 'Companion presentation and Technical Specification & TPG, Indonesia context, lifecycle, commissioning and feasibility checklist.', '配套演示文稿及技术规范与TPG、印尼背景、生命周期、调试及可行性清单。', 'know'],
+      ['file', '#16a34a', 'Proposal report', '项目建议书', 'Export a complete project proposal as Word, Excel or PDF for each project in your workspace.', '为工作区内每个项目导出完整的项目建议书（Word、Excel或PDF）。', 'assess/export']
+    ];
     html += '<div class="grid g4">' + feats.map(function (f) { return '<div class="card feature" style="cursor:pointer" data-go="' + f[6] + '"><div class="ficon" style="background:' + f[1] + '">' + ic(f[0]) + '</div><div><h3>' + L(f[2], f[3]) + '</h3><div class="small muted">' + L(f[4], f[5]) + '</div></div></div>'; }).join('') + '</div>';
-    html += '<div class="grid g2"><div class="card"><h3>' + L('How it works', '工作流程') + '</h3><div class="steps">' + [
-      ['Create a project (or several) — each is saved in your browser workspace.', '新建一个或多个项目——均保存在浏览器工作区。'],
+    var projs = DBS.projects.slice().sort(function (a, b) { return b.updated - a.updated; }).slice(0, 6);
+    html += '<div class="grid g2"><div class="card"><h3>' + L('How the assessment works', '项目评估流程') + '</h3><div class="steps">' + [
+      ['Start a project — blank, or from a reference template — it is saved in your browser workspace.', '新建项目——空白项目或基于参考模板——均保存在浏览器工作区。'],
       ['Enter the essentials: province & location, facility type, design IT load and (optionally) your PLN tariff.', '输入关键信息：省份与地点、设施类型、设计IT负载及（可选）PLN电价。'],
       ['Review the proposals: rack platform & density, Tier, fuel/UPS autonomy, BESS, cooling (with decision matrix), PUE and commercial assumptions — each with its reasoning.', '审阅建议值：机柜平台与功率、等级、燃油/UPS后备、储能、制冷（含决策矩阵）、PUE及商业假设——均附依据。'],
       ['Override anything you know better; reset to the proposal at any time.', '可修改任何参数；随时恢复建议值。'],
       ['Export the proposal report (Word / Excel / PDF).', '导出项目建议书（Word/Excel/PDF）。']
     ].map(function (s) { return '<div class="step"><div>' + L(s[0], s[1]) + '</div></div>'; }).join('') + '</div></div>' +
-      '<div class="card"><div class="row"><h3 style="margin:0">' + L('Your projects', '我的项目') + '</h3><span class="spacer"></span><button class="btn small ghost" data-act="newproj">' + ic('plus') + L('New', '新建') + '</button></div><div class="tblw" style="margin-top:10px"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th>' + L('Location', '地点') + '</th><th class="r">MW</th><th>' + L('Updated', '更新') + '</th></tr></thead><tbody>' +
-      projs.map(function (pr) { var l = E.loc(pr.input.loc); return '<tr style="cursor:pointer" data-open="' + pr.id + '"><td><b>' + esc(pr.name) + '</b></td><td>' + L(l.en, l.zh) + '</td><td class="r">' + F(pr.input.sizing === 'racks' ? 0 : pr.input.itMW, 1) + '</td><td class="small muted">' + new Date(pr.updated).toLocaleDateString() + '</td></tr>'; }).join('') + '</tbody></table></div></div></div>';
+      '<div class="card"><div class="row"><h3 style="margin:0">' + L('Your projects', '我的项目') + '</h3><span class="spacer"></span><button type="button" class="btn small ghost" data-act="newproj">' + ic('plus') + L('New', '新建') + '</button></div>' +
+      (projs.length ? '<div class="tblw" style="margin-top:10px"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th>' + L('Location', '地点') + '</th><th class="r">MW</th><th>' + L('Updated', '更新') + '</th></tr></thead><tbody>' +
+        projs.map(function (pr) { var l = E.loc(pr.input.loc); return '<tr style="cursor:pointer" data-open="' + pr.id + '"><td><b>' + esc(pr.name) + '</b></td><td>' + L(l.en, l.zh) + '</td><td class="r">' + F(pr.input.sizing === 'racks' ? 0 : pr.input.itMW, 1) + '</td><td class="small muted">' + new Date(pr.updated).toLocaleDateString() + '</td></tr>'; }).join('') + '</tbody></table></div>'
+        : '<div class="empty small"><p class="muted">' + L('No projects yet. Open a reference example to see a complete assessment, or use one as a template.', '暂无项目。可打开参考示例查看完整评估，或将其用作模板。') + '</p><div class="row" style="justify-content:center"><button type="button" class="btn small" data-go="assess/library">' + ic('building') + L('Reference library', '参考项目库') + '</button><button type="button" class="btn small ghost" data-act="newproj">' + ic('plus') + L('Blank project', '空白项目') + '</button></div></div>') + '</div></div>';
     $('#view-home').innerHTML = html;
   }
   function heroArt() {
@@ -233,38 +245,190 @@
     }
     return '<div class="f' + (f.full ? ' full' : '') + hid + (AUTO[f.k] && inp().ov && inp().ov[f.k] ? ' isman' : '') + '">' + lab + html + hint + whyLine(f.k) + '</div>';
   }
-  function projectBar() {
-    var pr = active();
-    return '<div class="projbar"><div class="row" style="gap:8px;flex:1;min-width:0"><span class="chip ind" style="flex-shrink:0">' + ic('folder') + L('Project', '项目') + '</span>' +
-      '<select id="projSel" class="fsel" style="flex:1;min-width:180px;max-width:440px">' + DBS.projects.map(function (x) { return '<option value="' + x.id + '"' + (x.id === pr.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select>' +
-      '<button class="btn small" data-act="newproj">' + ic('plus') + L('New', '新建') + '</button><button class="btn small ghost" data-act="dupproj">' + ic('copy') + L('Duplicate', '复制') + '</button>' +
-      '<button class="btn small ghost" data-act="delproj">' + ic('trash') + L('Delete', '删除') + '</button><button class="btn small ghost" data-act="allproj">' + ic('grid') + L('All projects', '全部项目') + ' (' + DBS.projects.length + ')</button></div>' +
-      '<div class="row" style="gap:6px"><button class="btn small ghost" data-act="exportdb">' + ic('download') + L('Export workspace', '导出工作区') + '</button><label class="btn small ghost" style="cursor:pointer">' + ic('upload') + L('Import', '导入') + '<input type="file" id="fileImport" accept=".json" hidden></label></div></div>' +
-      (S.showAll ? allProjectsTable() : '');
+  /* ============================================================ ASSESSMENT — workspace, navigation and pages
+   * Sidebar sub-menu: Workspace (projects, reference library) · Inputs (5 steps) · Results (13 pages) · Report (export).
+   * A reference benchmark can be viewed read-only ("example") or copied into the workspace as an editable template. */
+  var STEP_D = [
+    ['Name the project and choose the province and location — this sets the climate, PLN grid, land, water, wages and hazards — then the facility type and workload criticality.', '命名项目并选择省份与地点——由此确定气候、PLN电网、土地、水、工资及灾害——再选择设施类型与业务关键程度。'],
+    ['Size the IT load, choose the standard and high-density rack platforms, the cabinet range and the construction phasing.', '确定IT负载规模，选择标准及高密度机柜平台、机柜系列与建设分期。'],
+    ['Tier level, generator fuel and UPS autonomy, battery chemistry and the battery energy storage system (BESS).', 'Tier等级、发电机燃油与UPS后备时间、电池类型及电池储能系统（BESS）。'],
+    ['Cooling technology (proposed by the weighted decision matrix), the annual PUE target and the renewable share.', '制冷技术（由加权决策矩阵提出）、年均PUE目标及可再生能源占比。'],
+    ['PLN tariff, exchange rate, business case, prices and the financial assumptions behind IRR / TCO.', 'PLN电价、汇率、商业模式、价格及IRR/TCO的财务假设。']
+  ];
+  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['me', 'Cooling', '制冷'],
+               ['sp', 'Building & space', '建筑与空间'], ['fs', 'Fire · security · monitoring', '消防·安防·监控'], ['boq', 'Equipment list', '设备清单'], ['fin', 'Cost & finance', '投资与财务'],
+               ['sch', 'Schedule & staffing', '进度与人员'], ['risk', 'Risks', '风险'], ['std', 'Permits & standards', '许可与标准'], ['reg', 'Parameter register', '参数登记']];
+  var RIC = { sum: 'gauge', site: 'map', it: 'server', el: 'bolt', me: 'snow', sp: 'building', fs: 'shield', boq: 'list', fin: 'coins', sch: 'calendar', risk: 'alert', std: 'scale', reg: 'sliders' };
+  var RDESC = {
+    sum: ['Key figures, main requirements, top risks and similar reference projects.', '关键指标、主要要求、主要风险及相似参考项目。'],
+    site: ['Location profile, utilities, costs, labour and the site-area check.', '地点概况、公用设施、成本、人工及用地核查。'],
+    it: ['Rack platforms, densities, GPUs, cabinet selection and a platform comparison.', '机柜平台、功率密度、GPU、机柜选型及平台比较。'],
+    el: ['Tier and standards, the critical power chain, electrical sizing, backup autonomy and BESS.', '等级与标准、关键供电链、电气容量、后备时间及储能。'],
+    me: ['Cooling decision matrix, selected design and reasoning, plant sizing, PUE, WUE and renewables.', '制冷决策矩阵、选定方案及依据、设备容量、PUE、WUE及可再生能源。'],
+    sp: ['Building areas, structure, floor loading and the site requirement.', '建筑面积、结构、楼面荷载及用地需求。'],
+    fs: ['Fire protection and suppression, security layers and monitoring points.', '消防与灭火、安防层级及监控点位。'],
+    boq: ['Major and secondary equipment with planning quantities — each linked to its specification & TPG.', '主要及次要设备及规划数量——均链接至技术规范及TPG。'],
+    fin: ['Capital and operating cost, returns or total cost of ownership, and the annual cash flow.', '资本与运营成本、投资回报或总拥有成本，以及年度现金流。'],
+    sch: ['Programme to Ready-for-Service, milestones and 24/7 operations staffing.', '至投产的进度计划、里程碑及7×24运营人员配置。'],
+    risk: ['Risk register with level and mitigation.', '风险登记册（含等级及应对措施）。'],
+    std: ['Indonesian permits & approvals, and the applicable codes, standards and regulations.', '印尼许可与审批，以及适用规范、标准与法规。'],
+    reg: ['Every proposed parameter, the value used and the basis of the proposal.', '每项建议参数、采用值及建议依据。']
+  };
+  function rtabOf(id) { for (var i = 0; i < RTABS.length; i++) if (RTABS[i][0] === id) return RTABS[i]; return null; }
+  function hasProj() { return !!active().id; }
+  function curRef() { var r = S.preview ? find(DB.references, S.preview) : null; return r && r.id ? r : null; }
+  function curName() { var r = curRef(); return r ? Lt(r.en, r.zh) : (active().name || ''); }
+  function refInput(r) { var i = JSON.parse(JSON.stringify(r.input)); i.name = Lt(r.en, r.zh); return i; }
+  var REFX = {};
+  function resolveRef(r) { return REFX[r.id] || (REFX[r.id] = P.resolve(r.input)); }
+  function isArch(r) { return r.kind === 'arch'; }
+  function recompute() { var r = curRef(); S.x = r ? P.resolve(refInput(r)) : (hasProj() ? P.resolve(inp()) : null); }
+  function isProjPage(s) { s = s || S.asub; return /^in[1-5]$/.test(s) || s === 'export' || !!rtabOf(s); }
+  function validSub(sub) {
+    sub = String(sub || '');
+    if (sub === 'projects' || sub === 'library') return sub;
+    if (sub.indexOf('ref/') === 0) return find(DB.references, sub.slice(4)).id ? sub : 'library';
+    if (/^in[1-5]$/.test(sub)) return hasProj() && !S.preview ? sub : (S.x ? 'sum' : 'projects');
+    if (sub === 'export' || rtabOf(sub)) return S.x ? sub : 'projects';
+    return S.x ? 'sum' : 'projects';
   }
-  function allProjectsTable() {
-    return '<div class="card" style="margin-top:10px"><div class="tblw"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th>' + L('Location', '地点') + '</th><th>' + L('Type', '类型') + '</th><th class="r">MW</th><th>Tier</th><th class="r">PUE</th><th class="r">CAPEX</th><th class="r">IRR / TCO</th><th>' + L('Updated', '更新') + '</th><th></th></tr></thead><tbody>' +
-      DBS.projects.map(function (pr) {
+  function go(sub) {
+    S.asub = validSub(sub);
+    if (S.view !== 'assess') show('assess');
+    renderSide(); renderAHead(); renderPage();
+    history.replaceState(null, '', '#assess/' + S.asub);
+    window.scrollTo({ top: 0 });
+  }
+
+  /* ---------- sidebar sub-menu (desktop) and jump list (tablet / phone) */
+  function navBtn(sub, icon, en, zh, extra) { return '<button type="button" class="anav' + (S.asub === sub ? ' on' : '') + '" data-sub="' + sub + '">' + icon + '<span class="lb">' + L(en, zh) + '</span>' + (extra || '') + '</button>'; }
+  function nManual(st) { var o = (hasProj() && inp().ov) || {}; return st ? st.f.filter(function (f) { return AUTO[f.k] && o[f.k]; }).length : Object.keys(o).filter(function (k) { return o[k]; }).length; }
+  function renderSide() {
+    var r = curRef(), h = '<div class="ag">' + L('Workspace', '工作区') + '</div>' +
+      navBtn('projects', ic('folder'), 'My projects', '我的项目', '<span class="cnt">' + DBS.projects.length + '</span>') +
+      navBtn('library', ic('building'), 'Reference library', '参考项目库', '<span class="cnt">' + DB.references.length + '</span>');
+    if (S.asub.indexOf('ref/') === 0) { var rr = find(DB.references, S.asub.slice(4)); h += '<button type="button" class="anav on sub" data-sub="' + S.asub + '"><span class="lb">' + L(rr.en, rr.zh) + '</span></button>'; }
+    if (r) h += '<div class="acur prev"><div class="albl">' + L('Example · read-only', '示例 · 只读') + '</div><b>' + L(r.en, r.zh) + '</b><div class="row" style="gap:6px;margin-top:8px"><button type="button" class="btn small" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button><button type="button" class="btn small ghost" data-act="closeprev">' + L('Close', '关闭') + '</button></div></div>';
+    else if (hasProj()) h += '<div class="acur"><div class="albl">' + L('Active project', '当前项目') + '</div><select id="projSel" class="fsel" aria-label="' + esc(Lt('Active project', '当前项目')) + '">' + DBS.projects.map(function (x) { return '<option value="' + x.id + '"' + (x.id === DBS.active ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select></div>';
+    if (hasProj() && !r) h += '<div class="ag">' + L('Inputs', '输入') + '</div>' + STEPS.map(function (st) { var n = nManual(st); return navBtn('in' + st.n, '<span class="n">' + st.n + '</span>', st.en, st.zh, n ? '<span class="badge man" title="' + esc(Lt('manual overrides', '手动修改项')) + '">' + n + '</span>' : ''); }).join('');
+    if (S.x) {
+      h += '<div class="ag">' + L('Results', '结果') + '</div>' + RTABS.map(function (t) { return navBtn(t[0], ic(RIC[t[0]]), t[1], t[2]); }).join('');
+      h += '<div class="ag">' + L('Report', '报告') + '</div>' + navBtn('export', ic('download'), 'Export proposal report', '导出项目建议书');
+    }
+    $('#aSide').innerHTML = h;
+    function o(v, t) { return '<option value="' + v + '"' + (S.asub === v ? ' selected' : '') + '>' + esc(t) + '</option>'; }
+    var j = '<optgroup label="' + esc(Lt('Workspace', '工作区')) + '">' + o('projects', Lt('My projects', '我的项目') + ' (' + DBS.projects.length + ')') + o('library', Lt('Reference library', '参考项目库')) + (S.asub.indexOf('ref/') === 0 ? o(S.asub, '› ' + Lt(rr.en, rr.zh)) : '') + '</optgroup>';
+    if (hasProj() && !r) j += '<optgroup label="' + esc(Lt('Inputs', '输入')) + '">' + STEPS.map(function (st) { return o('in' + st.n, st.n + '. ' + Lt(st.en, st.zh)); }).join('') + '</optgroup>';
+    if (S.x) j += '<optgroup label="' + esc(Lt('Results', '结果')) + '">' + RTABS.map(function (t) { return o(t[0], Lt(t[1], t[2])); }).join('') + '</optgroup><optgroup label="' + esc(Lt('Report', '报告')) + '">' + o('export', Lt('Export proposal report', '导出项目建议书')) + '</optgroup>';
+    $('#aJump').innerHTML = j;
+    var cx = $('#aJumpCtx'); if (cx) cx.innerHTML = r ? '<span class="chip amber">' + L('Example', '示例') + '</span> <b>' + L(r.en, r.zh) + '</b>' : (hasProj() ? '<span class="chip ind">' + ic('folder') + L('Project', '项目') + '</span> <b>' + esc(active().name) + '</b>' : '');
+  }
+
+  /* ---------- project header (inputs, results and export pages) */
+  function renderAHead() {
+    var el = $('#aHead'); if (!el) return;
+    if (!isProjPage() || !S.x) { el.innerHTML = ''; return; }
+    var x = S.x, R = x.R, p = x.p, c = R.cap, f = R.fin, r = curRef();
+    var chips = [L(c.size.en, c.size.zh), esc(c.tier.en.split(' — ')[0]) + ' · ' + c.tier.avail + '%', F(c.itMW, 2) + ' MW IT', F(c.racks) + ' ' + L('racks', '机柜'), c.gpus ? '≈ ' + F(c.gpus) + ' GPU' : '',
+      'PUE ' + F(R.eff.pue, 2), L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')), 'CAPEX ' + money(R.capex.total),
+      p.revModel === 'lease' ? 'IRR ' + pct(f.irrTV) : L('TCO ', '拥有成本 ') + money(f.lcocAll, 0) + '/kW·mo', 'RFS ' + R.sched.rfsYear];
+    el.innerHTML = '<div class="report-head ahead"><div class="row" style="align-items:flex-start"><div style="min-width:0">' + (r ? '<span class="chip amber" style="margin-bottom:6px">' + L('Example · read-only', '示例 · 只读') + '</span>' : '') +
+      '<h3>' + esc(curName() || 'Untitled') + '</h3><div class="small" style="color:#c8cbff">' + L(R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh) + ' · ' + L(c.type.en, c.type.zh) + '</div></div><span class="spacer"></span>' +
+      '<div class="row no-print" style="gap:6px">' + (r ? '<button type="button" class="btn small cyan" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button>' : '') +
+      '<select id="curSel" class="fsel" style="padding:5px 8px" title="' + esc(Lt('Currency', '货币')) + '">' + ['USD', 'IDR', 'CNY'].map(function (k) { return '<option' + (S.cur === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select>' +
+      (S.cur === 'CNY' ? '<input id="cnyIn" class="fsel" style="width:80px;padding:5px 8px" type="number" step="0.01" value="' + S.cny + '" title="CNY per USD">' : '') +
+      (S.asub !== 'export' ? '<button type="button" class="btn small ghost2" data-sub="export">' + ic('download') + L('Export report', '导出报告') + '</button>' : '') + '</div></div>' +
+      '<div class="chips">' + chips.filter(Boolean).map(function (h) { return '<span class="chip">' + h + '</span>'; }).join('') + '</div></div>';
+  }
+
+  /* ---------- pages */
+  function phead(en, zh, sen, szh, extra) { return '<div class="phead"><div style="min-width:0"><h2 class="sec">' + L(en, zh) + '</h2>' + (sen ? '<div class="sec-sub">' + L(sen, szh) + '</div>' : '') + '</div>' + (extra || '') + '</div>'; }
+  function pager(a, b) { return '<div class="pager no-print">' + (a ? '<button type="button" class="btn ghost" data-sub="' + a[0] + '">← ' + L(a[1], a[2]) + '</button>' : '<span></span>') + (b ? '<button type="button" class="btn" data-sub="' + b[0] + '">' + L(b[1], b[2]) + ' →</button>' : '') + '</div>'; }
+  function renderPage() {
+    var s = S.asub, h, el = $('#aPage'); if (!el) return;
+    try {
+      if (s === 'projects') h = pageProjects();
+      else if (s === 'library') h = pageLibrary();
+      else if (s.indexOf('ref/') === 0) h = pageRef(s.slice(4));
+      else if (/^in[1-5]$/.test(s)) h = pageInput(+s.slice(2));
+      else if (s === 'export') h = pageExport();
+      else h = pageResult(s);
+    } catch (e) { console.error(e); h = '<div class="card">' + esc(String(e)) + '</div>'; }
+    el.innerHTML = h;
+  }
+  function pageResult(id) {
+    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
+    var ids = RTABS.map(function (t) { return t[0]; }), i = ids.indexOf(id), t = RTABS[i], prev = RTABS[i - 1], next = RTABS[i + 1];
+    return phead(t[1], t[2], RDESC[id][0], RDESC[id][1], '<span class="pnum">' + (i + 1) + ' / ' + RTABS.length + '</span>') +
+      '<div class="rpanel">' + panels[id](S.x) + '</div>' + pager(prev, next || ['export', 'Export proposal report', '导出项目建议书']);
+  }
+  function pageInput(n) {
+    var st = STEPS[n - 1];
+    var dots = '<div class="stepper">' + STEPS.map(function (s2) { return '<button type="button" class="sdot' + (s2.n === n ? ' on' : '') + '" data-sub="in' + s2.n + '"><span class="n">' + s2.n + '</span><span class="t">' + L(s2.en, s2.zh) + '</span></button>'; }).join('') + '</div>';
+    return dots + '<div class="ipage"><div class="card istep">' + phead(st.en, st.zh, STEP_D[n - 1][0], STEP_D[n - 1][1], '<span class="pnum">' + L('Step', '步骤') + ' ' + n + ' / ' + STEPS.length + '</span>') +
+      '<div class="fields" id="stepFields">' + stepFields(n) + '</div>' +
+      '<div class="small muted" style="margin-top:14px">' + L('AUTO = proposed from references & standards (hover for the basis). Editing a value marks it MANUAL; ↺ restores the proposal.', '自动=依据参考及标准提出（悬停查看依据）。修改后标记为手动；↺恢复建议值。') + '</div>' +
+      pager(n > 1 ? ['in' + (n - 1), STEPS[n - 2].en, STEPS[n - 2].zh] : null, n < STEPS.length ? ['in' + (n + 1), STEPS[n].en, STEPS[n].zh] : ['sum', 'View the results', '查看结果']) + '</div>' +
+      '<aside class="card impact" id="impact">' + impactHTML() + '</aside></div>';
+  }
+  function stepFields(n) { var p = S.x.p; return STEPS[n - 1].f.map(function (f) { return fieldHTML(f, p); }).join(''); }
+  function renderStepFields() { var m = /^in([1-5])$/.exec(S.asub), el = $('#stepFields'); if (m && el) el.innerHTML = stepFields(+m[1]); }
+  function impactHTML() {
+    var x = S.x, R = x.R, c = R.cap, f = R.fin, p = x.p, lease = p.revModel === 'lease';
+    var items = [[F(c.itMW, 2) + ' MW', 'IT load', 'IT负载'], [F(c.racks), 'Racks', '机柜'], [esc(c.tier.en.split(' — ')[0]), 'Resilience', '韧性'], [F(R.eff.pue, 2), 'Annual PUE', '年均PUE'],
+      [F(R.el.mva, 1) + ' MVA', 'PLN demand', 'PLN需量'], [money(R.capex.total), 'Total CAPEX', '总投资'], [lease ? pct(f.irrTV) : money(f.lcocAll, 0), lease ? 'IRR (with exit)' : 'Cost / kW·mo', lease ? 'IRR（含终值）' : '拥有成本/kW·月'], [R.sched.total + ' ' + L('mo', '月'), 'To RFS', '至投产']];
+    return '<h4 style="margin-top:0">' + L('Live results', '实时结果') + '</h4><div class="mt">' + items.map(function (i) { return '<div><span>' + L(i[1], i[2]) + '</span><b>' + i[0] + '</b></div>'; }).join('') + '</div>' +
+      '<div class="small muted" style="margin-top:10px">' + L('Updates as you edit · manual overrides: ', '随编辑实时更新 · 手动修改：') + '<b>' + nManual() + '</b></div>' +
+      '<button type="button" class="btn small ghost" style="margin-top:10px;width:100%;justify-content:center" data-sub="sum">' + ic('gauge') + L('Open the results summary', '打开结果摘要') + '</button>';
+  }
+  function projectsTable() {
+    return '<div class="card flat" style="padding:0;overflow:hidden"><div class="tblw"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th>' + L('Location', '地点') + '</th><th>' + L('Type', '类型') + '</th><th class="r">MW</th><th>Tier</th><th class="r">PUE</th><th class="r">CAPEX</th><th class="r">IRR / TCO</th><th></th></tr></thead><tbody>' +
+      DBS.projects.slice().sort(function (a, b) { return b.updated - a.updated; }).map(function (pr) {
         var x; try { x = P.resolve(pr.input); } catch (e) { return ''; }
         var R = x.R;
-        return '<tr' + (pr.id === DBS.active ? ' class="cur"' : '') + '><td><b>' + esc(pr.name) + '</b></td><td>' + L(R.L.en, R.L.zh) + '</td><td>' + L(R.cap.type.en, R.cap.type.zh) + '</td><td class="r">' + F(R.cap.itMW, 1) + '</td><td>' + ['I', 'II', 'III', 'IV'][R.p.tier - 1] + '</td><td class="r">' + F(R.eff.pue, 2) + '</td><td class="r">' + money(R.capex.total) + '</td><td class="r">' + (R.p.revModel === 'lease' ? pct(R.fin.irrTV) : money(R.fin.lcocAll, 0) + '/kW·mo') + '</td><td class="small muted">' + new Date(pr.updated).toLocaleString() + '</td>' +
-          '<td class="nowrap"><button class="btn small ghost" data-open="' + pr.id + '">' + L('Open', '打开') + '</button></td></tr>';
+        return '<tr' + (pr.id === DBS.active && !S.preview ? ' class="cur"' : '') + '><td style="cursor:pointer" data-open="' + pr.id + '"><b>' + esc(pr.name) + '</b><div class="small muted">' + L('Updated ', '更新于 ') + new Date(pr.updated).toLocaleString() + '</div></td><td>' + L(R.L.en, R.L.zh) + '</td><td>' + L(R.cap.type.en, R.cap.type.zh) + '</td><td class="r">' + F(R.cap.itMW, R.cap.itMW < 1 ? 2 : 1) + '</td><td>' + ['I', 'II', 'III', 'IV'][R.p.tier - 1] + '</td><td class="r">' + F(R.eff.pue, 2) + '</td><td class="r">' + money(R.capex.total) + '</td><td class="r">' + (R.p.revModel === 'lease' ? pct(R.fin.irrTV) : money(R.fin.lcocAll, 0) + '/kW·mo') + '</td>' +
+          '<td class="nowrap"><button type="button" class="btn small" data-open="' + pr.id + '">' + L('Open', '打开') + '</button> <button type="button" class="btn small ghost" data-act="dupproj" data-id="' + pr.id + '" title="' + esc(Lt('Duplicate', '复制')) + '">' + ic('copy') + '</button> <button type="button" class="btn small ghost" data-act="delproj" data-id="' + pr.id + '" title="' + esc(Lt('Delete', '删除')) + '">' + ic('trash') + '</button></td></tr>';
       }).join('') + '</tbody></table></div></div>';
   }
-  function renderForm() {
-    var p = S.x.p;
-    var openState = $$('details.stepbox').map(function (d) { return d.open; });
-    var html = '';
-    STEPS.forEach(function (st, i) {
-      var nOv = st.f.filter(function (f) { return AUTO[f.k] && inp().ov && inp().ov[f.k]; }).length;
-      html += '<details class="stepbox"' + ((openState.length ? openState[i] : st.open) ? ' open' : '') + '><summary><span class="n">' + st.n + '</span><span>' + L(st.en, st.zh) + '</span>' + (nOv ? '<span class="badge man">' + nOv + ' ' + L('manual', '手动') + '</span>' : '') + '<span class="tw">›</span></summary><div class="fields">' +
-        st.f.map(function (f) { return fieldHTML(f, p); }).join('') + '</div></details>';
-    });
-    html += '<div class="small muted" style="padding:4px 4px 12px">' + L('AUTO = proposed from references & standards (hover for the basis). Editing a value marks it MANUAL; ↺ restores the proposal.', '自动=依据参考及标准提出（悬停查看依据）。修改后标记为手动；↺恢复建议值。') + '</div>';
-    $('#formCol').innerHTML = html;
+  function exCard(r) {
+    var x = resolveRef(r), R = x.R;
+    return '<div class="card excard"><div class="meta"><span class="chip ind">' + L('Benchmark design', '基准设计') + '</span><span class="chip">' + F(R.cap.itMW, R.cap.itMW < 1 ? 2 : 0) + ' MW</span><span class="chip">' + esc(R.cap.tier.en.split(' — ')[0]) + '</span></div>' +
+      '<h4>' + L(r.en, r.zh) + '</h4><div class="small muted">' + Lp(r.loc) + ' · ' + L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')) + '</div>' +
+      '<div class="exk"><span>PUE <b>' + F(R.eff.pue, 2) + '</b></span><span>CAPEX <b>' + money(R.capex.total) + '</b></span><span>RFS <b>' + R.sched.total + ' ' + L('mo', '月') + '</b></span></div>' +
+      '<div class="row" style="gap:6px;margin-top:auto"><button type="button" class="btn small ghost" data-act="prev" data-id="' + r.id + '">' + ic('play') + L('View example', '查看示例') + '</button><button type="button" class="btn small" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button><button type="button" class="btn small ghost" data-sub="ref/' + r.id + '">' + L('Details', '详情') + '</button></div></div>';
   }
+  function pageProjects() {
+    var n = DBS.projects.length;
+    var h = phead('My projects', '我的项目', 'Projects are saved in this browser. Start a blank project, use a reference as a template, or import a workspace file.', '项目保存在本浏览器中。可新建空白项目、以参考项目为模板，或导入工作区文件。',
+      '<div class="row" style="gap:6px"><button type="button" class="btn" data-act="newproj">' + ic('plus') + L('New blank project', '新建空白项目') + '</button><button type="button" class="btn ghost" data-sub="library">' + ic('building') + L('Start from a reference', '从参考项目开始') + '</button>' +
+      '<label class="btn ghost" style="cursor:pointer">' + ic('upload') + L('Import', '导入') + '<input type="file" id="fileImport" accept=".json" hidden></label>' + (n ? '<button type="button" class="btn ghost" data-act="exportdb">' + ic('download') + L('Export workspace', '导出工作区') + '</button>' : '') + '</div>');
+    if (!n) h += '<div class="card empty"><div class="ficon" style="background:var(--indigo)">' + ic('folder') + '</div><h3>' + L('Your workspace has no projects yet', '工作区暂无项目') + '</h3><p class="muted">' +
+      L('Open one of the reference examples below to see a complete assessment (read-only), then use it as a template and edit any value — or start from a blank project.', '可打开下方任一参考示例查看完整评估（只读），再将其用作模板并修改任何参数——或新建空白项目。') + '</p>' +
+      '<div class="row" style="justify-content:center"><button type="button" class="btn" data-act="newproj">' + ic('plus') + L('New blank project', '新建空白项目') + '</button><button type="button" class="btn ghost" data-sub="library">' + ic('building') + L('Browse the reference library', '浏览参考项目库') + '</button></div></div>';
+    else h += projectsTable();
+    h += '<div class="phead" style="margin-top:22px"><div><h3 style="margin:0">' + L('Reference examples', '参考示例') + '</h3><div class="small muted">' + L('Benchmark designs in Indonesian locations with the complete assessment — view one read-only, or use it as a template for a new project.', '位于印尼各地的基准设计，含完整评估——可只读查看，或用作新项目模板。') + '</div></div><button type="button" class="btn small ghost" data-sub="library">' + L('All references →', '全部参考项目 →') + '</button></div>' +
+      '<div class="grid g3">' + DB.references.filter(isArch).map(exCard).join('') + '</div>';
+    return h;
+  }
+  function pageExport() {
+    var r = curRef();
+    var h = phead('Export proposal report', '导出项目建议书', 'The proposal covers every result page — summary, site, IT, power, cooling, building, fire · security · monitoring, equipment, cost & finance, schedule, risks, permits & standards and the parameter register. Amounts use the currency selected above (' + S.cur + ').',
+      '建议书涵盖全部结果页面——摘要、场地、IT、供电、制冷、建筑、消防·安防·监控、设备、投资与财务、进度、风险、许可与标准及参数登记。金额采用上方所选货币（' + S.cur + '）。');
+    if (r) h += '<div class="whybox" style="margin-bottom:14px">' + L('This is a read-only example. Its report can be exported as it is; use it as a template to edit the values first.', '此为只读示例，可直接导出其报告；如需修改参数，请先用作模板。') + '</div>';
+    h += '<div class="grid g3">' + [['file', '#2b579a', 'Word report (.docx)', 'Word报告（.docx）', 'Complete proposal with all sections, tables, diagrams and the parameter register — ready to edit.', '完整建议书，含全部章节、表格、图示及参数登记——可直接编辑。', 'docx'],
+      ['grid', '#217346', 'Excel workbook (.xlsx)', 'Excel工作簿（.xlsx）', 'Summary, parameters, equipment, CAPEX / OPEX, cash flow, schedule and risks on separate sheets.', '摘要、参数、设备、投资/运营成本、现金流、进度及风险分表列示。', 'xlsx'],
+      ['print', '#b42318', 'PDF (print)', 'PDF（打印）', 'Printable report in a new window — choose “Save as PDF” in the print dialog.', '在新窗口打开可打印报告——在打印对话框中选择“另存为PDF”。', 'pdf']].map(function (e) {
+        return '<div class="card exp-card"><div class="ficon" style="background:' + e[1] + '">' + ic(e[0]) + '</div><h3>' + L(e[2], e[3]) + '</h3><div class="small muted">' + L(e[4], e[5]) + '</div><button type="button" class="btn" data-act="' + e[6] + '">' + ic('download') + L('Export', '导出') + '</button></div>'; }).join('') + '</div>';
+    h += '<div class="grid g2"><div class="card">' + ptitle('Data files', '数据文件') + '<div class="row" style="gap:8px"><button type="button" class="btn ghost" data-act="json">' + ic('download') + L('Project file (.json)', '项目文件（.json）') + '</button><button type="button" class="btn ghost" data-act="csv">' + ic('download') + L('Equipment list (.csv)', '设备清单（.csv）') + '</button><button type="button" class="btn ghost" data-act="fincsv">' + ic('download') + L('Cash flow (.csv)', '现金流（.csv）') + '</button></div>' +
+      '<div class="small muted" style="margin-top:10px">' + L('A project file can be imported again under My projects, or shared with colleagues.', '项目文件可在“我的项目”中重新导入，或与同事共享。') + '</div></div>' +
+      '<div class="card">' + ptitle('Report contents', '报告内容') + '<ol class="toc">' + RTABS.map(function (t) { return '<li><button type="button" data-sub="' + t[0] + '">' + L(t[1], t[2]) + '</button></li>'; }).join('') + '</ol></div></div>';
+    return h;
+  }
+
+  /* ---------- editing */
   var timer = null;
   function setVal(k, v, rerender) {
+    if (!hasProj() || S.preview) return;
     var i = inp(), f = null;
     STEPS.forEach(function (st) { st.f.forEach(function (x) { if (x.k === k) f = x; }); });
     if (k === 'prov') { var pr = find(DB.idProvinces, v); i.loc = pr.locs[0].id; }
@@ -277,31 +441,53 @@
     }
     active().updated = Date.now();
     recompute();
-    if (rerender || RERENDER.indexOf(k) >= 0) { renderForm(); if (k === 'name') renderProjBar(); }
-    else refreshBadges();
-    clearTimeout(timer); timer = setTimeout(function () { saveDB(); renderReport(); }, 150);
+    if (rerender || RERENDER.indexOf(k) >= 0) renderStepFields();
+    else { refreshBadges(); markManual(k); }
+    clearTimeout(timer); timer = setTimeout(function () { saveDB(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); renderHome(); }, 160);
+  }
+  function markManual(k) {
+    if (!AUTO[k]) return;
+    var lab = $('label[for="in-' + k + '"]'); if (!lab) return;
+    $$('.badge, .rst', lab).forEach(function (b) { b.remove(); });
+    lab.insertAdjacentHTML('beforeend', badge(k));
+    var fw = lab.closest('.f'); if (fw) fw.classList.add('isman');
   }
   function refreshBadges() {
     /* update auto values of untouched fields after a recompute without stealing focus */
     var p = S.x.p;
-    $$('#formCol [data-k]').forEach(function (el) {
+    $$('#aPage [data-k]').forEach(function (el) {
       var k = el.dataset.k; if (!AUTO[k] || (inp().ov && inp().ov[k]) || el === document.activeElement) return;
       if (el.tagName === 'INPUT' && el.type === 'checkbox') el.checked = !!p[k];
       else if (el.tagName === 'INPUT' || el.tagName === 'SELECT') el.value = p[k];
       else if (el.classList.contains('seg')) $$('button', el).forEach(function (b) { b.classList.toggle('on', String(b.dataset.v) === String(p[k])); });
     });
   }
-  function recompute() { S.x = P.resolve(inp()); }
-  function renderProjBar() { $('#projBar').innerHTML = projectBar(); }
 
+  /* ---------- workspace actions */
   function newProject(base, name) {
-    var pr = { id: uid(), name: name || (base && base.name) || Lt('New Data Center Project', '新数据中心项目'), created: Date.now(), updated: Date.now(), input: newInput(base || { loc: inp().loc }) };
-    pr.input.name = pr.name;
-    DBS.projects.push(pr); DBS.active = pr.id; saveDB();
-    recompute(); renderAssess(); renderHome();
+    var b = base || (hasProj() ? { loc: inp().loc } : {});
+    var pr = { id: uid(), name: name || b.name || Lt('New Data Center Project', '新数据中心项目'), created: Date.now(), updated: Date.now(), input: newInput(b) };
+    pr.input.name = pr.name; S.preview = null;
+    DBS.projects.push(pr); DBS.active = pr.id; saveDB(); recompute(); renderHome();
     return pr;
   }
-  function openProject(id) { DBS.active = id; saveDB(); recompute(); renderAssess(); show('assess'); }
+  function useTemplate(id) {
+    var r = find(DB.references, id); if (!r.id) return;
+    if (r.kind === 'arch') newProject(refInput(r), Lt(r.en, r.zh));
+    else newProject({ name: Lt(r.en, r.zh) + Lt(' (model)', '（模型）'), loc: r.country === 'ID' ? (/Batam/.test(r.en + r.loc[0]) ? 'KR-BTM' : 'JB-BKS') : 'JB-KRW', type: r.type, itMW: Math.min(r.mw || 10, 1000) });
+    go('in1'); toast(Lt('Template added to your projects — every value can now be edited', '模板已加入我的项目——现在可修改任何参数'));
+  }
+  function preview(id) { S.preview = id; recompute(); go('sum'); }
+  function closePreview() { S.preview = null; recompute(); go(isProjPage() ? (hasProj() ? S.asub : 'projects') : S.asub); }
+  function openProject(id) { S.preview = null; DBS.active = id; saveDB(); recompute(); go(isProjPage() ? S.asub : 'sum'); }
+  function deleteProject(id) {
+    var pr = find(DBS.projects, id); if (!pr.id) return;
+    if (!confirm(Lt('Delete project “' + pr.name + '”?', '删除项目“' + pr.name + '”？'))) return;
+    DBS.projects = DBS.projects.filter(function (x) { return x.id !== id; });
+    if (DBS.active === id) DBS.active = DBS.projects.length ? DBS.projects[0].id : null;
+    saveDB(); recompute(); renderHome(); go(S.asub === 'projects' || !hasProj() ? 'projects' : S.asub);
+    toast(Lt('Project deleted', '项目已删除'));
+  }
   function importJSON(file) {
     if (!file) return;
     var rd = new FileReader();
@@ -311,15 +497,18 @@
         var list = o.projects ? o.projects : (o.input ? [{ name: o.input.name, input: o.input }] : [o]);
         list.forEach(function (pp) { var inpx = pp.input || pp; if (!inpx || (!inpx.loc && !inpx.type)) return; var pr = { id: uid(), name: pp.name || inpx.name || 'Imported', created: Date.now(), updated: Date.now(), input: newInput(inpx) }; DBS.projects.push(pr); DBS.active = pr.id; added++; });
         if (!added) throw new Error('none');
-        saveDB(); recompute(); renderAssess(); renderHome(); toast(Lt('Imported ' + added + ' project(s)', '已导入' + added + '个项目'));
+        S.preview = null; saveDB(); recompute(); renderHome(); go('projects'); toast(Lt('Imported ' + added + ' project(s)', '已导入' + added + '个项目'));
       } catch (e) { toast(Lt('Invalid file', '文件无效')); }
     };
     rd.readAsText(file);
   }
+  function curProjFile() { var r = curRef(); return r ? { name: curName(), input: refInput(r) } : active(); }
 
   function renderAssess() {
-    $('#view-assess').innerHTML = '<div id="projBar"></div><div class="assess"><div class="form-col" id="formCol"></div><div id="reportCol"></div></div>';
-    renderProjBar(); renderForm(); renderReport();
+    $('#view-assess').innerHTML = '<div class="aw"><aside class="aside no-print" id="aSide" aria-label="' + esc(Lt('Project Assessment menu', '项目评估菜单')) + '"></aside><div class="amain">' +
+      '<div class="ajump no-print"><div id="aJumpCtx" class="small"></div><select id="aJump" class="fsel" aria-label="' + esc(Lt('Go to page', '转到页面')) + '"></select></div>' +
+      '<div id="aHead"></div><div id="aPage"></div></div></div>';
+    S.asub = validSub(S.asub); renderSide(); renderAHead(); renderPage();
   }
   function bindAssess() {
     var v = $('#view-assess');
@@ -328,8 +517,9 @@
       var t = ev.target;
       if (t.id === 'fileImport') return importJSON(t.files[0]);
       if (t.id === 'projSel') return openProject(t.value);
-      if (t.id === 'curSel') { S.cur = t.value; saveDB(); renderReport(); if (S.showAll) renderProjBar(); return; }
-      if (t.id === 'cnyIn') { S.cny = parseFloat(t.value) || 7.1; saveDB(); renderReport(); return; }
+      if (t.id === 'aJump') return go(t.value);
+      if (t.id === 'curSel') { S.cur = t.value; saveDB(); renderAHead(); renderPage(); return; }
+      if (t.id === 'cnyIn') { S.cny = parseFloat(t.value) || 7.1; saveDB(); renderAHead(); renderPage(); return; }
       if (t.dataset && t.dataset.k) {
         if (t.type === 'checkbox') setVal(t.dataset.k, t.checked, true);
         else if (t.tagName === 'SELECT') setVal(t.dataset.k, t.value, true);
@@ -337,48 +527,36 @@
       }
     });
     v.addEventListener('click', function (ev) {
-      var b = ev.target.closest('button,[data-rtab],[data-act],[data-open]'); if (!b) return;
-      if (b.dataset.reset) { var i = inp(); if (i.ov) delete i.ov[b.dataset.reset]; active().updated = Date.now(); recompute(); saveDB(); renderForm(); renderReport(); return; }
+      var b = ev.target.closest('button,[data-rtab],[data-act],[data-open],[data-sub]'); if (!b) return;
+      if (b.dataset.sub) { go(b.dataset.sub); return; }
+      if (b.dataset.rtab) { go(b.dataset.rtab); return; }
+      if (b.dataset.reset) { var i = inp(); if (i.ov) delete i.ov[b.dataset.reset]; active().updated = Date.now(); recompute(); saveDB(); renderStepFields(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); return; }
       if (b.dataset.tier) { setVal('tier', +b.dataset.tier, true); return; }
       var seg = b.closest('.seg'); if (seg && b.dataset.v !== undefined) { setVal(seg.dataset.k, b.dataset.v, true); return; }
-      if (b.dataset.rtab) { S.rtab = b.dataset.rtab; $$('.rtab').forEach(function (x) { x.classList.toggle('on', x.dataset.rtab === S.rtab); }); $$('.rpanel').forEach(function (p) { p.classList.toggle('hidden', p.dataset.panel !== S.rtab); }); return; }
       if (b.dataset.open) { openProject(b.dataset.open); return; }
-      var a = b.dataset.act;
-      if (a === 'dupproj') { var cp = JSON.parse(JSON.stringify(inp())); newProject(cp, active().name + ' (' + Lt('copy', '副本') + ')'); toast(Lt('Duplicated', '已复制')); }
-      if (a === 'delproj') { if (DBS.projects.length <= 1) { toast(Lt('Keep at least one project', '至少保留一个项目')); return; } if (!confirm(Lt('Delete project “' + active().name + '”?', '删除项目“' + active().name + '”？'))) return; DBS.projects = DBS.projects.filter(function (x) { return x.id !== DBS.active; }); DBS.active = DBS.projects[0].id; saveDB(); recompute(); renderAssess(); renderHome(); }
-      if (a === 'allproj') { S.showAll = !S.showAll; renderProjBar(); }
-      if (a === 'exportdb') download('dc-assessment-workspace.json', JSON.stringify({ app: 'Data Center Project Assessment', version: 2, exported: new Date().toISOString(), projects: DBS.projects }, null, 2), 'application/json');
-      if (a === 'json') download(safeName(active().name) + '.json', JSON.stringify({ app: 'Data Center Project Assessment', version: 2, projects: [active()] }, null, 2), 'application/json');
+      var a = b.dataset.act, id = b.dataset.id;
+      if (a === 'newproj') { newProject(); go('in1'); return; }
+      if (a === 'dupproj') { var src = find(DBS.projects, id || DBS.active); if (src.id) { newProject(JSON.parse(JSON.stringify(src.input)), src.name + ' (' + Lt('copy', '副本') + ')'); go('projects'); toast(Lt('Duplicated', '已复制')); } return; }
+      if (a === 'delproj') { deleteProject(id || DBS.active); return; }
+      if (a === 'usetpl') { useTemplate(id); return; }
+      if (a === 'prev') { preview(id); return; }
+      if (a === 'closeprev') { closePreview(); return; }
+      if (a === 'ref') { go('ref/' + id); return; }
+      if (a === 'exportdb') download('dc-assessment-workspace.json', JSON.stringify({ app: 'Data Center Project Assessment', version: 3, exported: new Date().toISOString(), projects: DBS.projects }, null, 2), 'application/json');
+      if (a === 'json') download(safeName(curName()) + '.json', JSON.stringify({ app: 'Data Center Project Assessment', version: 3, projects: [curProjFile()] }, null, 2), 'application/json');
       if (a === 'pdf') { if (!RP.openPrint(S.x, ropt(), reportName())) toast(Lt('Allow pop-ups to open the printable report', '请允许弹出窗口以打开打印报告')); }
       if (a === 'docx') { toast(Lt('Building Word report…', '正在生成Word报告…')); RP.docx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Word export failed', 'Word导出失败')); }); }
       if (a === 'xlsx') { toast(Lt('Building Excel workbook…', '正在生成Excel…')); RP.xlsx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Excel export failed', 'Excel导出失败')); }); }
       if (a === 'csv') exportBOQ();
       if (a === 'fincsv') exportFin();
-      if (a === 'eq') { S.eq.sel = b.dataset.id; S.eqTab = 'eq'; renderEquip(); show('equip'); }
+      if (a === 'eq') { S.eq.sel = id; S.eqTab = 'eq'; renderEquip(); show('equip'); }
       if (a === 'plat') { S.eqTab = 'plat'; renderEquip(); show('equip'); }
-      if (a === 'ref') openRef(b.dataset.id);
     });
   }
   function ropt() { return { money: money, cur: S.cur, fx: fxNow(), lang: I18N.lang() }; }
-  function reportName() { return safeName(active().name) + '_' + Lt('Proposal', '建议书'); }
+  function reportName() { return safeName(curName()) + '_' + Lt('Proposal', '建议书'); }
 
-  /* ============================================================ ASSESSMENT — report */
-  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['me', 'Cooling', '制冷'],
-               ['sp', 'Building & space', '建筑与空间'], ['fs', 'Fire · security · monitoring', '消防·安防·监控'], ['boq', 'Equipment list', '设备清单'], ['fin', 'Cost & finance', '投资与财务'],
-               ['sch', 'Schedule & staffing', '进度与人员'], ['risk', 'Risks', '风险'], ['std', 'Permits & standards', '许可与标准'], ['reg', 'Parameter register', '参数登记']];
-  function renderReport() {
-    var x = S.x, R = x.R, p = x.p, c = R.cap;
-    var head = '<div class="report-head"><div class="row" style="align-items:flex-start"><div style="min-width:0"><h3>' + esc(p.name || 'Untitled') + '</h3><div class="small" style="color:#c8cbff">' + L(R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh) + ' · ' + L(c.type.en, c.type.zh) + '</div></div><span class="spacer"></span>' +
-      '<div class="row no-print" style="gap:6px"><select id="curSel" class="fsel" style="padding:5px 8px">' + ['USD', 'IDR', 'CNY'].map(function (k) { return '<option' + (S.cur === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select>' +
-      (S.cur === 'CNY' ? '<input id="cnyIn" class="fsel" style="width:80px;padding:5px 8px" type="number" step="0.01" value="' + S.cny + '" title="CNY per USD">' : '') +
-      '<span class="exp">' + L('Export proposal', '导出建议书') + '</span><button class="btn small cyan" data-act="docx">' + ic('file') + 'Word</button><button class="btn small cyan" data-act="xlsx">' + ic('grid') + 'Excel</button><button class="btn small cyan" data-act="pdf">' + ic('print') + 'PDF</button><button class="btn small ghost2" data-act="json">JSON</button></div></div>' +
-      '<div class="chips"><span class="chip">' + L(c.size.en, c.size.zh) + '</span><span class="chip">' + esc(c.tier.en.split(' — ')[0]) + ' · ' + c.tier.avail + '%</span><span class="chip">' + F(c.itMW, 2) + ' MW IT</span><span class="chip">' + F(c.racks) + ' ' + L('racks', '机柜') + '</span>' +
-      (c.gpus ? '<span class="chip">≈ ' + F(c.gpus) + ' GPU</span>' : '') + '<span class="chip">PUE ' + F(R.eff.pue, 2) + '</span><span class="chip">' + L(R.cool.obj.en, R.cool.obj.zh) + '</span></div></div>';
-    var tabs = '<div class="rtabs no-print">' + RTABS.map(function (t) { return '<button class="rtab' + (S.rtab === t[0] ? ' on' : '') + '" data-rtab="' + t[0] + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
-    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
-    var body = RTABS.map(function (t) { var h; try { h = panels[t[0]](x); } catch (e) { console.error(e); h = '<div class="card">' + esc(String(e)) + '</div>'; } return '<div class="rpanel' + (S.rtab === t[0] ? '' : ' hidden') + '" data-panel="' + t[0] + '">' + h + '</div>'; }).join('');
-    $('#reportCol').innerHTML = head + tabs + body;
-  }
+  /* ============================================================ ASSESSMENT — result pages */
   function tile(val, unit, en, zh, sub, color) { return '<div class="tile" style="--c:' + (color || '#3f3cbb') + '"><div class="lbl">' + L(en, zh) + '</div><b>' + val + (unit ? '<span class="u">' + unit + '</span>' : '') + '</b>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; }
   function kv(rows) { return '<div class="tblw"><table class="t kv"><tbody>' + rows.map(function (r) { return '<tr><td>' + L(r[0], r[1]) + '</td><td>' + r[2] + '</td></tr>'; }).join('') + '</tbody></table></div>'; }
   function ptitle(en, zh, extra) { return '<div class="row" style="margin:2px 0 10px"><h3 style="margin:0">' + L(en, zh) + '</h3><span class="spacer"></span>' + (extra || '') + '</div>'; }
@@ -544,8 +722,8 @@
       '<div class="tblw"><table class="t"><thead><tr><th>' + L('Ref.', '编号') + '</th><th>' + L('Equipment', '设备') + '</th><th class="r">' + L('Qty', '数量') + '</th><th>' + L('Unit', '单位') + '</th><th>' + L('Rating', '规格') + '</th><th>' + L('Note', '备注') + '</th></tr></thead><tbody>' +
       R.boq.map(function (b) { return '<tr><td><button class="chip ind" style="cursor:pointer" data-act="eq" data-id="' + b.id + '">' + b.id + '</button></td><td>' + L(b.en, b.zh) + '</td><td class="r num"><b>' + F(b.qty) + '</b></td><td>' + esc(b.unit) + '</td><td>' + esc(b.rating) + '</td><td class="small muted">' + esc(b.note) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
   }
-  function exportBOQ() { var R = S.x.R; download(safeName(active().name) + '_equipment.csv', csv([['Ref', 'Equipment', '设备', 'Qty', 'Unit', 'Rating', 'Note']].concat(R.boq.map(function (b) { return [b.id, b.en, b.zh, Math.round(b.qty), b.unit, b.rating, b.note]; }))), 'text/csv;charset=utf-8'); }
-  function exportFin() { var R = S.x.R; download(safeName(active().name) + '_cashflow_USD.csv', csv([['Year', 'Built kW', 'Used kW', 'CAPEX', 'Revenue', 'Energy', 'OPEX', 'EBITDA', 'Tax', 'Cash flow', 'Cumulative']].concat(R.fin.rows.map(function (r) { return [r.year, Math.round(r.built), Math.round(r.used), Math.round(r.capex), Math.round(r.rev), Math.round(r.energy), Math.round(r.opex), Math.round(r.ebitda), Math.round(r.tax), Math.round(r.cf), Math.round(r.cum)]; }))), 'text/csv;charset=utf-8'); }
+  function exportBOQ() { var R = S.x.R; download(safeName(curName()) + '_equipment.csv', csv([['Ref', 'Equipment', '设备', 'Qty', 'Unit', 'Rating', 'Note']].concat(R.boq.map(function (b) { return [b.id, b.en, b.zh, Math.round(b.qty), b.unit, b.rating, b.note]; }))), 'text/csv;charset=utf-8'); }
+  function exportFin() { var R = S.x.R; download(safeName(curName()) + '_cashflow_USD.csv', csv([['Year', 'Built kW', 'Used kW', 'CAPEX', 'Revenue', 'Energy', 'OPEX', 'EBITDA', 'Tax', 'Cash flow', 'Cumulative']].concat(R.fin.rows.map(function (r) { return [r.year, Math.round(r.built), Math.round(r.used), Math.round(r.capex), Math.round(r.rev), Math.round(r.energy), Math.round(r.opex), Math.round(r.ebitda), Math.round(r.tax), Math.round(r.cf), Math.round(r.cum)]; }))), 'text/csv;charset=utf-8'); }
   function pFin(x) {
     var R = x.R, cx = R.capex, op = R.opex, f = R.fin, p = x.p, cols = ['#e39b1b', '#0ea5c6', '#b45309', '#f0544f', '#3f3cbb', '#16a34a', '#a3a6c8', '#7c3aed'];
     var html = '<div class="grid g2"><div class="card">' + ptitle('Capital expenditure', '资本性支出') + '<div class="tblw"><table class="t"><thead><tr><th>' + L('Item', '项目') + '</th><th class="r">' + S.cur + '</th><th class="r">%</th></tr></thead><tbody>' +
@@ -597,49 +775,84 @@
     return '<div class="card">' + ptitle('Parameter register — proposals, overrides and basis', '参数登记——建议值、修改及依据') + '<div class="tblw"><table class="t"><thead><tr><th>' + L('Parameter', '参数') + '</th><th>' + L('Proposed', '建议值') + '</th><th>' + L('Used', '采用值') + '</th><th>' + L('Basis', '依据') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
   }
 
-  /* ========================================================= REFERENCES */
+  /* ========================================================= REFERENCE LIBRARY (inside Project Assessment) */
   function refMini(r) {
     var mw = r.kind === 'arch' ? (r.input.itMW || 1) : r.mw;
-    return '<div class="refcard" data-act="ref" data-id="' + r.id + '"><div class="meta"><span class="chip ' + (r.kind === 'arch' ? 'ind' : 'cyan') + '">' + (r.kind === 'arch' ? L('Benchmark design', '基准设计') : L('Real project', '真实项目')) + '</span>' + (mw ? '<span class="chip">' + F(mw, mw < 1 ? 2 : 0) + ' MW</span>' : '') + '</div><h4>' + L(r.en, r.zh) + '</h4><div class="facts">' + Lp(r.loc) + '</div></div>';
+    return '<div class="refcard" data-sub="ref/' + r.id + '"><div class="meta"><span class="chip ' + (r.kind === 'arch' ? 'ind' : 'cyan') + '">' + (r.kind === 'arch' ? L('Benchmark design', '基准设计') : L('Real project', '真实项目')) + '</span>' + (mw ? '<span class="chip">' + F(mw, mw < 1 ? 2 : 0) + ' MW</span>' : '') + '</div><h4>' + L(r.en, r.zh) + '</h4><div class="facts">' + Lp(r.loc) + '</div></div>';
   }
-  function renderRefs() {
+  function libList() {
     var f = S.ref, q = f.q.toLowerCase();
-    var list = DB.references.filter(function (r) { if (f.kind !== 'all' && r.kind !== f.kind && !(f.kind === 'id' && r.kind === 'real' && r.country === 'ID')) return false; if (f.kind === 'id' && !(r.kind === 'real' && r.country === 'ID')) return false; if (f.type !== 'all' && r.type !== f.type) return false;
-      if (q && (r.en + r.zh + (r.loc || []).join(' ') + JSON.stringify(r.facts || r.d)).toLowerCase().indexOf(q) < 0) return false; return true; });
-    var html = '<h2 class="sec">' + L('Reference project database', '参考项目数据库') + '</h2><div class="sec-sub">' + L('Benchmark designs in Indonesian locations carry complete planning & feasibility data; real projects show publicly reported facts with sources.', '位于印尼地点的基准设计包含完整的规划与可研数据；真实项目展示公开报道的信息及来源。') + '</div>' +
-      '<div class="filters"><input class="search" id="refQ" placeholder="' + esc(Lt('Search projects, locations, features…', '搜索项目、地点、特征…')) + '" value="' + esc(f.q) + '">' +
-      '<select class="fsel" id="refKind">' + [['all', 'All', '全部'], ['arch', 'Benchmark designs', '基准设计'], ['id', 'Real projects — Indonesia', '真实项目——印尼'], ['real', 'Real projects — all', '真实项目——全部']].map(function (o) { return '<option value="' + o[0] + '"' + (f.kind === o[0] ? ' selected' : '') + '>' + esc(Lt(o[1], o[2])) + '</option>'; }).join('') + '</select>' +
-      '<select class="fsel" id="refType"><option value="all">' + esc(Lt('All types', '全部类型')) + '</option>' + DB.dcTypes.map(function (t) { return '<option value="' + t.id + '"' + (f.type === t.id ? ' selected' : '') + '>' + esc(Lt(t.en, t.zh)) + '</option>'; }).join('') + '</select></div>';
-    var arch = list.filter(function (r) { return r.kind === 'arch'; }), real = list.filter(function (r) { return r.kind === 'real'; });
-    if (arch.length) html += '<h3>' + L('Benchmark designs (Indonesia)', '基准设计（印尼）') + ' (' + arch.length + ')</h3><div class="card flat" style="padding:0;overflow:hidden"><div class="tblw"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th class="r">MW</th><th>Tier</th><th>' + L('Platform', '平台') + '</th><th class="r">' + L('Racks', '机柜') + '</th><th>' + L('Cooling', '制冷') + '</th><th class="r">PUE</th><th class="r">CAPEX</th><th class="r">USD M/MW</th><th class="r">' + L('Months', '月') + '</th><th class="r">IRR / TCO</th><th></th></tr></thead><tbody>' +
-      arch.map(function (r) { var x = P.resolve(r.input), R = x.R; return '<tr><td style="cursor:pointer" data-act="ref" data-id="' + r.id + '"><b>' + L(r.en, r.zh) + '</b><div class="small muted">' + Lp(r.loc) + '</div></td><td class="r">' + F(R.cap.itMW, R.cap.itMW < 1 ? 2 : 0) + '</td><td>' + ['I', 'II', 'III', 'IV'][x.p.tier - 1] + '</td><td class="small">' + (R.cap.hdR ? L(R.hdP.en.split(' (')[0].split(' —')[0], R.hdP.zh.split('（')[0].split('——')[0]) : L(R.stdP.en.split(' (')[0], R.stdP.zh.split('（')[0])) + '</td><td class="r">' + F(R.cap.racks) + '</td><td class="small">' + L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')) + '</td><td class="r">' + F(R.eff.pue, 2) + '</td><td class="r">' + money(R.capex.total) + '</td><td class="r">' + F(R.capex.perMW, 1) + '</td><td class="r">' + R.sched.total + '</td><td class="r">' + (x.p.revModel === 'lease' ? pct(R.fin.irrTV) : money(R.fin.lcocAll, 0) + '/kW·mo') + '</td>' +
-        '<td><button class="btn small ghost" data-loadref="' + r.id + '">' + ic('plus') + L('New project', '新建项目') + '</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
-    if (real.length) html += '<h3 style="margin-top:18px">' + L('Real-world projects (public information)', '真实项目（公开信息）') + ' (' + real.length + ')</h3><div class="grid g4">' + real.map(function (r) {
-      return '<div class="refcard" data-act="ref" data-id="' + r.id + '"><div class="meta"><span class="chip cyan">' + esc(r.country) + '</span><span class="chip">' + L(find(DB.dcTypes, r.type).en || r.type, find(DB.dcTypes, r.type).zh) + '</span>' + (r.mw ? '<span class="chip amber">≈ ' + F(r.mw) + ' MW</span>' : '') + '</div><h4>' + L(r.en, r.zh) + '</h4><div class="facts">' + Lp(r.loc) + '<br>' + Lp(r.facts[0]) + '</div></div>'; }).join('') + '</div>';
-    if (!list.length) html += '<div class="card">' + L('No matching projects.', '没有匹配的项目。') + '</div>';
-    $('#view-refs').innerHTML = html;
+    return DB.references.filter(function (r) {
+      if (f.kind === 'arch' && r.kind !== 'arch') return false;
+      if (f.kind === 'real' && r.kind !== 'real') return false;
+      if (f.kind === 'id' && !(r.kind === 'real' && r.country === 'ID')) return false;
+      if (f.type !== 'all' && r.type !== f.type) return false;
+      if (q && (r.en + r.zh + (r.loc || []).join(' ') + JSON.stringify(r.facts || r.d)).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
   }
-  function openRef(id) {
-    var r = find(DB.references, id); if (!r.id) return;
-    var body = '';
+  function pageLibrary() {
+    var f = S.ref;
+    var html = phead('Reference library', '参考项目库', 'Benchmark designs in Indonesian locations carry the complete planning & feasibility assessment — view one as a read-only example or use it as a template. Real projects show publicly reported facts with sources.',
+      '位于印尼各地的基准设计包含完整的规划与可研评估——可作为只读示例查看或用作模板。真实项目展示公开报道的信息及来源。') +
+      '<div class="filters"><input class="search" id="refQ" placeholder="' + esc(Lt('Search projects, locations, features…', '搜索项目、地点、特征…')) + '" value="' + esc(f.q) + '">' +
+      '<select class="fsel" id="refKind">' + [['all', 'All references', '全部参考项目'], ['arch', 'Benchmark designs', '基准设计'], ['id', 'Real projects — Indonesia', '真实项目——印尼'], ['real', 'Real projects — all', '真实项目——全部']].map(function (o) { return '<option value="' + o[0] + '"' + (f.kind === o[0] ? ' selected' : '') + '>' + esc(Lt(o[1], o[2])) + '</option>'; }).join('') + '</select>' +
+      '<select class="fsel" id="refType"><option value="all">' + esc(Lt('All types', '全部类型')) + '</option>' + DB.dcTypes.map(function (t) { return '<option value="' + t.id + '"' + (f.type === t.id ? ' selected' : '') + '>' + esc(Lt(t.en, t.zh)) + '</option>'; }).join('') + '</select></div><div id="libBody">' + libBody() + '</div>';
+    return html;
+  }
+  function libBody() {
+    var list = libList(), arch = list.filter(isArch), real = list.filter(function (r) { return r.kind === 'real'; }), html = '';
+    if (arch.length) html += '<h3>' + L('Benchmark designs (Indonesia)', '基准设计（印尼）') + ' (' + arch.length + ')</h3><div class="card flat" style="padding:0;overflow:hidden"><div class="tblw"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th class="r">MW</th><th>Tier</th><th>' + L('Platform', '平台') + '</th><th class="r">' + L('Racks', '机柜') + '</th><th>' + L('Cooling', '制冷') + '</th><th class="r">PUE</th><th class="r">CAPEX</th><th class="r">USD M/MW</th><th class="r">' + L('Months', '月') + '</th><th class="r">IRR / TCO</th><th></th></tr></thead><tbody>' +
+      arch.map(function (r) { var x = resolveRef(r), R = x.R; return '<tr><td style="cursor:pointer" data-sub="ref/' + r.id + '"><b>' + L(r.en, r.zh) + '</b><div class="small muted">' + Lp(r.loc) + '</div></td><td class="r">' + F(R.cap.itMW, R.cap.itMW < 1 ? 2 : 0) + '</td><td>' + ['I', 'II', 'III', 'IV'][x.p.tier - 1] + '</td><td class="small">' + (R.cap.hdR ? L(R.hdP.en.split(' (')[0].split(' —')[0], R.hdP.zh.split('（')[0].split('——')[0]) : L(R.stdP.en.split(' (')[0], R.stdP.zh.split('（')[0])) + '</td><td class="r">' + F(R.cap.racks) + '</td><td class="small">' + L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')) + '</td><td class="r">' + F(R.eff.pue, 2) + '</td><td class="r">' + money(R.capex.total) + '</td><td class="r">' + F(R.capex.perMW, 1) + '</td><td class="r">' + R.sched.total + '</td><td class="r">' + (x.p.revModel === 'lease' ? pct(R.fin.irrTV) : money(R.fin.lcocAll, 0) + '/kW·mo') + '</td>' +
+        '<td class="nowrap"><button type="button" class="btn small ghost" data-sub="ref/' + r.id + '">' + L('Details', '详情') + '</button> <button type="button" class="btn small ghost" data-act="prev" data-id="' + r.id + '" title="' + esc(Lt('Open the complete assessment read-only', '只读打开完整评估')) + '">' + ic('play') + L('Example', '示例') + '</button> <button type="button" class="btn small" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Template', '模板') + '</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
+    if (real.length) html += '<h3 style="margin-top:18px">' + L('Real-world projects (public information)', '真实项目（公开信息）') + ' (' + real.length + ')</h3><div class="grid g4">' + real.map(function (r) {
+      return '<div class="refcard" data-sub="ref/' + r.id + '"><div class="meta"><span class="chip cyan">' + esc(r.country) + '</span><span class="chip">' + L(find(DB.dcTypes, r.type).en || r.type, find(DB.dcTypes, r.type).zh) + '</span>' + (r.mw ? '<span class="chip amber">≈ ' + F(r.mw) + ' MW</span>' : '') + '</div><h4>' + L(r.en, r.zh) + '</h4><div class="facts">' + Lp(r.loc) + '<br>' + Lp(r.facts[0]) + '</div></div>'; }).join('') + '</div>';
+    if (!list.length) html += '<div class="card">' + L('No matching projects.', '没有匹配的项目。') + '</div>';
+    return html;
+  }
+  function renderRefs() { var b = $('#libBody'); if (b) b.innerHTML = libBody(); }
+  function pageRef(id) {
+    var r = find(DB.references, id), ty = find(DB.dcTypes, r.type);
+    var h = '<div class="crumb no-print"><button type="button" data-sub="library">' + ic('building') + L('Reference library', '参考项目库') + '</button><span>›</span>' + L(r.en, r.zh) + '</div>';
     if (r.kind === 'arch') {
-      var x = P.resolve(r.input), R = x.R;
-      body += '<p>' + Lp(r.d) + '</p><div class="tiles" style="margin-top:12px">' + tile(F(R.cap.itMW, 2), 'MW', 'IT capacity', 'IT容量', F(R.cap.racks) + ' ' + L('racks', '机柜')) + tile(R.cap.tier.en.split(' — ')[0], '', 'Tier', '等级', R.cap.tier.avail + '%', '#17153f') +
-        tile(F(R.eff.pue, 2), '', 'PUE', 'PUE', L(R.cool.obj.en, R.cool.obj.zh), '#0ea5c6') + tile(F(R.el.mva, 1), 'MVA', 'PLN demand', 'PLN需量', R.el.genTotal + ' × ' + R.el.genSize + ' kWe', '#f2a93b') +
-        tile(money(R.capex.total), '', 'CAPEX', '投资', F(R.capex.perMW, 1) + ' USD M/MW', '#f0544f') + tile(R.sched.total, L('months', '月'), 'To RFS', '至投产', '', '#16a34a') + '</div>';
-      body += '<h4>' + L('Key requirements', '关键要求') + '</h4>' + R.reqs.slice(0, 8).map(reqRow).join('');
-      body += '<h4>' + L('Lessons & design notes', '经验与设计要点') + '</h4><ul style="padding-left:20px">' + r.lessons.map(function (l) { return '<li>' + L(l[0], l[1]) + '</li>'; }).join('') + '</ul>';
-      body += '<div class="row" style="margin-top:14px"><button class="btn cyan" id="refLoad">' + ic('plus') + L('Create project from this benchmark', '以此基准新建项目') + '</button></div>';
+      var x = resolveRef(r), R = x.R, p = x.p, c = R.cap, el = R.el, me = R.me, f = R.fin;
+      h += '<div class="refhead"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="chip ind">' + L('Benchmark design', '基准设计') + '</span><span class="chip">' + L(ty.en || r.type, ty.zh) + '</span><span class="chip cyan">' + ic('map') + Lp(r.loc) + '</span></div><h2>' + L(r.en, r.zh) + '</h2><p>' + Lp(r.d) + '</p></div>' +
+        '<div class="row no-print" style="gap:8px"><button type="button" class="btn cyan" data-act="prev" data-id="' + r.id + '">' + ic('play') + L('View the complete assessment', '查看完整评估') + '</button><button type="button" class="btn" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button></div></div>';
+      h += '<div class="tiles">' + tile(F(c.itMW, 2), 'MW', 'IT capacity', 'IT容量', F(c.racks) + ' ' + L('racks · avg ', '柜·平均 ') + F(c.avgDens, 1) + ' kW') + tile(c.tier.en.split(' — ')[0], '', 'Resilience', '韧性等级', c.tier.avail + '% · ' + L(p.fuelH + ' h fuel', '燃油' + p.fuelH + ' h'), '#17153f') +
+        tile(F(R.eff.pue, 2), '', 'Annual PUE', '年均PUE', 'WUE ' + F(R.eff.wue, 2), '#0ea5c6') + tile(F(el.mva, 1), 'MVA', 'PLN demand', 'PLN需量', L(el.volt[0], el.volt[1]), '#f2a93b') +
+        tile(money(R.capex.total), '', 'Total CAPEX', '总投资', F(R.capex.perMW, 1) + ' USD M/MW', '#f0544f') + tile(money(R.opex.total), L('/yr', '/年'), 'OPEX', '运营成本', L('energy ', '电费 ') + Math.round(R.opex.energy / R.opex.total * 100) + '%', '#7c3aed') +
+        (p.revModel === 'lease' ? tile(pct(f.irrTV), '', 'Project IRR (with exit)', '项目IRR（含终值）', 'NPV ' + money(f.npvTV), '#16a34a') : tile(money(f.lcocAll, 0), '/kW·mo', 'Cost of ownership', '拥有成本', '', '#7c3aed')) +
+        tile(R.sched.total, L('months', '个月'), 'To Ready-for-Service', '至投产', 'RFS ≈ ' + R.sched.rfsYear, '#16a34a') + tile(F(R.sp.siteNeed / 10000, 2), 'ha', 'Site required', '所需用地', F(R.sp.gfa) + ' m² GFA', '#b45309') +
+        tile(el.bess ? F(el.bess.mwh, 1) : '–', el.bess ? 'MWh' : '', 'BESS', '储能', el.bess ? F(el.bess.mw, 1) + ' MW' : L('not proposed', '未建议'), '#0b7f99') + tile(R.staff.fte, 'FTE', 'Operations staff', '运营人员', '24/7', '#5d6280') +
+        tile(c.gpus ? F(c.gpus) : '–', '', 'GPUs / accelerators', 'GPU/加速器', c.hdR ? L(R.hdP.en.split(' (')[0], R.hdP.zh.split('（')[0]) : '', '#7c3aed') + '</div>';
+      h += '<div class="grid g2"><div class="card">' + ptitle('Design basis', '设计基准') + kv([
+        ['Location', '地点', L(R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh) + ' · ' + R.L.db + ' °C DB / ' + R.L.wb + ' °C WB'], ['Facility type / criticality', '设施类型/关键程度', L(c.type.en, c.type.zh) + ' · ' + showVal(p.crit)],
+        ['IT load / racks', 'IT负载/机柜', F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + L('racks', '机柜') + ' (' + F(c.stdR) + ' + ' + F(c.hdR) + ' HD)'], ['Standard rack platform', '标准机柜平台', showVal(p.stdPlat) + ' · ' + F(c.sd, 1) + ' kW'],
+        ['High-density platform', '高密度平台', c.hdR ? showVal(p.hdPlat) + ' · ' + F(c.hd, 1) + ' kW · ' + p.hdShare + '%' : L('none', '无')], ['Cabinet', '机柜', showVal(p.cabinet) + ' · ' + p.rackW + ' × ' + p.rackD + ' mm · ' + p.rackU + 'U'],
+        ['Tier · fuel · UPS', '等级·燃油·UPS', esc(c.tier.en.split(' — ')[0]) + ' · ' + p.fuelH + ' h · ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')], ['BESS', '储能', el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : L('not included', '未配置')],
+        ['Cooling', '制冷', L(R.cool.obj.en, R.cool.obj.zh)], ['PUE target · renewables', 'PUE目标·可再生能源', F(p.targetPUE, 2) + ' · ' + p.renewable + '%'],
+        ['Business case', '商业模式', p.revModel === 'lease' ? L('Lease / colocation · ', '租赁/托管 · ') + 'USD ' + F(p.price) + '/kW·' + L('month', '月') : L('Owner-occupied (TCO)', '自用（TCO）')], ['Phasing', '分期', p.phases + ' ' + L('phase(s)', '期') + (p.phases > 1 ? ' · ' + p.phaseInterval + ' ' + L('yr apart', '年间隔') : '')]]) + '</div>' +
+        '<div class="card">' + ptitle('Main systems', '主要系统') + kv([
+        ['PLN connection', 'PLN接入', F(el.mva, 1) + ' MVA · ' + L(el.volt[0], el.volt[1]) + ' · ' + el.feeds + ' ' + L('feed(s)', '路')], ['Transformers', '变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')'],
+        ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + el.tanks + ' × ' + el.tankSize + ' m³'], ['UPS / batteries', 'UPS/电池', el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') · ' + F(el.battKWh) + ' kWh'],
+        ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'],
+        ['Cooling plant', '制冷设备', (me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW ' + L('chillers', '冷机') + ' (' + me.chLabel + ')' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW CRAC' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW IEC' : '–'))) + (me.cduN ? ' · ' + (me.cduN + me.cduR) + ' × ' + me.cduSize + ' kW CDU' : '')],
+        ['Water use', '用水', F(me.waterDay) + ' m³/' + L('day', '日')], ['Building', '建筑', F(R.sp.gfa) + ' m² GFA · ' + p.floors + ' ' + L('storey(s)', '层') + ' · ' + F(R.sp.ws) + ' m² ' + L('white space', '白区')],
+        ['Fire · security', '消防·安防', Lp(R.fs.suppression) + ' · ≈ ' + F(R.fs.cams) + ' ' + L('cameras', '摄像机')]]) + '</div></div>';
+      h += '<div class="grid g2"><div class="card">' + ptitle('Key requirements', '关键要求') + R.reqs.map(reqRow).join('') + '</div><div><div class="card">' + ptitle('Lessons & design notes', '经验与设计要点') + '<ul class="li">' + r.lessons.map(function (l) { return '<li>' + L(l[0], l[1]) + '</li>'; }).join('') + '</ul></div>' +
+        '<div class="card">' + ptitle('Top risks', '主要风险') + R.risks.slice(0, 6).map(riskRow).join('') + '</div></div></div>';
+      var sim = DB.references.filter(function (q) { return q.id !== r.id && q.type === r.type; }).slice(0, 4);
+      if (sim.length) h += '<div class="card">' + ptitle('Related references', '相关参考项目') + '<div class="grid g4">' + sim.map(refMini).join('') + '</div></div>';
     } else {
-      body += '<div class="row" style="gap:6px;margin-bottom:10px"><span class="chip cyan">' + Lp(r.loc) + '</span>' + (r.status ? '<span class="chip">' + Lp(r.status) + '</span>' : '') + (r.mw ? '<span class="chip amber">≈ ' + F(r.mw) + ' MW</span>' : '') + '</div>';
-      body += '<h4>' + L('Publicly reported facts', '公开报道信息') + '</h4><ul style="padding-left:20px">' + r.facts.map(function (f) { return '<li style="margin-bottom:6px">' + L(f[0], f[1]) + '</li>'; }).join('') + '</ul>';
-      body += '<p class="small muted" style="margin-top:10px">' + L('Figures as announced by operators / trade press; they may change.', '数据来自运营商/行业媒体公告，可能变化。') + '</p>';
-      body += '<div class="row" style="margin-top:12px"><a class="btn ghost" href="' + esc(r.src) + '" target="_blank" rel="noopener">' + ic('link') + L('Source', '来源') + '</a>' + (r.mw ? '<button class="btn cyan" id="refModel">' + ic('plus') + L('Model a similar project in Indonesia', '在印尼建模相似项目') + '</button>' : '') + '</div>';
+      h += '<div class="refhead"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="chip cyan">' + L('Real project', '真实项目') + ' · ' + esc(r.country) + '</span><span class="chip">' + L(ty.en || r.type, ty.zh) + '</span>' + (r.status ? '<span class="chip">' + Lp(r.status) + '</span>' : '') + (r.mw ? '<span class="chip amber">≈ ' + F(r.mw) + ' MW</span>' : '') + '</div><h2>' + L(r.en, r.zh) + '</h2><p>' + ic('map') + ' ' + Lp(r.loc) + '</p></div>' +
+        '<div class="row no-print" style="gap:8px"><a class="btn ghost" href="' + esc(r.src) + '" target="_blank" rel="noopener">' + ic('link') + L('Source', '来源') + '</a>' + (r.mw ? '<button type="button" class="btn" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Model a similar project in Indonesia', '在印尼建模相似项目') + '</button>' : '') + '</div></div>';
+      h += '<div class="grid g2"><div class="card">' + ptitle('Publicly reported facts', '公开报道信息') + '<ul class="li">' + r.facts.map(function (x) { return '<li>' + L(x[0], x[1]) + '</li>'; }).join('') + '</ul><p class="small muted" style="margin-top:10px">' + L('Figures as announced by operators / trade press; they may change.', '数据来自运营商/行业媒体公告，可能变化。') + '</p></div>' +
+        '<div class="card">' + ptitle('Key data', '关键数据') + kv([['Country', '国家', esc(r.country)], ['Location', '地点', Lp(r.loc)], ['Type', '类型', L(ty.en || r.type, ty.zh)], ['Capacity (reported)', '容量（公开）', r.mw ? '≈ ' + F(r.mw) + ' MW' : '–'], ['Status', '状态', r.status ? Lp(r.status) : '–'], ['Source', '来源', '<a href="' + esc(r.src) + '" target="_blank" rel="noopener">' + esc(String(r.src).replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>']]) +
+        (r.mw ? '<div class="whybox" style="margin-top:10px">' + L('“Model a similar project” creates an editable project of the same type and capacity at an Indonesian location; every other parameter is proposed and can be changed.', '“建模相似项目”将在印尼地点创建同类型、同容量的可编辑项目；其余参数均自动提出并可修改。') + '</div>' : '') + '</div></div>';
+      var bm = DB.references.filter(function (q) { return q.kind === 'arch' && q.type === r.type; });
+      if (bm.length) h += '<h3>' + L('Comparable benchmark designs', '可比基准设计') + '</h3><div class="grid g3">' + bm.map(exCard).join('') + '</div>';
     }
-    $('#modalRoot').innerHTML = '<div class="modal" id="modal"><div class="modal-box"><div class="modal-head"><div><h3>' + L(r.en, r.zh) + '</h3></div><button class="xbtn" id="mClose">✕</button></div><div class="modal-body">' + body + '</div></div></div>';
-    $('#mClose').onclick = closeModal; $('#modal').onclick = function (e) { if (e.target.id === 'modal') closeModal(); };
-    if ($('#refLoad')) $('#refLoad').onclick = function () { closeModal(); newProject(JSON.parse(JSON.stringify(r.input))); show('assess'); toast(Lt('Project created', '已新建项目')); };
-    if ($('#refModel')) $('#refModel').onclick = function () { closeModal(); newProject({ name: r.en + ' (model)', loc: r.country === 'ID' ? (/Batam/.test(r.en + r.loc[0]) ? 'KR-BTM' : 'JB-BKS') : 'JB-KRW', type: r.type, itMW: Math.min(r.mw, 1000) }); show('assess'); };
+    return h;
   }
   function closeModal() { $('#modalRoot').innerHTML = ''; }
 
@@ -733,23 +946,38 @@
       '<h4>' + L('Key sources', '主要来源') + '</h4><ul style="padding-left:20px" class="small">' + [['PLN tariffs Q4 2026 (JournalArta)', 'https://journalarta.com/news/2026/10/06/tarif-listrik-pln-terbaru-oktober-2026/'], ['UMP 2026 (Bisnis.com)', 'https://ekonomi.bisnis.com/read/20260108/12/1942811/lengkap-ini-daftar-ump-2026-di-38-provinsi-versi-kemnaker'],
         ['HPE NVIDIA GB300 NVL72 documentation', 'https://www.hpe.com/us/en/collaterals/collateral.a50009244enw.html'], ['Uptime Institute Tier Standard', 'https://uptimeinstitute.com/'], ['ANSI/TIA-942-C', 'https://tiaonline.org/'], ['ASHRAE TC 9.9', 'https://www.ashrae.org/'], ['SNI 8799 — BSN', 'https://bsn.go.id/'], ['PLN REC sales (Kontan)', 'https://industri.kontan.co.id/news/pln-catat-penjualan-energi-hijau-tembus-1368-twh-pada-semester-i-2025']]
         .map(function (x) { return '<li><a href="' + x[1] + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a></li>'; }).join('') + '</ul>' +
-      '<h4>' + L('Data & privacy', '数据与隐私') + '</h4><p class="small">' + L('Everything runs in your browser. Projects are stored in this browser (localStorage); export the workspace to back up or share.', '所有计算均在浏览器中运行。项目存储于本浏览器（localStorage）；可导出工作区备份或分享。') + '</p><p class="small">v2.0 · 2026-10 · <a href="https://github.com/Alexandervsq/Data-Center-Project-Assessment" target="_blank" rel="noopener">GitHub</a> · docx.js & ExcelJS (MIT)</p></div></div>';
+      '<h4>' + L('Data & privacy', '数据与隐私') + '</h4><p class="small">' + L('Everything runs in your browser. Projects are stored in this browser (localStorage); export the workspace to back up or share.', '所有计算均在浏览器中运行。项目存储于本浏览器（localStorage）；可导出工作区备份或分享。') + '</p><p class="small">v3.0 · 2026-10 · <a href="https://github.com/Alexandervsq/Data-Center-Project-Assessment" target="_blank" rel="noopener">GitHub</a> · docx.js & ExcelJS (MIT)</p></div></div>';
   }
 
-  /* ========================================================== wiring */
-  function renderCards() { if (window.TC && TC.cards.length) TC.mount($('#view-cards')); }
-  function renderAll() { renderHeader(); renderHome(); renderAssess(); renderCards(); renderRefs(); renderEquip(); renderKnow(); renderStd(); renderGloss(); renderAbout(); show(S.view); }
+  /* ========================================================== wiring & routing
+   * #home · #sim/<card>/<panel> · #assess/<page> (projects, library, ref/<id>, in1–in5, results, export) · #equip/<id> · #know …
+   * Old links keep working: #cards → #sim, #refs → #assess/library. */
+  function renderSim() { if (window.TC && TC.cards.length) TC.mount($('#view-sim')); }
+  function renderAll() { recompute(); renderHeader(); renderHome(); renderAssess(); renderSim(); renderEquip(); renderKnow(); renderStd(); renderGloss(); renderAbout(); show(S.view); }
+  function route(hash) {
+    var parts = String(hash || '').replace(/^#/, '').split('/'), h = parts[0];
+    if (h === 'cards') h = 'sim';
+    if (h === 'refs') { h = 'assess'; parts = ['assess', 'library']; }
+    if (h === 'sim' && window.TC) TC.route(parts.slice(1));
+    if (h === 'equip' && parts[1]) { if (parts[1] === 'platforms') S.eqTab = 'plat'; else if (find(DB.equipment, parts[1]).id) { S.eq.sel = parts[1]; S.eqTab = 'eq'; S.eq.q = ''; S.eq.sys = 'all'; } }
+    if (h === 'assess' && parts[1]) S.asub = parts.slice(1).join('/');
+    return document.getElementById('view-' + h) ? h : 'home';
+  }
+  function navTo(path) {
+    var v = route('#' + path);
+    if (v === 'assess') { go(S.asub); return; }
+    if (v === 'equip') renderEquip();
+    show(v);
+    if (v === 'sim' && window.TC) TC.render();
+  }
   document.addEventListener('click', function (ev) {
     var l = ev.target.closest('.lang'); if (l) { I18N.set(l.dataset.lang); renderAll(); return; }
-    var t = ev.target.closest('.tab'); if (t) { show(t.dataset.view); return; }
-    var go = ev.target.closest('[data-go]'); if (go) { show(go.dataset.go); return; }
+    var t = ev.target.closest('.tab'); if (t) { if (t.dataset.view === 'assess') go(S.asub); else show(t.dataset.view); return; }
+    var gl = ev.target.closest('[data-go]'); if (gl) { navTo(gl.dataset.go); return; }
     var anc = ev.target.closest('[data-anchor]'); if (anc) { ev.preventDefault(); var el = document.getElementById(anc.dataset.anchor); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 150, behavior: 'smooth' }); return; }
     var et = ev.target.closest('[data-eqtab]'); if (et) { S.eqTab = et.dataset.eqtab; renderEquip(); return; }
-    var li = ev.target.closest('[data-eq]'); if (li) { S.eq.sel = li.dataset.eq; renderEquip(); window.scrollTo({ top: 0 }); return; }
-    var lr = ev.target.closest('[data-loadref]'); if (lr) { var r = find(DB.references, lr.dataset.loadref); newProject(JSON.parse(JSON.stringify(r.input))); show('assess'); toast(Lt('Project created', '已新建项目')); return; }
-    if (S.view !== 'assess') { var np = ev.target.closest('[data-act="newproj"]'); if (np) { newProject(); show('assess'); return; } var op = ev.target.closest('[data-open]'); if (op) { openProject(op.dataset.open); return; } }
-    if (S.view === 'assess') { var np2 = ev.target.closest('[data-act="newproj"]'); if (np2) { newProject(); return; } }
-    if (S.view === 'refs') { var rc = ev.target.closest('[data-act="ref"]'); if (rc) { openRef(rc.dataset.id); return; } }
+    var li = ev.target.closest('[data-eq]'); if (li) { S.eq.sel = li.dataset.eq; renderEquip(); history.replaceState(null, '', '#equip/' + li.dataset.eq); window.scrollTo({ top: 0 }); return; }
+    if (S.view !== 'assess') { var np = ev.target.closest('[data-act="newproj"]'); if (np) { newProject(); go('in1'); return; } var op = ev.target.closest('[data-open]'); if (op) { openProject(op.dataset.open); return; } }
     if (ev.target.id === 'menuBtn') $('#tabs').classList.toggle('open');
   });
   document.addEventListener('input', function (ev) {
@@ -763,18 +991,19 @@
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeModal(); });
   window.addEventListener('hashchange', function () {
-    var parts = location.hash.replace('#', '').split('/'), h = parts[0];
-    if (h === 'cards' && window.TC) { TC.route(parts.slice(1)); if (S.view === 'cards') TC.render(); }
-    if (h && document.getElementById('view-' + h) && h !== S.view) show(h);
+    var v = route(location.hash);
+    if (v === 'assess') { go(S.asub); return; }
+    if (v === 'equip') renderEquip();
+    if (v !== S.view) show(v);
+    if (v === 'sim' && window.TC) TC.render();
   });
 
-  var h0 = location.hash.replace('#', '').split('/'); if (h0[0] && document.getElementById('view-' + h0[0])) S.view = h0[0];
-  if (h0[0] === 'cards' && window.TC) TC.route(h0.slice(1));
-  /* bridge used by the technology cards (assets/js/techcard.js) */
+  if (location.hash.length > 1) S.view = route(location.hash);
+  /* bridge used by the Project Technology Simulation (assets/js/techcard.js) */
   window.DCApp = {
-    activeInput: function () { return JSON.parse(JSON.stringify(inp())); }, activeName: function () { return active().name; },
+    activeInput: function () { return hasProj() ? JSON.parse(JSON.stringify(inp())) : null; }, activeName: function () { return hasProj() ? active().name : ''; },
     openEquipment: function (id) { S.eq.sel = id; S.eqTab = 'eq'; S.eq.q = ''; S.eq.sys = 'all'; renderEquip(); show('equip'); },
-    setLang: function (l) { I18N.set(l); renderAll(); }, show: function (v) { show(v); }
+    setLang: function (l) { I18N.set(l); renderAll(); }, show: function (v) { if (v === 'assess') go(S.asub); else show(v); }
   };
-  recompute(); bindAssess(); renderAll();
+  bindAssess(); renderAll();
 })();

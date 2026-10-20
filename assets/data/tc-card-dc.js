@@ -118,7 +118,7 @@
       return ['<b>' + L.te([r.en, r.zh]) + '</b><br><span class="tc-src">' + L.te(r.loc) + '</span>', L.e(r.country), r.mw ? F(r.mw) + ' MW' : '–', L.te(r.facts[0]) + (r.src ? ' <a href="' + L.e(r.src) + '" target="_blank" rel="noopener">↗</a>' : '')];
     });
     return L.freePanel('refs', '★', ['Reference projects', '参考项目'], ['Public information from operators and trade press', '来自运营商及行业媒体的公开信息'],
-      L.ptable([['Project', '项目'], ['Country', '国家'], ['Capacity', '容量'], ['Key fact', '要点']], rows) + '<div class="tc-rel"><button type="button" class="tc-ext" data-goassess>' + L.te(['Model a project in the assessment', '在项目评估中建模']) + ' →</button></div>', 'x');
+      L.ptable([['Project', '项目'], ['Country', '国家'], ['Capacity', '容量'], ['Key fact', '要点']], rows) + '<div class="tc-rel"><a class="tc-ext" href="#assess/library" target="_blank" rel="noopener">' + L.te(['Open the reference library (new tab)', '打开参考项目库（新标签页）']) + ' ↗</a></div>', 'x');
   }
   var card = {
     id: 'DC', abbr: 'DC', title: ['Data Center Facility', '数据中心设施'], short: ['Data Center Facility', '数据中心设施'], icon: 'building',
