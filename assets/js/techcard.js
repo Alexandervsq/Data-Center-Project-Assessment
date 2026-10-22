@@ -465,7 +465,8 @@
     how: ['How it works', '工作原理'], forBasis: ['In this design basis', '本设计基准中'], ratings: ['Typical ratings', '典型规格'],
     params: ['Design parameters (TPG excerpt)', '设计参数（TPG摘录）'], req: ['Key technical requirements', '主要技术要求'], stds: ['Applicable standards', '适用标准'],
     tests: ['Inspection & testing', '检验与试验'], om: ['Operation, maintenance & common issues', '运行、维护与常见问题'], see: ['See also', '另见'],
-    calc: ['Step-by-step calculation', '分步计算'], calcHint: ['Drag or type an input; every step recalculates immediately.', '拖动或输入数值，每一步即时重算。'],
+    calc: ['Step-by-step calculation', '分步计算'], calcHint: ['Change any input — linked AUTO inputs follow their code / standard rule and every step recalculates. Editing an AUTO value makes it MANUAL; ↺ restores the rule.', '修改任一输入——联动的“自动”参数按规范/标准规则调整，每一步即时重算。修改“自动”值即转为“手动”；↺恢复规则值。'],
+    auto: ['AUTO', '自动'], manual: ['MANUAL', '手动'], basisB: ['BASIS', '基准'], applyRule: ['Apply the rule again', '重新按规则取值'],
     theory: ['Short theory & calculation', '原理简述与计算'], fullSpec: ['Full specification & TPG', '完整技术规范及TPG'], relEq: ['Related equipment', '相关设备'],
     desc: ['Description', '描述'], unit: ['Unit', '单位'], req2: ['Required', '要求值'], faq: ['Frequently asked questions', '常见问题'], faqSub: ['Short answers for owners and clients', '面向业主与客户的简要解答'],
     prev: ['Previous', '上一个'], next: ['Next', '下一个'], close: ['Close', '关闭'], openCard: ['Open simulation', '打开模拟'], note: ['Results are design checks for explanation, not detailed design.', '计算结果用于讲解与校核，并非详细设计。']
@@ -761,28 +762,67 @@
     var grp = PANELS[i].g, list = PANELS.filter(function (p) { return p.g === grp; }), j = list.map(function (p) { return p.id; }).indexOf(ST.open);
     openPanel(list[(j + d + list.length) % list.length].id);
   }
+  /* calculators with linked inputs: a source change recalculates every AUTO input from its rule
+     (codes & standards / engine design rules); editing an AUTO input makes it MANUAL, ↺ restores the rule.
+     An AUTO input whose design-basis value differs from its rule starts as BASIS. */
   function calc(id) {
     var ov = VIEW.querySelector('.tc-ov'); if (!ov) return;
     Array.prototype.forEach.call(ov.querySelectorAll('.tc-calc'), function (box) {
       var key = box.getAttribute('data-c'), C = CUR_CARD.calc && CUR_CARD.calc[key]; if (!C) { box.remove(); return; }
-      var cin = box.querySelector('.tc-cin'), ol = box.querySelector('.tc-steps');
+      var A = C.a || {}, man = {}, cin = box.querySelector('.tc-cin'), ol = box.querySelector('.tc-steps');
+      function snap(p, x) { x = Math.round(x / p[5]) * p[5]; return +x.toFixed(6); }
+      function dflt(p) { return snap(p, typeof p[6] === 'function' ? p[6](CTX) : p[6]); }
+      var v0 = {}; C.i.forEach(function (p) { v0[p[0]] = dflt(p); });
+      C.i.forEach(function (p) { var r = A[p[0]]; if (!r) return; var x; try { x = snap(p, r.f(v0, CTX)); } catch (e) { return; } if (Math.abs(x - v0[p[0]]) > 1e-9) man[p[0]] = 'basis'; });
       cin.innerHTML = C.i.map(function (p) {
-        var val = typeof p[6] === 'function' ? p[6](CTX) : p[6]; val = Math.round(val / p[5]) * p[5]; val = +val.toFixed(6);
-        var lab = te(p[1]), un = te(p[2]);
-        return '<label>' + lab + (un ? ' <small>(' + un + ')</small>' : '') + '<span class="r"><input type="range" min="' + p[3] + '" max="' + p[4] + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '">' +
-          '<input type="number" min="' + p[3] + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '"></span></label>';
+        var val = v0[p[0]], lab = te(p[1]), un = te(p[2]), r = A[p[0]], ctl;
+        if (p[7]) ctl = '<span class="r o"><select data-k="' + p[0] + '" aria-label="' + lab + '">' + p[7].map(function (o) { return '<option value="' + o[0] + '"' + (+o[0] === val ? ' selected' : '') + '>' + te(o[1]) + '</option>'; }).join('') + '</select></span>';
+        else ctl = '<span class="r"><input type="range" min="' + p[3] + '" max="' + Math.max(p[4], val) + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '">' +
+          '<input type="number" min="' + p[3] + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '"></span>';
+        return '<label class="' + (r ? 'lk' : '') + '"><span class="lh"><span>' + lab + (un ? ' <small>(' + un + ')</small>' : '') + '</span>' + (r ? '<span class="tc-bd" data-bd="' + p[0] + '"></span>' : '') + '</span>' + ctl +
+          (r ? '<span class="tc-why" title="' + te(r.b) + '">' + te(r.b) + '</span>' : '') + '</label>';
       }).join('');
-      function run() {
+      function setDom(p, x) {
+        Array.prototype.forEach.call(cin.querySelectorAll('[data-k="' + p[0] + '"]'), function (el) { if (el.type === 'range' && +el.max < x) el.max = x; el.value = x; });
+      }
+      function read() {
         var v = {};
-        C.i.forEach(function (p) { var el = cin.querySelector('input[type=number][data-k="' + p[0] + '"]'), x = parseFloat(String(el.value).replace(',', '.')); v[p[0]] = isFinite(x) ? x : (typeof p[6] === 'function' ? p[6](CTX) : p[6]); });
+        C.i.forEach(function (p) { var el = cin.querySelector('select[data-k="' + p[0] + '"], input[type=number][data-k="' + p[0] + '"]'), x = parseFloat(String(el.value).replace(',', '.')); v[p[0]] = isFinite(x) ? x : dflt(p); });
+        return v;
+      }
+      function propagate(v) {
+        for (var pass = 0; pass < 4; pass++) {
+          var changed = false;
+          C.i.forEach(function (p) {
+            var r = A[p[0]]; if (!r || man[p[0]]) return;
+            var x; try { x = snap(p, r.f(v, CTX)); } catch (e) { return; }
+            if (isFinite(x) && x !== v[p[0]]) { v[p[0]] = x; setDom(p, x); changed = true; }
+          });
+          if (!changed) break;
+        }
+      }
+      function badges() {
+        Object.keys(A).forEach(function (k) {
+          var bd = cin.querySelector('[data-bd="' + k + '"]'); if (!bd) return;
+          var m = man[k], lab = m === 'basis' ? UI.basisB : (m ? UI.manual : UI.auto);
+          bd.innerHTML = '<b class="' + (m === 'basis' ? 'bs' : (m ? 'mn' : 'au')) + '">' + te(lab) + '</b>' + (m ? '<button type="button" class="tc-rst" data-rst="' + k + '" title="' + te(UI.applyRule) + '">↺</button>' : '');
+          bd.parentNode.parentNode.classList.toggle('isman', !!m);
+        });
+      }
+      function run() {
+        var v = read(); propagate(v); badges();
         var rows; try { rows = C.f(v, CTX); } catch (err) { rows = [[['Error', '错误'], String(err), '–']]; }
         ol.innerHTML = rows.map(function (r) { return '<li><span class="t">' + te(r[0]) + '</span><span class="f">' + te(r[1]) + '</span><span class="r">' + te(r[2]) + '</span></li>'; }).join('');
       }
-      cin.addEventListener('input', function (ev) {
+      function onEdit(ev) {
         var k = ev.target.getAttribute('data-k'); if (!k) return;
         Array.prototype.forEach.call(cin.querySelectorAll('[data-k="' + k + '"]'), function (x) { if (x !== ev.target) x.value = ev.target.value; });
+        if (A[k]) man[k] = 'man';
         run();
-      });
+      }
+      cin.addEventListener('input', onEdit);
+      cin.addEventListener('change', function (ev) { if (ev.target.tagName === 'SELECT') onEdit(ev); });
+      cin.addEventListener('click', function (ev) { var b = ev.target.closest('[data-rst]'); if (!b) return; ev.preventDefault(); delete man[b.getAttribute('data-rst')]; run(); });
       run();
     });
   }
