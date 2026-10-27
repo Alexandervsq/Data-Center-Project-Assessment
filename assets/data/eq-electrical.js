@@ -456,8 +456,8 @@
   { id: 'EL-14', sys: 'EL', cls: 'M', en: 'Intelligent Rack PDU (rPDU)', zh: '智能机架式PDU（rPDU）',
     fn: ['Distributes power inside each cabinet to individual servers, with metering and (optionally) per-outlet switching.',
          '在机柜内部向各服务器分配电源，具备计量功能（可选逐插口开关）。'],
-    ty: ['Vertical 0U, 1-phase 32 A (7.4 kW) to 3-phase 63 A (43 kW), C13/C19 or hybrid outlets; 2 per rack (A/B).',
-         '竖装0U，单相32 A（7.4 kW）至三相63 A（43 kW），C13/C19或混合插座；每柜2条（A/B）。'],
+    ty: ['Vertical 0U, 1-phase 32 A (7.4 kW) to 3-phase 63 A (43 kW), C13/C19 or hybrid outlets; 2 per rack (A/B), 2 per feed (4 per rack) above ≈ 43 kW; not used where integrated AI racks have OEM power shelves fed from busway tap-offs.',
+         '竖装0U，单相32 A（7.4 kW）至三相63 A（43 kW），C13/C19或混合插座；每柜2条（A/B），约43 kW以上每路2条（每柜4条）；集成AI机柜使用由母线插接箱供电的OEM电源架时不使用。'],
     s: [
       ['Metered-by-outlet or switched type with network management card, environmental sensor ports.', '逐插口计量或可开关型，带网络管理卡及环境传感器接口。'],
       ['Locking outlets to prevent accidental disconnection; colour-coded A/B bodies.', '防脱插座，防止意外断开；A/B路颜色区分外壳。'],

@@ -231,6 +231,7 @@
     var pdus = useBusway ? 0 : ceil(itKW / 120) * (feedsPerRack === 2 ? 2 : 1);
     function rpduType(d, pl) {
       if (pl && pl.cat === 'AI' && pl.kw >= 100) return ['Rack power shelves / busbar (OEM-integrated)', '机架电源架/母排（OEM集成）', 0];
+      if (pl && pl.id === 'OCP-ORV3') return ['OCP power shelves, 48 V busbar', 'OCP电源架，48 V母排', 0];
       if (d <= 7) return ['1-ph 32 A (7.4 kW)', '单相32 A（7.4 kW）', 1];
       if (d <= 22) return ['3-ph 32 A (22 kW)', '三相32 A（22 kW）', 1];
       if (d <= 43) return ['3-ph 63 A (43 kW)', '三相63 A（43 kW）', 1];
@@ -528,7 +529,9 @@
   /* --------------------------------------------------------------- BOQ */
   function boq(p, R) {
     var B = [], el = R.el, me = R.me, sp = R.sp, c = R.cap;
-    function add(id, qty, unit, rating, note) { var e = find(DB.equipment, id); B.push({ id: id, sys: e ? e.sys : '', en: e ? e.en : id, zh: e ? e.zh : id, qty: qty, unit: unit, rating: rating || '', note: note || '' }); }
+    function add(id, qty, unit, rating, note, noteZh, unitZh) { var e = find(DB.equipment, id); B.push({ id: id, sys: e ? e.sys : '', en: e ? e.en : id, zh: e ? e.zh : id, qty: qty, unit: unit, unitZh: unitZh || unit, rating: rating || '', note: note || '', noteZh: noteZh || note || '' }); }
+    var fr = el.feedsPerRack, sp0 = R.stdP, hp0 = R.hdP, integ = function (pl) { return !!(pl && ((pl.cat === 'AI' && pl.kw >= 100) || pl.id === 'OCP-ORV3')); }, rpN = function (r) { return r ? fr * r[2] : 0; };
+    var taps = c.stdR * fr * Math.max(1, el.rStd[2]) + (c.hdR ? c.hdR * fr * (el.rHd && el.rHd[2] ? el.rHd[2] : ceil(c.hd / 43)) : 0);
     add('EL-01', 3 + el.txTotal + Math.max(1, ceil(el.txTotal * 0.2)), 'panels', el.vclass === 'TT' ? '24 kV (from 150 kV substation)' : '24 kV', el.feeds + ' incomer(s) + bus coupler');
     add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel);
     add('EL-03', el.txTotal, 'line-ups', '4,000 A', 'One per transformer');
@@ -539,8 +542,11 @@
     add('EL-09', el.upsTotal, 'systems', el.upsSize + ' kW', el.upsLabel);
     add(p.battery === 'LI' ? 'EL-10' : 'EL-11', Math.round(el.battKWh), 'kWh', p.upsMin + ' min', 'EOL sizing');
     if (el.bess) add('EL-23', el.bess.containers, 'containers', fmt(el.bess.mw, 1) + ' MW / ' + fmt(el.bess.mwh, 1) + ' MWh', 'LFP, ' + el.bess.h + ' h');
-    if (el.useBusway) add('EL-13', el.busways, 'runs', el.bwA + ' A', el.rows + ' rows'); else add('EL-12', el.pdus, 'no.', '150 kVA', 'A/B pairs');
-    if (el.rpdus) add('EL-14', el.rpdus, 'no.', el.rStd[0], el.feedsPerRack + ' per rack');
+    if (el.useBusway) add('EL-13', el.busways, 'runs', el.bwA + ' A', el.rows + ' rows × ' + fr + ' (A/B) · ≈ ' + fmt(taps, 0) + ' tap-off units (1 per rack per feed, more for HD racks)', el.rows + '排 × ' + fr + '（A/B）· 约' + fmt(taps, 0) + '个插接箱（每柜每路1个，高密度机柜更多）', '条');
+    else add('EL-12', el.pdus, 'no.', '150 kVA', 'A/B pairs', 'A/B成对', '台');
+    if (el.rpdus) add('EL-14', el.rpdus, 'no.', el.rStd[0] + (el.rHd && el.rHd[2] && el.rHd[0] !== el.rStd[0] ? ' · HD: ' + el.rHd[0] : ''),
+      fmt(c.stdR, 0) + ' standard racks × ' + rpN(el.rStd) + (el.rStd[2] ? '' : ' (power shelves)') + (c.hdR ? ' + ' + fmt(c.hdR, 0) + ' HD racks × ' + rpN(el.rHd) + (el.rHd && !el.rHd[2] ? ' (OEM power shelves fed by busway tap-offs)' : '') : '') + ' — A + B feeds',
+      fmt(c.stdR, 0) + '个标准机柜 × ' + rpN(el.rStd) + (el.rStd[2] ? '' : '（电源架）') + (c.hdR ? ' + ' + fmt(c.hdR, 0) + '个高密度机柜 × ' + rpN(el.rHd) + (el.rHd && !el.rHd[2] ? '（OEM电源架，由母线插接箱供电）' : '') : '') + '——A+B双路', '条');
     add('EL-17', Math.max(1, Math.round(el.txTotal / 2)), 'no.', '300 A', 'Per harmonic study');
     add('EL-18', 1, 'lot', '≤ 1 Ω', 'Mesh-BN + TMGB/TGB');
     add('EL-19', 1, 'lot', 'LPL I/II', 'SPD Type 1+2/2/3');
@@ -560,8 +566,14 @@
     add('ME-16', 1, 'lot', '', 'Dual headers / ring');
     if (R.cool.airTech === 'WCCH') add('ME-17', 1, 'lot', '', 'CoC 4–6');
     add('ME-18', 1, 'lot', '+5–15 Pa', '');
-    add('IT-01', c.stdR, 'no.', p.rackU + 'U ' + p.rackW + '×' + p.rackD + ' mm', R.stdP.en);
-    if (c.hdR) add('IT-08', c.hdR, 'racks', R.hdP.en, fmt(c.hd, 0) + ' kW/rack');
+    if (integ(sp0)) add('IT-01', c.stdR, 'positions', sp0.u + 'U ' + sp0.w + '×' + sp0.d + ' mm', 'Standard rack positions: ' + sp0.en + ', ' + fmt(c.sd, 1) + ' kW — racks arrive integrated with the IT (rack-level integration)', '标准机柜位：' + sp0.zh + '，' + fmt(c.sd, 1) + ' kW——机柜随IT整柜集成到货', '个机柜位');
+    else add('IT-01', c.stdR, 'cabinets', p.rackU + 'U ' + p.rackW + '×' + p.rackD + ' mm', 'Standard racks: ' + sp0.en + ', ' + fmt(c.sd, 1) + ' kW — facility supply', '标准机柜：' + sp0.zh + '，' + fmt(c.sd, 1) + ' kW——设施供货', '个机柜');
+    if (c.hdR) add('IT-01', c.hdR, integ(hp0) ? 'positions' : 'cabinets', hp0.u + 'U ' + hp0.w + '×' + hp0.d + ' mm',
+      integ(hp0) ? 'High-density rack positions: integrated cabinet arrives with the IT system (' + fmt(c.hd, 0) + ' kW)' : 'High-density cabinets: ' + fmt(c.hd, 0) + ' kW — facility supply',
+      integ(hp0) ? '高密度机柜位：集成机柜随IT系统到货（' + fmt(c.hd, 0) + ' kW）' : '高密度机柜：' + fmt(c.hd, 0) + ' kW——设施供货', integ(hp0) ? '个机柜位' : '个机柜');
+    if (c.hdR && hp0.gpu) { var spr = hp0.spr || 1, nsys = Math.max(1, ceil(c.hdR * spr - 1e-9)), gps = Math.round(hp0.gpu / spr);
+      add('IT-08', nsys, 'systems', hp0.en, gps + ' GPUs per system · ' + fmt(c.hdR * hp0.gpu, 0) + ' GPUs inside the ' + fmt(c.hdR, 0) + ' HD racks above — IT scope, reference (not additional racks)',
+        '每系统' + gps + '颗GPU · 位于上述' + fmt(c.hdR, 0) + '个高密度机柜内，共' + fmt(c.hdR * hp0.gpu, 0) + '颗GPU——IT范围，仅供参考（非额外机柜）', '套'); }
     add('IT-02', Math.max(1, ceil(el.rows / 2)), 'pods', R.cool.tech === 'DLC' ? 'HAC' : 'HAC/CAC', '');
     add('IT-03', 1, 'lot', 'OS2 + OM4/OM5', 'MPO trunks');
     add('IT-10', p.tier >= 3 ? 2 : 1, 'rooms', '', p.tier >= 3 ? 'Diverse entries' : '');

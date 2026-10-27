@@ -454,3 +454,36 @@ ul.li { padding-left: 20px; display: grid; gap: 6px; font-size: .88rem; }
   .btn.big { align-self: stretch; justify-content: center; }
 }
 @media print { .aside, .ajump, .pager, .stepper { display: none !important; } .aw { display: block; } }
+
+
+/* ------------------------------------------------------------------ v4: CCEPC brand bar (light, logo colours) */
+:root { --ccepc-teal: #07A4AF; --ccepc-blue: #016EB1; --ccepc-ink: #2B2D35; }
+.credit { background: #1E2430; color: #CFEFF2; }
+.credit b { color: #7FD9DF; }
+.head .bar { background: linear-gradient(90deg, #FFFFFF 0%, #FFFFFF 38%, #F1FAFB 70%, #E3F4F6 100%); border-bottom: 3px solid transparent; border-image: linear-gradient(90deg, var(--ccepc-teal), var(--ccepc-blue)) 1; padding-top: 10px; padding-bottom: 10px; }
+.brand { gap: 14px; }
+.brand .logo { height: 48px; width: auto; display: block; flex-shrink: 0; }
+.brand .bdiv { width: 1px; align-self: stretch; background: linear-gradient(180deg, transparent, #B8D9DE, transparent); margin: 2px 2px; }
+.brand-title { color: var(--ccepc-ink); }
+.brand-title .zh { color: var(--ccepc-blue); }
+.brand-sub { color: var(--ccepc-blue); font-weight: 600; }
+.brand-sub .zh { color: var(--ccepc-teal); }
+.langs { border-color: #BFDDE2; background: #fff; }
+.lang { color: #2B4A55; opacity: 1; }
+.lang + .lang { border-left-color: #D5E8EC; }
+.lang:hover { background: #EAF6F8; }
+.lang.on { background: var(--ccepc-teal); color: #fff; }
+.menu-btn { background: #fff; border-color: #BFDDE2; color: var(--ccepc-ink); }
+.tab.dirty::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #F2A93B; box-shadow: 0 0 0 2px rgba(242,169,59,.3); margin-left: 2px; }
+.acur.dirty { background: #FFF6E6; border-color: #F4D7A1; }
+@media (max-width: 760px) { .brand .logo { height: 36px; } .brand .bdiv { display: none; } }
+@media (max-width: 420px) { .brand-title { font-size: .95rem; } }
+
+/* v4: real-project parameters by type */
+.tstats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; margin-top: 10px; }
+.tstats div { background: var(--surface-2); border: 1px solid #E6E8F3; border-radius: 9px; padding: 7px 10px; min-width: 0; }
+.tstats span { display: block; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.tstats b { display: block; font-size: .92rem; color: var(--deep); overflow-wrap: anywhere; }
+button.lnk { background: none; border: 0; padding: 0; color: var(--indigo); font: inherit; font-weight: 700; cursor: pointer; text-align: left; }
+button.lnk:hover { text-decoration: underline; }
+.tcard .chip { cursor: pointer; font-family: inherit; }

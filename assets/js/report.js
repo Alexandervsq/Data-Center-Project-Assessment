@@ -184,7 +184,7 @@
 
     /* 8 BOQ */
     h1(T('8. Major & Secondary Equipment List', '8. 主要及次要设备清单'));
-    table([T('Ref.', '编号'), T('Equipment', '设备'), T('Qty', '数量'), T('Unit', '单位'), T('Rating', '规格'), T('Note', '备注')], R.boq.map(function (b) { return [b.id, T(b.en, b.zh), F(b.qty), b.unit, b.rating, b.note]; }), [8, 36, 9, 10, 20, 17], [2]);
+    table([T('Ref.', '编号'), T('Equipment', '设备'), T('Qty', '数量'), T('Unit', '单位'), T('Rating', '规格'), T('Note', '备注')], R.boq.map(function (b) { return [b.id, T(b.en, b.zh), F(b.qty), T(b.unit, b.unitZh || b.unit), b.rating, T(b.note, b.noteZh || b.note)]; }), [8, 36, 9, 10, 20, 17], [2]);
 
     /* 9 cost */
     B.push({ t: 'pb' });

@@ -50,7 +50,12 @@
   }
   var DBS = loadDB();
   try { var cu = JSON.parse(localStorage.getItem('dcpa_cur2')); if (cu) { S.cur = cu.cur || 'USD'; S.cny = cu.cny || 7.1; } } catch (e) { }
-  function saveDB() { try { localStorage.setItem(LS_DB, JSON.stringify(DBS)); localStorage.setItem('dcpa_cur2', JSON.stringify({ cur: S.cur, cny: S.cny })); } catch (e) { toast(Lt('Browser storage unavailable — export your projects.', '浏览器存储不可用——请导出项目。')); } }
+  function saveDB() { try { localStorage.setItem(LS_DB, JSON.stringify(DBS)); S.dirty = false; markDirtyUI(); } catch (e) { toast(Lt('Browser storage unavailable — export your projects.', '浏览器存储不可用——请导出项目。')); } saveCur(); }
+  function saveCur() { try { localStorage.setItem('dcpa_cur2', JSON.stringify({ cur: S.cur, cny: S.cny })); } catch (e) { } }
+  /* changes stay in this browser tab until the user saves them to the workspace (or discards them) */
+  function touch() { S.dirty = true; markDirtyUI(); }
+  function markDirtyUI() { var t = document.querySelector('.tab[data-view="assess"]'); if (t) t.classList.toggle('dirty', !!S.dirty); }
+  function discardWS() { DBS = loadDB(); S.dirty = false; markDirtyUI(); recompute(); renderHome(); renderAssess(); }
   function active() { return find(DBS.projects, DBS.active); }
   function inp() { return active().input; }
 
@@ -74,6 +79,7 @@
     $('#brandTitle').innerHTML = L('Data Center Project Assessment', '数据中心项目评估');
     $('#brandSub').innerHTML = L('Indonesia · Planning · Feasibility · Proposal report', '印度尼西亚·规划·可行性·建议书');
     $('#langs').innerHTML = I18N.switcher();
+    setTimeout(markDirtyUI, 0);
     $('#tabs').innerHTML = TABS.map(function (t) { return '<button class="tab' + (S.view === t[0] ? ' on' : '') + '" data-view="' + t[0] + '">' + ic(t[1]) + '<span>' + L(t[2], t[3]) + '</span></button>'; }).join('');
     document.documentElement.lang = I18N.lang() === 'zh' ? 'zh-CN' : 'en';
     $('#footer').innerHTML = L('Planning-stage indications (±25–30%) — verify with site studies, PLN and qualified consultants.', '规划阶段参考（±25–30%）——须经场地研究、PLN及专业顾问核实。') + ' · <a href="https://github.com/Alexandervsq/Data-Center-Project-Assessment" target="_blank" rel="noopener">GitHub</a>';
@@ -304,7 +310,7 @@
   function navBtn(sub, icon, en, zh, extra) { return '<button type="button" class="anav' + (S.asub === sub ? ' on' : '') + '" data-sub="' + sub + '">' + icon + '<span class="lb">' + L(en, zh) + '</span>' + (extra || '') + '</button>'; }
   function nManual(st) { var o = (hasProj() && inp().ov) || {}; return st ? st.f.filter(function (f) { return AUTO[f.k] && o[f.k]; }).length : Object.keys(o).filter(function (k) { return o[k]; }).length; }
   function renderSide() {
-    var r = curRef(), h = '<div class="ag">' + L('Workspace', '工作区') + '</div>' +
+    var r = curRef(), h = (S.dirty ? '<div class="acur dirty"><div class="albl">' + L('Unsaved changes', '未保存的修改') + '</div><div class="small">' + L('Save them to My projects, or discard them.', '保存至我的项目，或放弃修改。') + '</div><div class="row" style="gap:6px;margin-top:8px"><button type="button" class="btn small" data-act="savews">' + ic('download') + L('Save', '保存') + '</button><button type="button" class="btn small ghost" data-act="discardws">' + L('Discard', '放弃') + '</button></div></div>' : '') + '<div class="ag">' + L('Workspace', '工作区') + '</div>' +
       navBtn('projects', ic('folder'), 'My projects', '我的项目', '<span class="cnt">' + DBS.projects.length + '</span>') +
       navBtn('library', ic('building'), 'Reference library', '参考项目库', '<span class="cnt">' + DB.references.length + '</span>');
     if (S.asub.indexOf('ref/') === 0) { var rr = find(DB.references, S.asub.slice(4)); h += '<button type="button" class="anav on sub" data-sub="' + S.asub + '"><span class="lb">' + L(rr.en, rr.zh) + '</span></button>'; }
@@ -333,8 +339,8 @@
       'PUE ' + F(R.eff.pue, 2), L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')), 'CAPEX ' + money(R.capex.total),
       p.revModel === 'lease' ? 'IRR ' + pct(f.irrTV) : L('TCO ', '拥有成本 ') + money(f.lcocAll, 0) + '/kW·mo', 'RFS ' + R.sched.rfsYear];
     el.innerHTML = '<div class="report-head ahead"><div class="row" style="align-items:flex-start"><div style="min-width:0">' + (r ? '<span class="chip amber" style="margin-bottom:6px">' + L('Example · read-only', '示例 · 只读') + '</span>' : '') +
-      '<h3>' + esc(curName() || 'Untitled') + '</h3><div class="small" style="color:#c8cbff">' + L(R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh) + ' · ' + L(c.type.en, c.type.zh) + '</div></div><span class="spacer"></span>' +
-      '<div class="row no-print" style="gap:6px">' + (r ? '<button type="button" class="btn small cyan" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button>' : '') +
+      '<h3>' + esc(curName() || 'Untitled') + (S.dirty && !r ? ' <span class="chip amber" style="vertical-align:middle">' + L('unsaved', '未保存') + '</span>' : '') + '</h3><div class="small" style="color:#c8cbff">' + L(R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh) + ' · ' + L(c.type.en, c.type.zh) + '</div></div><span class="spacer"></span>' +
+      '<div class="row no-print" style="gap:6px">' + (S.dirty && !r ? '<button type="button" class="btn small cyan" data-act="savews">' + ic('download') + L('Save project', '保存项目') + '</button>' : '') + (r ? '<button type="button" class="btn small cyan" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button>' : '') +
       '<select id="curSel" class="fsel" style="padding:5px 8px" title="' + esc(Lt('Currency', '货币')) + '">' + ['USD', 'IDR', 'CNY'].map(function (k) { return '<option' + (S.cur === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select>' +
       (S.cur === 'CNY' ? '<input id="cnyIn" class="fsel" style="width:80px;padding:5px 8px" type="number" step="0.01" value="' + S.cny + '" title="CNY per USD">' : '') +
       (S.asub !== 'export' ? '<button type="button" class="btn small ghost2" data-sub="export">' + ic('download') + L('Export report', '导出报告') + '</button>' : '') + '</div></div>' +
@@ -443,7 +449,7 @@
     recompute();
     if (rerender || RERENDER.indexOf(k) >= 0) renderStepFields();
     else { refreshBadges(); markManual(k); }
-    clearTimeout(timer); timer = setTimeout(function () { saveDB(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); renderHome(); }, 160);
+    clearTimeout(timer); timer = setTimeout(function () { touch(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); renderHome(); }, 160);
   }
   function markManual(k) {
     if (!AUTO[k]) return;
@@ -468,7 +474,7 @@
     var b = base || (hasProj() ? { loc: inp().loc } : {});
     var pr = { id: uid(), name: name || b.name || Lt('New Data Center Project', '新数据中心项目'), created: Date.now(), updated: Date.now(), input: newInput(b) };
     pr.input.name = pr.name; S.preview = null;
-    DBS.projects.push(pr); DBS.active = pr.id; saveDB(); recompute(); renderHome();
+    DBS.projects.push(pr); DBS.active = pr.id; touch(); recompute(); renderHome();
     return pr;
   }
   function useTemplate(id) {
@@ -479,13 +485,13 @@
   }
   function preview(id) { S.preview = id; recompute(); go('sum'); }
   function closePreview() { S.preview = null; recompute(); go(isProjPage() ? (hasProj() ? S.asub : 'projects') : S.asub); }
-  function openProject(id) { S.preview = null; DBS.active = id; saveDB(); recompute(); go(isProjPage() ? S.asub : 'sum'); }
+  function openProject(id) { S.preview = null; DBS.active = id; if (!S.dirty) saveDB(); recompute(); go(isProjPage() ? S.asub : 'sum'); }
   function deleteProject(id) {
     var pr = find(DBS.projects, id); if (!pr.id) return;
     if (!confirm(Lt('Delete project “' + pr.name + '”?', '删除项目“' + pr.name + '”？'))) return;
     DBS.projects = DBS.projects.filter(function (x) { return x.id !== id; });
     if (DBS.active === id) DBS.active = DBS.projects.length ? DBS.projects[0].id : null;
-    saveDB(); recompute(); renderHome(); go(S.asub === 'projects' || !hasProj() ? 'projects' : S.asub);
+    touch(); recompute(); renderHome(); go(S.asub === 'projects' || !hasProj() ? 'projects' : S.asub);
     toast(Lt('Project deleted', '项目已删除'));
   }
   function importJSON(file) {
@@ -497,7 +503,7 @@
         var list = o.projects ? o.projects : (o.input ? [{ name: o.input.name, input: o.input }] : [o]);
         list.forEach(function (pp) { var inpx = pp.input || pp; if (!inpx || (!inpx.loc && !inpx.type)) return; var pr = { id: uid(), name: pp.name || inpx.name || 'Imported', created: Date.now(), updated: Date.now(), input: newInput(inpx) }; DBS.projects.push(pr); DBS.active = pr.id; added++; });
         if (!added) throw new Error('none');
-        S.preview = null; saveDB(); recompute(); renderHome(); go('projects'); toast(Lt('Imported ' + added + ' project(s)', '已导入' + added + '个项目'));
+        S.preview = null; touch(); recompute(); renderHome(); go('projects'); toast(Lt('Imported ' + added + ' project(s)', '已导入' + added + '个项目'));
       } catch (e) { toast(Lt('Invalid file', '文件无效')); }
     };
     rd.readAsText(file);
@@ -518,8 +524,8 @@
       if (t.id === 'fileImport') return importJSON(t.files[0]);
       if (t.id === 'projSel') return openProject(t.value);
       if (t.id === 'aJump') return go(t.value);
-      if (t.id === 'curSel') { S.cur = t.value; saveDB(); renderAHead(); renderPage(); return; }
-      if (t.id === 'cnyIn') { S.cny = parseFloat(t.value) || 7.1; saveDB(); renderAHead(); renderPage(); return; }
+      if (t.id === 'curSel') { S.cur = t.value; saveCur(); renderAHead(); renderPage(); return; }
+      if (t.id === 'cnyIn') { S.cny = parseFloat(t.value) || 7.1; saveCur(); renderAHead(); renderPage(); return; }
       if (t.dataset && t.dataset.k) {
         if (t.type === 'checkbox') setVal(t.dataset.k, t.checked, true);
         else if (t.tagName === 'SELECT') setVal(t.dataset.k, t.value, true);
@@ -530,11 +536,13 @@
       var b = ev.target.closest('button,[data-rtab],[data-act],[data-open],[data-sub]'); if (!b) return;
       if (b.dataset.sub) { go(b.dataset.sub); return; }
       if (b.dataset.rtab) { go(b.dataset.rtab); return; }
-      if (b.dataset.reset) { var i = inp(); if (i.ov) delete i.ov[b.dataset.reset]; active().updated = Date.now(); recompute(); saveDB(); renderStepFields(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); return; }
+      if (b.dataset.reset) { var i = inp(); if (i.ov) delete i.ov[b.dataset.reset]; active().updated = Date.now(); recompute(); touch(); renderStepFields(); var im = $('#impact'); if (im) im.innerHTML = impactHTML(); renderAHead(); renderSide(); return; }
       if (b.dataset.tier) { setVal('tier', +b.dataset.tier, true); return; }
       var seg = b.closest('.seg'); if (seg && b.dataset.v !== undefined) { setVal(seg.dataset.k, b.dataset.v, true); return; }
       if (b.dataset.open) { openProject(b.dataset.open); return; }
       var a = b.dataset.act, id = b.dataset.id;
+      if (a === 'savews') { saveDB(); renderSide(); renderAHead(); renderPage(); toast(Lt('Saved to My projects', '已保存至我的项目')); return; }
+      if (a === 'discardws') { if (!confirm(Lt('Discard all unsaved changes and return to the last saved workspace?', '放弃所有未保存的修改并恢复至上次保存的工作区？'))) return; discardWS(); go(hasProj() ? S.asub : 'projects'); toast(Lt('Changes discarded', '已放弃修改')); return; }
       if (a === 'newproj') { newProject(); go('in1'); return; }
       if (a === 'dupproj') { var src = find(DBS.projects, id || DBS.active); if (src.id) { newProject(JSON.parse(JSON.stringify(src.input)), src.name + ' (' + Lt('copy', '副本') + ')'); go('projects'); toast(Lt('Duplicated', '已复制')); } return; }
       if (a === 'delproj') { deleteProject(id || DBS.active); return; }
@@ -596,6 +604,7 @@
       tile(F(R.opex.co2t / 1000, 1), 'kt CO₂e', 'Scope-2 emissions', '范围二排放', L('renewable ', '可再生 ') + p.renewable + '%', '#16a34a') + '</div>';
     html += '<div class="grid g2"><div class="card">' + ptitle('Key requirements', '关键要求') + R.reqs.slice(0, 8).map(reqRow).join('') + '<div style="margin-top:8px"><button class="btn small ghost" data-rtab="el">' + L('Details →', '详情 →') + '</button></div></div>' +
       '<div class="card">' + ptitle('Top risks', '主要风险') + R.risks.slice(0, 5).map(riskRow).join('') + '<div style="margin-top:8px"><button class="btn small ghost" data-rtab="risk">' + L('Risk register →', '风险登记册 →') + '</button></div></div></div>';
+    html += benchReal(x);
     html += '<div class="card">' + ptitle('Similar reference projects', '相似参考项目') + '<div class="grid g4">' + R.similar.map(refMini).join('') + '</div></div>';
     return html;
   }
@@ -625,6 +634,7 @@
     }
     var html = '<div class="tiles">' + tile(F(c.racks), '', 'Total racks', '机柜总数', F(c.stdR) + ' + ' + F(c.hdR) + ' HD', '#3f3cbb') + tile(F(c.avgDens, 1), 'kW', 'Average density', '平均密度', L('max ', '最大 ') + F(c.maxDens, 0) + ' kW', '#f0544f') +
       tile(c.gpus ? F(c.gpus) : '–', '', 'GPUs / accelerators', 'GPU/加速器', c.hdR ? L(hp.en, hp.zh) : '', '#7c3aed') + tile(F(R.sp.ws), 'm²', 'White space', '白区', F(R.sp.rackArea, 2) + ' m²/' + L('rack', '柜'), '#0ea5c6') + '</div>';
+    html += itReconcile(x);
     html += '<div class="grid g2">' + platCard(sp, ['Standard racks', '标准机柜'], c.stdR, c.sd) + (c.hdR ? platCard(hp, ['High-density racks', '高密度机柜'], c.hdR, c.hd) : '<div class="card">' + L('No high-density racks.', '无高密度机柜。') + '</div>') + '</div>';
     var cab = find(DB.cabinets, p.cabinet);
     html += '<div class="card">' + ptitle('Cabinet selection', '机柜选型') + kv([['Brand / range', '品牌/系列', L(cab.en, cab.zh)], ['Selected size', '选型尺寸', p.rackW + ' × ' + p.rackD + ' mm · ' + p.rackU + 'U'], ['Static load rating', '静载能力', '≈ ' + F(cab.kg) + ' kg'], ['Note', '说明', Lp(cab.note)]]) + why('cabinet') + '</div>';
@@ -720,7 +730,7 @@
     var R = x.R;
     return '<div class="card">' + ptitle('Major & secondary equipment list (planning quantities)', '主要及次要设备清单（规划数量）', '<button class="btn small ghost" data-act="csv">' + ic('download') + 'CSV</button>') +
       '<div class="tblw"><table class="t"><thead><tr><th>' + L('Ref.', '编号') + '</th><th>' + L('Equipment', '设备') + '</th><th class="r">' + L('Qty', '数量') + '</th><th>' + L('Unit', '单位') + '</th><th>' + L('Rating', '规格') + '</th><th>' + L('Note', '备注') + '</th></tr></thead><tbody>' +
-      R.boq.map(function (b) { return '<tr><td><button class="chip ind" style="cursor:pointer" data-act="eq" data-id="' + b.id + '">' + b.id + '</button></td><td>' + L(b.en, b.zh) + '</td><td class="r num"><b>' + F(b.qty) + '</b></td><td>' + esc(b.unit) + '</td><td>' + esc(b.rating) + '</td><td class="small muted">' + esc(b.note) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
+      R.boq.map(function (b) { return '<tr><td><button class="chip ind" style="cursor:pointer" data-act="eq" data-id="' + b.id + '">' + b.id + '</button></td><td>' + L(b.en, b.zh) + '</td><td class="r num"><b>' + F(b.qty) + '</b></td><td>' + L(b.unit, b.unitZh || b.unit) + '</td><td>' + esc(b.rating) + '</td><td class="small muted">' + L(b.note, b.noteZh || b.note) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
   }
   function exportBOQ() { var R = S.x.R; download(safeName(curName()) + '_equipment.csv', csv([['Ref', 'Equipment', '设备', 'Qty', 'Unit', 'Rating', 'Note']].concat(R.boq.map(function (b) { return [b.id, b.en, b.zh, Math.round(b.qty), b.unit, b.rating, b.note]; }))), 'text/csv;charset=utf-8'); }
   function exportFin() { var R = S.x.R; download(safeName(curName()) + '_cashflow_USD.csv', csv([['Year', 'Built kW', 'Used kW', 'CAPEX', 'Revenue', 'Energy', 'OPEX', 'EBITDA', 'Tax', 'Cash flow', 'Cumulative']].concat(R.fin.rows.map(function (r) { return [r.year, Math.round(r.built), Math.round(r.used), Math.round(r.capex), Math.round(r.rev), Math.round(r.energy), Math.round(r.opex), Math.round(r.ebitda), Math.round(r.tax), Math.round(r.cf), Math.round(r.cum)]; }))), 'text/csv;charset=utf-8'); }
@@ -800,8 +810,79 @@
       '<select class="fsel" id="refType"><option value="all">' + esc(Lt('All types', '全部类型')) + '</option>' + DB.dcTypes.map(function (t) { return '<option value="' + t.id + '"' + (f.type === t.id ? ' selected' : '') + '>' + esc(Lt(t.en, t.zh)) + '</option>'; }).join('') + '</select></div><div id="libBody">' + libBody() + '</div>';
     return html;
   }
+  /* ---------- real-project technical parameters and findings by facility type */
+  var COOLN = { AIR: ['Air (precision AC)', '风冷（精密空调）'], CHW: ['Chilled water + CRAH', '冷冻水+精密空调'], DLC: ['Direct-to-chip liquid', '冷板液冷'], EVAP: ['Evaporative / outside air', '蒸发/室外空气'], SEA: ['Seawater', '海水'] };
+  var ROM = ['', 'I', 'II', 'III', 'IV'];
+  function rng(a, d) { if (!a.length) return '–'; var lo = Math.min.apply(null, a), hi = Math.max.apply(null, a); if (d === 1 && hi >= 10) d = 0; return lo === hi ? F(lo, d) : F(lo, d) + '–' + F(hi, d); }
+  function specKw(r) { var sp = r.spec || {}, m = sp.itMW || r.mw; if (sp.kw) return sp.kw; if (sp.racks && m) { var a = Math.round(m * 10000 / sp.racks) / 10; return [a, a]; } return null; }
+  function typeStats(type) {
+    var rs = DB.references.filter(function (r) { return r.kind === 'real' && r.type === type; }), o = { refs: rs, mw: [], kw: [], pue: [], tiers: [], cool: [] }, cc = {};
+    rs.forEach(function (r) { var sp = r.spec || {}, m = sp.itMW || r.mw, k = specKw(r); if (m) o.mw.push(m); if (k) o.kw.push(k[0], k[1]); if (sp.pue) o.pue.push(sp.pue); if (sp.tier && o.tiers.indexOf(sp.tier) < 0) o.tiers.push(sp.tier); if (sp.cool) cc[sp.cool] = (cc[sp.cool] || 0) + 1; });
+    o.tiers.sort(); o.cool = Object.keys(cc).sort(function (a, b) { return cc[b] - cc[a]; }); return o;
+  }
+  function typeCard(t) {
+    var st = typeStats(t.id), b = DB.references.filter(function (r) { return r.kind === 'arch' && r.type === t.id; })[0], fd = DB.typeFindings && DB.typeFindings[t.id], bx = b ? resolveRef(b) : null;
+    return '<div class="card tcard"><div class="row" style="gap:8px"><h3 style="margin:0">' + L(t.en, t.zh) + '</h3><span class="spacer"></span><span class="chip cyan">' + st.refs.length + ' ' + L('real projects', '个真实项目') + '</span></div>' +
+      '<div class="tstats">' + [['IT capacity', 'IT容量', rng(st.mw, 1) + (st.mw.length ? ' MW' : '')], ['Rack density', '机柜功率', rng(st.kw, 1) + (st.kw.length ? ' kW' : '')], ['PUE', 'PUE', rng(st.pue, 2)],
+        ['Tier', '等级', st.tiers.map(function (k) { return ROM[k]; }).join(' / ') || '–'], ['Cooling', '制冷', st.cool.map(function (k) { return L(COOLN[k][0], COOLN[k][1]); }).join(' · ') || '–']]
+        .map(function (x) { return '<div><span>' + L(x[0], x[1]) + '</span><b>' + x[2] + '</b></div>'; }).join('') + '</div>' +
+      (fd ? '<p class="small" style="margin-top:10px">' + Lp(fd) + '</p>' : '') +
+      (bx ? '<div class="small muted" style="margin-top:6px">' + L('Benchmark design in this tool', '本工具基准设计') + ': <button type="button" class="lnk" data-sub="ref/' + b.id + '">' + b.id + ' ' + L(b.en, b.zh) + '</button> — ' + F(bx.R.cap.itMW, bx.R.cap.itMW < 1 ? 2 : 0) + ' MW · ' + F(bx.R.cap.avgDens, 1) + ' kW/' + L('rack', '柜') + ' · PUE ' + F(bx.R.eff.pue, 2) + ' · Tier ' + ROM[bx.p.tier] + '</div>' : '') +
+      '<div class="row" style="gap:6px;margin-top:10px">' + st.refs.map(function (r) { return '<button type="button" class="chip ind" data-sub="ref/' + r.id + '">' + esc(Lt(r.en, r.zh).split(/ — |——/)[0]) + '</button>'; }).join('') + '</div></div>';
+  }
+  function specRows(r) {
+    var sp = r.spec || {}, k = specKw(r), ty = find(DB.dcTypes, r.type), m = sp.itMW || r.mw;
+    var rows = [['Type', '类型', L(ty.en || r.type, ty.zh)], ['Country · location', '国家·地点', esc(r.country) + ' · ' + Lp(r.loc)], ['Status', '状态', r.status ? Lp(r.status) : '–'],
+      ['IT capacity (campus / planned)', 'IT容量（园区/规划）', m ? '≈ ' + F(m, m < 10 ? 2 : 0) + ' MW' : '–'], ['First phase', '一期', sp.firstMW ? F(sp.firstMW, 1) + ' MW' : null], ['Racks', '机柜', sp.racks ? F(sp.racks) + '+' : null],
+      ['Rack density', '机柜功率', k ? (k[0] === k[1] ? '≈ ' + F(k[0], 1) : F(k[0]) + '–' + F(k[1])) + ' kW' + (!sp.kw ? ' ' + L('(average = IT ÷ racks)', '（平均值=IT÷机柜数）') : '') : '–'],
+      ['PUE', 'PUE', sp.pue ? F(sp.pue, 2) + (sp.pueNote ? ' · ' + Lp(sp.pueNote) : '') : '–'], ['Tier / certification', '等级/认证', sp.tierTxt ? Lp(sp.tierTxt) : (sp.tier ? 'Tier ' + ROM[sp.tier] : '–')],
+      ['Cooling', '制冷', sp.coolTxt ? Lp(sp.coolTxt) : (sp.cool ? L(COOLN[sp.cool][0], COOLN[sp.cool][1]) : '–')], ['Power supply', '供电', sp.power ? Lp(sp.power) : null], ['Site / area', '场地/面积', sp.area ? Lp(sp.area) : null], ['Other', '其他', sp.other ? Lp(sp.other) : null]];
+    return rows.filter(function (x) { return x[2] !== null; });
+  }
+  function srcLinks(r) {
+    var u = [r.src].concat((r.spec && r.spec.srcs) || []).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+    return '<div class="small" style="margin-top:10px"><b>' + L('Sources', '来源') + ':</b> ' + u.map(function (x) { return '<a href="' + esc(x) + '" target="_blank" rel="noopener">' + esc(String(x).replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + ' ↗</a>'; }).join(' · ') + '</div>';
+  }
+  function benchReal(x) {
+    var R = x.R, c = R.cap, p = x.p, st = typeStats(p.type), ty = find(DB.dcTypes, p.type), fd = DB.typeFindings && DB.typeFindings[p.type];
+    function chk(v, arr, lowGood) {
+      if (!arr.length) return '<span class="chip">' + L('no published data', '无公开数据') + '</span>';
+      var lo = Math.min.apply(null, arr), hi = Math.max.apply(null, arr);
+      if (v < lo * 0.999) return '<span class="chip ' + (lowGood ? 'green' : 'amber') + '">' + (lowGood ? L('better than reported', '优于公开值') : L('below the range', '低于范围')) + '</span>';
+      if (v > hi * 1.001) return '<span class="chip amber">' + L('above the range', '高于范围') + '</span>';
+      return '<span class="chip green">' + L('within the range', '在范围内') + '</span>';
+    }
+    var rows = [['IT capacity', 'IT容量', F(c.itMW, 2) + ' MW', rng(st.mw, 1) + (st.mw.length ? ' MW' : ''), chk(c.itMW, st.mw)],
+      ['Average rack density', '平均机柜功率', F(c.avgDens, 1) + ' kW', rng(st.kw, 1) + (st.kw.length ? ' kW' : ''), chk(c.avgDens, st.kw)],
+      ['Maximum rack density', '最大机柜功率', F(c.maxDens, 0) + ' kW', rng(st.kw, 1) + (st.kw.length ? ' kW' : ''), chk(c.maxDens, st.kw)],
+      ['Annual PUE', '年均PUE', F(R.eff.pue, 2), rng(st.pue, 2), chk(R.eff.pue, st.pue, true)],
+      ['Tier', '等级', 'Tier ' + ROM[p.tier], st.tiers.map(function (k) { return 'Tier ' + ROM[k]; }).join(' / ') || '–', st.tiers.length ? (st.tiers.indexOf(p.tier) >= 0 ? '<span class="chip green">' + L('matches', '一致') + '</span>' : '<span class="chip amber">' + L('differs', '不同') + '</span>') : '<span class="chip">' + L('no published data', '无公开数据') + '</span>']];
+    return '<div class="card">' + ptitle('Benchmark against real ' + Lt(ty.en, ty.zh) + ' projects', '与真实' + Lt(ty.en, ty.zh) + '项目对标', '<button class="btn small ghost" data-sub="library">' + L('Reference library →', '参考项目库 →') + '</button>') +
+      '<div class="tblw"><table class="t"><thead><tr><th>' + L('Parameter', '参数') + '</th><th class="r">' + L('This project', '本项目') + '</th><th class="r">' + L('Real projects (' + st.refs.length + ')', '真实项目（' + st.refs.length + '个）') + '</th><th>' + L('Check', '对比') + '</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr><td>' + L(r[0], r[1]) + '</td><td class="r"><b>' + r[2] + '</b></td><td class="r">' + r[3] + '</td><td>' + r[4] + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      (fd ? '<div class="whybox" style="margin-top:10px">' + Lp(fd) + '</div>' : '') +
+      '<div class="row" style="gap:6px;margin-top:10px">' + st.refs.map(function (r) { return '<button type="button" class="chip ind" data-sub="ref/' + r.id + '">' + esc(Lt(r.en, r.zh).split(/ — |——/)[0]) + '</button>'; }).join('') + '</div>' +
+      '<div class="small muted" style="margin-top:8px">' + L('Ranges come from publicly reported values of real projects of the same facility type; a value outside the range is not wrong, but should be explained.', '范围来自同类型真实项目的公开数值；超出范围并不代表错误，但应说明原因。') + '</div></div>';
+  }
+  function itReconcile(x) {
+    var R = x.R, c = R.cap, bq = R.boq, pick = function (id) { return bq.filter(function (b) { return b.id === id; }); };
+    var rows = [['<b>' + L('Rack positions in the white space (total)', '白区机柜位（合计）') + '</b>', '<b>' + F(c.racks) + '</b>', L(F(c.stdR) + ' standard + ' + F(c.hdR) + ' high-density positions', F(c.stdR) + '个标准机柜位+' + F(c.hdR) + '个高密度机柜位')]];
+    pick('IT-01').forEach(function (b, i) { rows.push(['IT-01 · ' + (i === 0 ? (b.unit === 'positions' ? L('Standard positions', '标准机柜位') : L('Standard cabinets', '标准机柜')) : (b.unit === 'positions' ? L('High-density positions', '高密度机柜位') : L('High-density cabinets', '高密度机柜'))), F(b.qty) + ' ' + L(b.unit, b.unitZh), L(b.note, b.noteZh)]); });
+    pick('IT-08').forEach(function (b) { rows.push(['IT-08 · ' + L('GPU / AI systems', 'GPU/AI系统'), F(b.qty) + ' ' + L(b.unit, b.unitZh), L(b.note, b.noteZh)]); });
+    if (c.gpus) rows.push([L('GPUs / accelerators', 'GPU/加速器'), F(c.gpus), L('inside the high-density positions', '位于高密度机柜位内')]);
+    pick('EL-14').forEach(function (b) { rows.push(['EL-14 · ' + L('Rack PDUs', '机柜PDU'), F(b.qty) + ' ' + L(b.unit, b.unitZh), L(b.note, b.noteZh)]); });
+    if (!pick('EL-14').length && R.el.useBusway) rows.push(['EL-14 · ' + L('Rack PDUs', '机柜PDU'), '0', L('Not required — all racks use power shelves fed directly by busway tap-offs', '不需要——所有机柜均使用由母线插接箱直接供电的电源架')]);
+    pick('EL-13').forEach(function (b) { rows.push(['EL-13 · ' + L('Busway runs', '母线'), F(b.qty) + ' ' + L(b.unit, b.unitZh), L(b.note, b.noteZh)]); });
+    return '<div class="card">' + ptitle('How racks, cabinets, GPU systems and PDUs are counted', '机柜、机柜位、GPU系统及PDU的计数方式') +
+      '<div class="tblw"><table class="t"><thead><tr><th>' + L('Item', '项目') + '</th><th class="r">' + L('Quantity', '数量') + '</th><th>' + L('Basis', '依据') + '</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr><td>' + r[0] + '</td><td class="r nowrap">' + r[1] + '</td><td class="small">' + r[2] + '</td></tr>'; }).join('') + '</tbody></table></div>' +
+      '<div class="whybox" style="margin-top:10px">' + L('Each physical rack position is counted once (IT-01): standard cabinets are supplied by the facility; integrated rack-scale AI systems arrive in their own cabinets, so the facility provides only the position, power and liquid connections. GPU / AI systems (IT-08) sit inside the high-density positions — they are not additional racks. Rack PDUs (EL-14) are counted per feed: 2 per standard rack (A + B), 2 per feed (4 per rack) for air-cooled racks above ≈ 43 kW, and none for integrated systems that use OEM power shelves fed by busway tap-offs.',
+        '每个物理机柜位只计一次（IT-01）：标准机柜由设施供货；机架级集成AI系统随自带机柜到货，设施仅提供机柜位、供电及液冷接口。GPU/AI系统（IT-08）位于高密度机柜位内——不是额外机柜。机柜PDU（EL-14）按每路计数：标准机柜每柜2条（A+B）；约43 kW以上风冷机柜每路2条（每柜4条）；使用OEM电源架并由母线插接箱供电的集成系统不需要机柜PDU。') + '</div></div>';
+  }
   function libBody() {
     var list = libList(), arch = list.filter(isArch), real = list.filter(function (r) { return r.kind === 'real'; }), html = '';
+    if (S.ref.kind !== 'arch') html += '<h3>' + L('What real projects show — parameters by facility type', '真实项目结论——按设施类型的技术参数') + '</h3><div class="small muted" style="margin:-4px 0 10px">' + L('Ranges from publicly reported values (operators, trade press, datasheets); averages marked as derived are IT ÷ racks. Click a project for its parameters and sources.', '范围来自公开报道数值（运营商、行业媒体、数据表）；标注为推算的平均值=IT÷机柜数。点击项目查看参数及来源。') + '</div>' +
+      '<div class="grid g2" style="margin-bottom:18px">' + DB.dcTypes.filter(function (t) { return S.ref.type === 'all' || t.id === S.ref.type; }).map(typeCard).join('') + '</div>';
     if (arch.length) html += '<h3>' + L('Benchmark designs (Indonesia)', '基准设计（印尼）') + ' (' + arch.length + ')</h3><div class="card flat" style="padding:0;overflow:hidden"><div class="tblw"><table class="t"><thead><tr><th>' + L('Project', '项目') + '</th><th class="r">MW</th><th>Tier</th><th>' + L('Platform', '平台') + '</th><th class="r">' + L('Racks', '机柜') + '</th><th>' + L('Cooling', '制冷') + '</th><th class="r">PUE</th><th class="r">CAPEX</th><th class="r">USD M/MW</th><th class="r">' + L('Months', '月') + '</th><th class="r">IRR / TCO</th><th></th></tr></thead><tbody>' +
       arch.map(function (r) { var x = resolveRef(r), R = x.R; return '<tr><td style="cursor:pointer" data-sub="ref/' + r.id + '"><b>' + L(r.en, r.zh) + '</b><div class="small muted">' + Lp(r.loc) + '</div></td><td class="r">' + F(R.cap.itMW, R.cap.itMW < 1 ? 2 : 0) + '</td><td>' + ['I', 'II', 'III', 'IV'][x.p.tier - 1] + '</td><td class="small">' + (R.cap.hdR ? L(R.hdP.en.split(' (')[0].split(' —')[0], R.hdP.zh.split('（')[0].split('——')[0]) : L(R.stdP.en.split(' (')[0], R.stdP.zh.split('（')[0])) + '</td><td class="r">' + F(R.cap.racks) + '</td><td class="small">' + L(R.cool.obj.en.replace(/ \(.*\)/, ''), R.cool.obj.zh.replace(/（.*）/, '')) + '</td><td class="r">' + F(R.eff.pue, 2) + '</td><td class="r">' + money(R.capex.total) + '</td><td class="r">' + F(R.capex.perMW, 1) + '</td><td class="r">' + R.sched.total + '</td><td class="r">' + (x.p.revModel === 'lease' ? pct(R.fin.irrTV) : money(R.fin.lcocAll, 0) + '/kW·mo') + '</td>' +
         '<td class="nowrap"><button type="button" class="btn small ghost" data-sub="ref/' + r.id + '">' + L('Details', '详情') + '</button> <button type="button" class="btn small ghost" data-act="prev" data-id="' + r.id + '" title="' + esc(Lt('Open the complete assessment read-only', '只读打开完整评估')) + '">' + ic('play') + L('Example', '示例') + '</button> <button type="button" class="btn small" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Template', '模板') + '</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
@@ -847,8 +928,9 @@
       h += '<div class="refhead"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="chip cyan">' + L('Real project', '真实项目') + ' · ' + esc(r.country) + '</span><span class="chip">' + L(ty.en || r.type, ty.zh) + '</span>' + (r.status ? '<span class="chip">' + Lp(r.status) + '</span>' : '') + (r.mw ? '<span class="chip amber">≈ ' + F(r.mw) + ' MW</span>' : '') + '</div><h2>' + L(r.en, r.zh) + '</h2><p>' + ic('map') + ' ' + Lp(r.loc) + '</p></div>' +
         '<div class="row no-print" style="gap:8px"><a class="btn ghost" href="' + esc(r.src) + '" target="_blank" rel="noopener">' + ic('link') + L('Source', '来源') + '</a>' + (r.mw ? '<button type="button" class="btn" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Model a similar project in Indonesia', '在印尼建模相似项目') + '</button>' : '') + '</div></div>';
       h += '<div class="grid g2"><div class="card">' + ptitle('Publicly reported facts', '公开报道信息') + '<ul class="li">' + r.facts.map(function (x) { return '<li>' + L(x[0], x[1]) + '</li>'; }).join('') + '</ul><p class="small muted" style="margin-top:10px">' + L('Figures as announced by operators / trade press; they may change.', '数据来自运营商/行业媒体公告，可能变化。') + '</p></div>' +
-        '<div class="card">' + ptitle('Key data', '关键数据') + kv([['Country', '国家', esc(r.country)], ['Location', '地点', Lp(r.loc)], ['Type', '类型', L(ty.en || r.type, ty.zh)], ['Capacity (reported)', '容量（公开）', r.mw ? '≈ ' + F(r.mw) + ' MW' : '–'], ['Status', '状态', r.status ? Lp(r.status) : '–'], ['Source', '来源', '<a href="' + esc(r.src) + '" target="_blank" rel="noopener">' + esc(String(r.src).replace(/^https?:\/\/(www\.)?/, '').split('/')[0]) + '</a>']]) +
+        '<div class="card">' + ptitle('Technical parameters (publicly reported)', '技术参数（公开报道）') + kv(specRows(r).map(function (x) { return [x[0], x[1], x[2] === '–' ? '<span class="muted">' + L('not published', '未公开') + '</span>' : x[2]]; })) + srcLinks(r) +
         (r.mw ? '<div class="whybox" style="margin-top:10px">' + L('“Model a similar project” creates an editable project of the same type and capacity at an Indonesian location; every other parameter is proposed and can be changed.', '“建模相似项目”将在印尼地点创建同类型、同容量的可编辑项目；其余参数均自动提出并可修改。') + '</div>' : '') + '</div></div>';
+      if (DB.typeFindings && DB.typeFindings[r.type]) h += '<div class="card">' + ptitle('What projects of this type show', '同类型项目的结论') + '<p>' + Lp(DB.typeFindings[r.type]) + '</p><button type="button" class="btn small ghost" style="margin-top:8px" data-sub="library">' + L('All parameters by facility type →', '按设施类型查看全部参数 →') + '</button></div>';
       var bm = DB.references.filter(function (q) { return q.kind === 'arch' && q.type === r.type; });
       if (bm.length) h += '<h3>' + L('Comparable benchmark designs', '可比基准设计') + '</h3><div class="grid g3">' + bm.map(exCard).join('') + '</div>';
     }
@@ -963,6 +1045,28 @@
     if (h === 'assess' && parts[1]) S.asub = parts.slice(1).join('/');
     return document.getElementById('view-' + h) ? h : 'home';
   }
+  function freshView(v) {
+    if (v === 'equip') { S.eq.q = ''; S.eq.sys = 'all'; S.eqTab = 'eq'; renderEquip(); }
+    else if (v === 'std') { S.std = { r: 'all', a: 'all', q: '' }; renderStd(); }
+    else if (v === 'gloss') { S.gl.q = ''; renderGloss(); }
+    else if (v === 'know') renderKnow();
+    else if (v === 'about') renderAbout();
+    else if (v === 'home') renderHome();
+    else if (v === 'sim' && window.TC) { TC.close(); TC.render(); }
+    show(v);
+  }
+  function leaveAssess(target, cb) {
+    if (S.view !== 'assess' || target === 'assess' || !S.dirty) { cb(); return; }
+    var names = DBS.projects.map(function (p) { return p.name; }).slice(0, 4).join(', ');
+    $('#modalRoot').innerHTML = '<div class="modal" id="modal"><div class="modal-box" style="max-width:560px"><div class="modal-head"><div><h3>' + L('Save your project assessment?', '保存项目评估？') + '</h3></div><button class="xbtn" id="mClose" aria-label="close">✕</button></div><div class="modal-body">' +
+      '<p>' + L('You have unsaved changes in your workspace. Save them to My projects before leaving Project Assessment, or discard them.', '工作区有未保存的修改。离开项目评估前，请保存至我的项目，或放弃修改。') + '</p>' + (names ? '<p class="small muted" style="margin-top:6px">' + esc(names) + '</p>' : '') +
+      '<div class="row" style="margin-top:16px;gap:8px"><button class="btn" id="mSave">' + ic('download') + L('Save to My projects', '保存至我的项目') + '</button><button class="btn ghost" id="mDiscard">' + L('Discard changes', '放弃修改') + '</button><span class="spacer"></span><button class="btn ghost" id="mStay">' + L('Stay here', '留在此页') + '</button></div></div></div></div>';
+    function stay() { closeModal(); markDirtyUI(); history.replaceState(null, '', '#assess/' + S.asub); }
+    $('#mClose').onclick = stay; $('#mStay').onclick = stay; $('#modal').onclick = function (e) { if (e.target.id === 'modal') stay(); };
+    $('#mSave').onclick = function () { closeModal(); saveDB(); renderSide(); renderAHead(); toast(Lt('Saved to My projects', '已保存至我的项目')); cb(); };
+    $('#mDiscard').onclick = function () { closeModal(); discardWS(); toast(Lt('Changes discarded', '已放弃修改')); cb(); };
+  }
+  function viewOf(path) { var h = String(path || '').replace(/^#/, '').split('/')[0]; return h === 'cards' ? 'sim' : (h === 'refs' ? 'assess' : h); }
   function navTo(path) {
     var v = route('#' + path);
     if (v === 'assess') { go(S.asub); return; }
@@ -972,8 +1076,8 @@
   }
   document.addEventListener('click', function (ev) {
     var l = ev.target.closest('.lang'); if (l) { I18N.set(l.dataset.lang); renderAll(); return; }
-    var t = ev.target.closest('.tab'); if (t) { if (t.dataset.view === 'assess') go(S.asub); else show(t.dataset.view); return; }
-    var gl = ev.target.closest('[data-go]'); if (gl) { navTo(gl.dataset.go); return; }
+    var t = ev.target.closest('.tab'); if (t) { var tv = t.dataset.view; if (tv === 'assess') go(S.asub); else leaveAssess(tv, function () { freshView(tv); }); return; }
+    var gl = ev.target.closest('[data-go]'); if (gl) { var gp = gl.dataset.go; leaveAssess(viewOf(gp), function () { navTo(gp); }); return; }
     var anc = ev.target.closest('[data-anchor]'); if (anc) { ev.preventDefault(); var el = document.getElementById(anc.dataset.anchor); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 150, behavior: 'smooth' }); return; }
     var et = ev.target.closest('[data-eqtab]'); if (et) { S.eqTab = et.dataset.eqtab; renderEquip(); return; }
     var li = ev.target.closest('[data-eq]'); if (li) { S.eq.sel = li.dataset.eq; renderEquip(); history.replaceState(null, '', '#equip/' + li.dataset.eq); window.scrollTo({ top: 0 }); return; }
@@ -991,6 +1095,8 @@
   });
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closeModal(); });
   window.addEventListener('hashchange', function () {
+    var hv = viewOf(location.hash);
+    if (S.view === 'assess' && S.dirty && hv !== 'assess') { var hh = location.hash; leaveAssess(hv, function () { history.replaceState(null, '', hh); var v2 = route(hh); freshView(v2); }); return; }
     var v = route(location.hash);
     if (v === 'assess') { go(S.asub); return; }
     if (v === 'equip') renderEquip();
@@ -1005,5 +1111,6 @@
     openEquipment: function (id) { S.eq.sel = id; S.eqTab = 'eq'; S.eq.q = ''; S.eq.sys = 'all'; renderEquip(); show('equip'); },
     setLang: function (l) { I18N.set(l); renderAll(); }, show: function (v) { if (v === 'assess') go(S.asub); else show(v); }
   };
-  bindAssess(); renderAll();
+  window.addEventListener('beforeunload', function (ev) { if (S.dirty) { ev.preventDefault(); ev.returnValue = ''; } });
+  bindAssess(); renderAll(); markDirtyUI();
 })();

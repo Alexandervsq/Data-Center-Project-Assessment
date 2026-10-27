@@ -12,7 +12,8 @@
       ['Static load rating ≥ 1,360 kg (≥ 1,800 kg for AI/GPU racks); seismic-rated frame where required.', '静载≥1,360 kg（AI/GPU机柜≥1,800 kg）；必要时采用抗震框架。'],
       ['Blanking panels in all unused U spaces, brush-strip cable entries, side air-dams to prevent recirculation.', '所有空置U位安装盲板，线缆入口设毛刷条，侧面设挡风板防止回流。'],
       ['Earthing stud on frame and doors bonded to rack bonding conductor (TIA-607).', '框架及门设接地螺柱并与机柜接地导体联结（TIA-607）。'],
-      ['Vertical 0U PDU mounting channels for two rPDUs (A/B) and cable managers.', '设两条（A/B）竖装0U PDU安装槽及理线器。']
+      ['Vertical 0U PDU mounting channels for two rPDUs (A/B) and cable managers.', '设两条（A/B）竖装0U PDU安装槽及理线器。'],
+      ['Counting: one cabinet per standard rack position (facility supply). Integrated rack-scale AI systems arrive in the vendor’s own cabinet — the facility then provides only the position, power, liquid connections and floor capacity.', '计数：每个标准机柜位一个机柜（设施供货）。机架级集成AI系统随厂商自带机柜到货——此时设施仅提供机柜位、供电、液冷接口及楼面承载。']
     ],
     tpg: [
       ['Manufacturer / model', '制造商 / 型号', '-', BID],
@@ -129,7 +130,8 @@
     ty: ['8-GPU servers 10–14 kW each (air/hybrid); rack-scale liquid-cooled systems ~120–140 kW per rack.', '8卡GPU服务器每台10–14 kW（风冷/混合）；机架级液冷系统每柜约120–140 kW。'],
     s: [['Facility to provide liquid-cooling interface (TCS supply/return, quick disconnects) per vendor reference design.', '设施按厂商参考设计提供液冷接口（TCS供/回液、快插接头）。'],
         ['Power: multiple 3-phase 63 A feeds or busbar/power shelves; account for synchronous load swings (power transients).', '供电：多路三相63 A或母线/电源架；需考虑同步负荷波动（功率瞬变）。'],
-        ['Floor loading up to 1,500–1,800 kg per rack; 800 mm wide cabinets typical.', '单柜重量可达1,500–1,800 kg；通常采用800 mm宽机柜。']],
+        ['Floor loading up to 1,500–1,800 kg per rack; 800 mm wide cabinets typical.', '单柜重量可达1,500–1,800 kg；通常采用800 mm宽机柜。'],
+        ['Counting: quantities are systems (8-GPU servers or rack-scale systems) installed inside the high-density rack positions of IT-01 — they are IT scope and never additional racks.', '计数：数量为安装在IT-01高密度机柜位内的系统（8卡服务器或机架级系统）——属于IT范围，绝不是额外机柜。']],
     tpg: [
       ['Rack power (design / peak)', '机柜功率(设计 / 峰值)', 'kW', BID],
       ['Liquid-cooled fraction of heat', '液冷散热比例', '%', '≈ 75 – 90'],
