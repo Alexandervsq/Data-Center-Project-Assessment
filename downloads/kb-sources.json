@@ -1,0 +1,24 @@
+{
+    "rev":  4,
+    "date":  "2026-10-29",
+    "slides":  78,
+    "pages":  145,
+    "built":  "2026-10-29 17:24",
+    "hash":  "c21be2f9d34380ff32351bf24df0bed79d004541b2e97421bb4949f518e28ca1",
+    "files":  [
+                  "connect.js",
+                  "engine.js",
+                  "eq-electrical.js",
+                  "eq-it.js",
+                  "eq-mechanical.js",
+                  "eq-safety-civil.js",
+                  "eq-systems.js",
+                  "kb-core.js",
+                  "kb-indonesia.js",
+                  "kb-racks.js",
+                  "kb-references.js",
+                  "kb-refspecs.js",
+                  "propose.js",
+                  "tc-calc.js"
+              ]
+}
