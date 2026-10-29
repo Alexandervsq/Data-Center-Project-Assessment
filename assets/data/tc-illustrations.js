@@ -55,9 +55,9 @@
       s += '<path d="M20 98Q60 100 106 70M64 98Q90 100 120 70M20 98Q70 140 106 178M64 98Q96 150 120 178" fill="none" stroke="#D58A12" stroke-width="1.4"/>';
       s += tx(154, 84, ['Substation 1', '变电站1'], 'start', 'font-weight:700') + tx(154, 192, ['Substation 2', '变电站2'], 'start', 'font-weight:700');
       s += L.pipe('M154 104H418', 'mv', 6) + L.pipe('M154 212H418', 'mv', 6);
-      s += txb(286, 124, tt ? ['Line A · 150 kV', 'A线 · 150 kV'] : ['Feeder A · 20 kV', 'A路馈线 · 20 kV'], 'middle', C.amD) + txb(286, 232, tt ? ['Line B · 150 kV', 'B线 · 150 kV'] : ['Feeder B · 20 kV', 'B路馈线 · 20 kV'], 'middle', C.amD);
+      s += txb(286, 124, tt ? ['Line A · ' + el.hv.name, 'A线 · ' + el.hv.name] : ['Feeder A · 20 kV', 'A路馈线 · 20 kV'], 'middle', C.amD) + txb(286, 232, tt ? ['Line B · ' + el.hv.name, 'B线 · ' + el.hv.name] : ['Feeder B · 20 kV', 'B路馈线 · 20 kV'], 'middle', C.amD);
       s += L.switchgear(420, 80, 3, 96, 150) + txb(468, 70, tt ? ['On-site substation', '场内变电站'] : ['Site MV switchgear', '场地中压开关柜'], 'middle');
-      return svg(s + foot([t(el.volt) + ' · ' + F(el.mva, 1) + ' MVA · ' + el.feeds + ' feed(s)', el.volt[1] + ' · ' + F(el.mva, 1) + ' MVA · ' + el.feeds + '路进线']));
+      return svg(s + foot([el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + ' circuit(s)' + (el.hv.gis ? ' · GIS ' + el.hv.ur + ' kV' : ''), el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + '回进线' + (el.hv.gis ? ' · GIS ' + el.hv.ur + ' kV' : '')]));
     },
     mvsg: function (c) {
       var s = ttl(['MV switchboard — single-line view', '中压开关柜——单线图']);

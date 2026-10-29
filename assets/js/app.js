@@ -646,7 +646,7 @@
   }
   function powerDiagram(R) {
     var el = R.el, W = 900, H = 250, bw = 112, bh = 64, y = 30, gap = (W - 20 - bw * 7) / 6, zh = I18N.lang() === 'zh';
-    var nodes = [['Utility (PLN)', '市电（PLN）', el.feeds + ' × ' + F(el.mva, 1) + ' MVA', '#f2a93b'], ['MV switchgear', '中压开关柜', el.vclass === 'TT' ? '150 kV → 20 kV' : '20 kV', '#e39b1b'],
+    var nodes = [['Utility (PLN)', '市电（PLN）', el.feeds + ' × ' + F(el.mva, 1) + ' MVA', '#f2a93b'], ['MV switchgear', '中压开关柜', el.hv && el.hv.kv > 20 ? el.hv.name + ' → 20 kV' : '20 kV', '#e39b1b'],
       ['Transformers', '变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA', '#3f3cbb'], ['LV switchboards', '低压配电柜', el.txTotal + ' ' + Lt('line-ups', '组'), '#3f3cbb'], ['UPS', 'UPS', el.upsTotal + ' × ' + F(el.upsSize) + ' kW', '#7c3aed'],
       [el.useBusway ? 'Busway' : 'PDU', el.useBusway ? '插接母线' : '列头柜', el.useBusway ? el.busways + ' × ' + el.bwA + ' A' : el.pdus + ' × 150 kVA', '#0ea5c6'], ['IT racks', 'IT机柜', F(R.cap.racks) + ' × ' + F(R.cap.avgDens, 1) + ' kW', '#17153f']];
     var s = '<svg class="diagram" viewBox="0 0 ' + W + ' ' + H + '"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5d6280"/></marker></defs>';
@@ -671,10 +671,12 @@
     html += '<div class="card">' + ptitle('Critical power chain', '关键供电链') + powerDiagram(R) + '</div>';
     html += '<div class="grid g2"><div class="card">' + ptitle('Electrical sizing', '电气容量') + kv([
       ['IT load / UPS-protected load', 'IT负载/UPS保护负载', F(R.cap.itKW) + ' / ' + F(el.upsLoad) + ' kW'], ['Facility maximum demand', '设施最大需量', F(el.demandKW) + ' kW · ' + F(el.demandKVA) + ' kVA'],
-      ['PLN connection', 'PLN接入', F(el.mva, 1) + ' MVA · ' + L(el.volt[0], el.volt[1]) + ' · ' + el.feeds + ' ' + L('feed(s)', '路')], ['MV/LV transformers', '中/低压变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')'],
-      ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC'], ['Fuel at max demand / storage', '耗油/储油', F(el.fuelLph) + ' L/h · ' + F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) · ' + el.tanks + ' × ' + el.tankSize + ' m³'],
+      ['PLN connection', 'PLN接入', F(el.mva, 1) + ' MVA · ' + L(el.volt[0], el.volt[1]) + ' · ' + el.hv.circ + ' ' + L('circuit(s)', '回进线')],
+      ['HV substation & transformers', '高压变电站及主变', el.hv.gis ? 'GIS ' + el.hv.ur + ' kV · ' + el.hv.ik + ' kA · ' + F(el.hv.busA) + ' A' + (el.hv.ibt ? ' · ' + el.hv.ibt.total + ' × ' + el.hv.ibt.mva + ' MVA ' + el.hv.ibt.ratio : '') + ' · ' + el.hv.ht.total + ' × ' + el.hv.ht.mva + ' MVA ' + el.hv.ht.ratio : L('none — 20 kV supply', '无——20 kV供电')],
+      ['20 kV switchgear', '20 kV开关柜', el.hv.mv.boards + ' × ' + F(el.hv.mv.busA) + ' A · ' + el.hv.mv.ik + ' kA'], ['MV/LV transformers', '中/低压变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ') · LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA'],
+      ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC · ' + (el.genV === 'MV' ? L('20 kV paralleled plant', '20 kV并机') : '400 V')], ['Fuel at max demand / storage', '耗油/储油', F(el.fuelLph) + ' L/h · ' + F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) · ' + el.tanks + ' × ' + el.tankSize + ' m³'],
       ['UPS systems', 'UPS系统', el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')'], ['UPS batteries', 'UPS电池', F(el.battKWh) + ' kWh ' + (p.battery === 'LI' ? 'Li-ion LFP' : 'VRLA') + ' · ' + p.upsMin + ' min'],
-      ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'], ['Rack power', '机柜供电', L(el.rStd[0], el.rStd[1]) + (el.rHd ? ' · HD: ' + L(el.rHd[0], el.rHd[1]) : '')]]) + '</div>' +
+      ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') + ' ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'], ['Rack power', '机柜供电', L(el.rStd[0], el.rStd[1]) + (el.rHd ? ' · HD: ' + L(el.rHd[0], el.rHd[1]) : '')]]) + '</div>' +
       '<div class="card">' + ptitle('Backup autonomy & storage', '后备时间与储能') + '<h4>' + L('Generator fuel', '发电机燃油') + ' — ' + p.fuelH + ' h</h4>' + why('fuelH') + '<h4>UPS — ' + p.upsMin + ' min, ' + (p.battery === 'LI' ? 'LFP' : 'VRLA') + '</h4>' + why('upsMin') + why('battery') +
       '<h4>BESS — ' + (el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh (' + el.bess.containers + ' × 20-ft)' : L('not included', '未配置')) + '</h4>' + why('bessOn') +
       (el.bess ? kv([['BESS CAPEX', '储能投资', money(R.capex.bess) + ' (≈ USD ' + E.BESS_USD_KWH + '/kWh)'], ['Peak-shaving saving / yr', '年削峰节省', money(-R.opex.bessSave)], ['Yard area', '场地面积', F(el.bess.area) + ' m²']]) : '') + '</div></div>';
@@ -916,7 +918,7 @@
         '<div class="card">' + ptitle('Main systems', '主要系统') + kv([
         ['PLN connection', 'PLN接入', F(el.mva, 1) + ' MVA · ' + L(el.volt[0], el.volt[1]) + ' · ' + el.feeds + ' ' + L('feed(s)', '路')], ['Transformers', '变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')'],
         ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + el.tanks + ' × ' + el.tankSize + ' m³'], ['UPS / batteries', 'UPS/电池', el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') · ' + F(el.battKWh) + ' kWh'],
-        ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'],
+        ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') + ' ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'],
         ['Cooling plant', '制冷设备', (me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW ' + L('chillers', '冷机') + ' (' + me.chLabel + ')' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW CRAC' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW IEC' : '–'))) + (me.cduN ? ' · ' + (me.cduN + me.cduR) + ' × ' + me.cduSize + ' kW CDU' : '')],
         ['Water use', '用水', F(me.waterDay) + ' m³/' + L('day', '日')], ['Building', '建筑', F(R.sp.gfa) + ' m² GFA · ' + p.floors + ' ' + L('storey(s)', '层') + ' · ' + F(R.sp.ws) + ' m² ' + L('white space', '白区')],
         ['Fire · security', '消防·安防', Lp(R.fs.suppression) + ' · ≈ ' + F(R.fs.cams) + ' ' + L('cameras', '摄像机')]]) + '</div></div>';
@@ -1028,7 +1030,7 @@
       '<h4>' + L('Key sources', '主要来源') + '</h4><ul style="padding-left:20px" class="small">' + [['PLN tariffs Q4 2026 (JournalArta)', 'https://journalarta.com/news/2026/10/06/tarif-listrik-pln-terbaru-oktober-2026/'], ['UMP 2026 (Bisnis.com)', 'https://ekonomi.bisnis.com/read/20260108/12/1942811/lengkap-ini-daftar-ump-2026-di-38-provinsi-versi-kemnaker'],
         ['HPE NVIDIA GB300 NVL72 documentation', 'https://www.hpe.com/us/en/collaterals/collateral.a50009244enw.html'], ['Uptime Institute Tier Standard', 'https://uptimeinstitute.com/'], ['ANSI/TIA-942-C', 'https://tiaonline.org/'], ['ASHRAE TC 9.9', 'https://www.ashrae.org/'], ['SNI 8799 — BSN', 'https://bsn.go.id/'], ['PLN REC sales (Kontan)', 'https://industri.kontan.co.id/news/pln-catat-penjualan-energi-hijau-tembus-1368-twh-pada-semester-i-2025']]
         .map(function (x) { return '<li><a href="' + x[1] + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a></li>'; }).join('') + '</ul>' +
-      '<h4>' + L('Data & privacy', '数据与隐私') + '</h4><p class="small">' + L('Everything runs in your browser. Projects are stored in this browser (localStorage); export the workspace to back up or share.', '所有计算均在浏览器中运行。项目存储于本浏览器（localStorage）；可导出工作区备份或分享。') + '</p><p class="small">v3.0 · 2026-10 · <a href="https://github.com/Alexandervsq/Data-Center-Project-Assessment" target="_blank" rel="noopener">GitHub</a> · docx.js & ExcelJS (MIT)</p></div></div>';
+      '<h4>' + L('Data & privacy', '数据与隐私') + '</h4><p class="small">' + L('Everything runs in your browser. Projects are stored in this browser (localStorage); export the workspace to back up or share.', '所有计算均在浏览器中运行。项目存储于本浏览器（localStorage）；可导出工作区备份或分享。') + '</p><p class="small">v3.1 · 2026-10 · <a href="https://github.com/Alexandervsq/Data-Center-Project-Assessment" target="_blank" rel="noopener">GitHub</a> · docx.js & ExcelJS (MIT)</p></div></div>';
   }
 
   /* ========================================================== wiring & routing

@@ -104,9 +104,9 @@
     }
     return { itKW: itKW, itMW: itKW / 1000, racks: racks, stdR: stdR, hdR: hdR, sd: sd, hd: hd, avgDens: itKW / racks, maxDens: hdR > 0 ? hd : sd, share: share };
   }
-  function liquidSplit(cool, cap, sp, hp) {
+  function liquidSplit(cool, cap, sp, hp, lsh) {
     var liq = 0;
-    if (cool === 'DLC') liq = cap.hdR * cap.hd * (hp.cool === 'DLC' ? hp.liq : 0.8) + (sp.cool === 'DLC' ? cap.stdR * cap.sd * sp.liq : 0);
+    if (cool === 'DLC') liq = cap.hdR * cap.hd * (lsh > 0 ? lsh : (hp.cool === 'DLC' ? hp.liq : 0.8)) + (sp.cool === 'DLC' ? cap.stdR * cap.sd * sp.liq : 0);
     if (cool === 'IMM') liq = (cap.hdR * cap.hd + cap.stdR * cap.sd) * 0.95;
     if ((cool === 'DLC') && liq === 0) liq = cap.itKW * 0.75;
     return Math.min(liq, cap.itKW);
@@ -114,12 +114,16 @@
   function airTechFor(cool, itMW, waterScarce) { return (cool === 'DLC' || cool === 'IMM') ? ((waterScarce || itMW < 5) ? 'ACCH' : 'WCCH') : cool; }
   function pueModel(cool, p, cap, L) {
     var sp = plat(p.stdPlat), hp = plat(p.hdPlat);
-    var liquid = liquidSplit(cool, cap, sp, hp), air = cap.itKW - liquid;
+    var liquid = liquidSplit(cool, cap, sp, hp, num(p.liqSh, 0) / 100), air = cap.itKW - liquid;
     var airTech = airTechFor(cool, cap.itMW, p.waterScarce);
     var mech = (air * mechCoef(airTech, L) + liquid * (cool === 'IMM' ? liqCoef('IMM', L) : (cool === 'DLC' ? liqCoef('DLC', L) : 0))) / cap.itKW;
     var elec = ELEC[clamp(Math.round(num(p.tier, 3)), 1, 4)] - (p.eco ? 0.025 : 0);
     var misc = cap.itMW >= 30 ? 0.010 : (cap.itMW >= 2 ? 0.015 : 0.02);
-    var wue = (air * wueCoef(airTech, L) + liquid * wueCoef('LIQ', L)) / cap.itKW;
+    /* overrides of the selected system's overheads (Project Technology Simulation) */
+    if (cool === p.cooling) { if (num(p.mechOv, 0) > 0) mech = num(p.mechOv, 0); if (num(p.elecOv, 0) > 0) elec = num(p.elecOv, 0); if (num(p.miscOv, 0) > 0) misc = num(p.miscOv, 0); }
+    /* evaporative make-up water scales with the cycles of concentration: CoC ÷ (CoC − 1), reference CoC 5 */
+    var coc = num(p.coc, 0), cocF = coc > 1 ? (coc / (coc - 1)) / 1.25 : 1, evap = airTech === 'WCCH' || airTech === 'IEC';
+    var wue = (air * wueCoef(airTech, L) * (evap ? cocF : 1) + liquid * wueCoef('LIQ', L) * cocF) / cap.itKW;
     return { liquid: liquid, air: air, airTech: airTech, mech: mech, elec: elec, misc: misc, pue: 1 + mech + elec + misc,
              puePeak: 1 + mech * (PEAK[L.cls] || 1.2) + elec + misc, wue: wue };
   }
@@ -163,6 +167,75 @@
   }
   function redLabel(n, r) { if (r === 0) return 'N'; if (r === n && n > 1) return '2N'; if (r === n && n === 1) return 'N+1 (2N)'; return r > 2 && r < n ? 'N+' + r + ' (N+1 per ' + Math.round(n / r) + ')' : 'N+' + r; }
 
+  /* ---------------------------------------------------- PLN connection solution
+     Voltage levels (IEC 60038 / SPLN 1) with the GIS rated voltage (IEC 62271-1/-203), planning capacity of one circuit,
+     practical demand range of a dedicated connection and typical short-time withstand current.
+     220 / 230 kV is not a PLN voltage — it is listed as the international equivalent (Vietnam 220 kV; Philippines,
+     Thailand, Singapore 230 kV). */
+  var KV = [
+    { kv: 20, ur: 24, cap: 10, lo: 0, hi: 30, ik: 25, cls: 'TM', en: '20 kV (PLN TM)', zh: '20 kV（PLN中压）' },
+    { kv: 70, ur: 72.5, cap: 60, lo: 10, hi: 60, ik: 31.5, cls: 'TT', en: '70 kV (PLN TT)', zh: '70 kV（PLN高压）' },
+    { kv: 150, ur: 170, cap: 200, lo: 30, hi: 300, ik: 40, cls: 'TT', en: '150 kV (PLN TT)', zh: '150 kV（PLN高压）' },
+    { kv: 230, ur: 245, cap: 400, lo: 100, hi: 600, ik: 50, cls: 'TT', intl: true, en: '220 / 230 kV (international)', zh: '220/230 kV（国际）' },
+    { kv: 275, ur: 300, cap: 600, lo: 200, hi: 900, ik: 40, cls: 'TET', en: '275 kV (PLN TET)', zh: '275 kV（PLN超高压）' },
+    { kv: 500, ur: 550, cap: 1800, lo: 500, hi: 3000, ik: 50, cls: 'TET', en: '500 kV (PLN TET)', zh: '500 kV（PLN超高压）' }
+  ];
+  /* transmission voltages by PLN system (planning view — confirm with PLN / RUPTL): 1 in service, 2 limited or legacy, 3 planned */
+  var KV_GRID = { JAMALI: { 20: 1, 70: 2, 150: 1, 500: 1 }, SUM: { 20: 1, 70: 2, 150: 1, 275: 1, 500: 3 }, BTM: { 20: 1, 150: 1 },
+                  KAL: { 20: 1, 70: 2, 150: 1, 275: 2 }, SULSEL: { 20: 1, 70: 2, 150: 1, 275: 1 }, SULUT: { 20: 1, 70: 1, 150: 1 },
+                  NUSA: { 20: 1, 70: 2, 150: 2 }, MAL: { 20: 1, 70: 2, 150: 2 } };
+  function kvLevel(kv) { for (var i = 0; i < KV.length; i++) if (KV[i].kv === kv) return KV[i]; return KV[2]; }
+  function kvRule(mva, gid) {
+    var av = KV_GRID[gid] || KV_GRID.JAMALI;
+    if (mva <= 30) return 20;
+    if (mva <= 300) return 150;
+    if (av[500] === 1) return 500;
+    if (av[275] && mva <= 900) return 275;
+    return av[500] ? 500 : (av[275] ? 275 : 150);
+  }
+  function kvName(kv) { return kv === 230 ? '220/230 kV' : kv + ' kV'; }
+  function connection(mva, p, L) {
+    var gid = L.grid, av = KV_GRID[gid] || {}, rule = kvRule(mva, gid);
+    var kv = [20, 70, 150, 230, 275, 500].indexOf(Math.round(num(p.hvKV, 0))) >= 0 ? Math.round(num(p.hvKV, 0)) : rule, V = kvLevel(kv), hi = p.tier >= 3;
+    var duty = Math.max(1, ceil(mva / V.cap)), circ = hi ? Math.max(2, duty + 1) : duty;
+    var scheme = kv === 20 ? (hi ? ['Single busbar in two sections with bus coupler (two incomers)', '单母线分段+母联（双进线）'] : ['Single busbar', '单母线'])
+      : kv <= 150 ? (hi ? ['Double busbar with bus coupler', '双母线+母联'] : ['Single busbar with bus section', '单母线分段'])
+      : kv === 500 ? ['Breaker-and-a-half (PLN 500 kV practice)', '一个半断路器接线（PLN 500 kV惯例）'] : (hi ? ['Breaker-and-a-half or double busbar', '一个半断路器或双母线'] : ['Double busbar', '双母线']);
+    var ik = (kv === 150 && gid === 'JAMALI' && mva > 150) ? 50 : (kv === 500 && gid === 'JAMALI' ? 63 : V.ik);
+    var I = mva * 1000 / (1.732 * kv), busMin = kv === 20 ? 630 : (kv <= 150 ? 2000 : (kv === 500 ? 4000 : 3150));
+    var busA = Math.max(busMin, pick([630, 1250, 2000, 2500, 3150, 4000, 5000], I * 1.2));
+    /* HV / EHV transformers: one standby per four duty units (Tier III), 2N (Tier IV), one standby (Tier II) */
+    function red(n) { return p.tier === 4 ? n : (p.tier === 3 ? Math.max(1, ceil(n / 4)) : (p.tier === 2 ? 1 : 0)); }
+    var ibt = null, ht = null;
+    if (kv === 275 || kv === 500) { var im = kv === 500 ? 500 : 250, iN = ceil(mva / im); ibt = { mva: im, n: iN, r: red(iN), ratio: kv + '/150 kV' }; ibt.total = ibt.n + ibt.r; }
+    if (kv > 20) {
+      var lowHV = ibt ? 150 : kv;
+      var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : 100)));
+      var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm);
+      ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + '/20 kV', hv: lowHV, uk: hm <= 30 ? 10 : (hm <= 60 ? 12.5 : 14) };
+      ht.total = ht.n + ht.r; ht.load = mva / (ht.total * hm) * 100; ht.loadOut = ht.total > 1 ? mva / ((ht.total - 1) * hm) * 100 : null;
+    }
+    /* 20 kV distribution switchgear: one board per HV/MV transformer, sized for its full current and fault level */
+    var mvI = ht ? ht.mva * 1000 / (1.732 * 20) : mva * 1000 / (1.732 * 20);
+    var mvIk = ht ? Math.max(25, pick([25, 31.5, 40, 50], ht.mva / (1.732 * 20 * ht.uk / 100) * 1.1)) : (mva > 10 ? 25 : 20);
+    var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: mvIk, boards: ht ? ht.total : 1 };
+    mv.gis = mv.busA > 2500;
+    var fit = mva > V.hi ? 'over' : (mva < V.lo ? 'under' : 'ok');
+    var opts = KV.map(function (o) {
+      return { kv: o.kv, ur: o.ur, en: o.en, zh: o.zh, lo: o.lo, hi: o.hi, cap: o.cap, intl: !!o.intl, avail: o.intl ? 0 : (av[o.kv] || 0), fit: mva > o.hi ? 'over' : (mva < o.lo ? 'under' : 'ok'),
+               circ: hi ? Math.max(2, ceil(mva / o.cap) + 1) : ceil(mva / o.cap), rule: o.kv === rule, sel: o.kv === kv };
+    });
+    var lead = kv >= 275 || kv === 230 ? 36 : (kv >= 70 ? 24 : (mva > 2 ? 12 : 6));
+    var cost = kv === 20 ? Math.max(0.3e6, 0.05e6 * mva) : (kv === 70 ? 3e6 + 0.09e6 * mva : (kv === 150 ? Math.max(6e6, 0.12e6 * mva) : (kv === 500 ? 35e6 + 0.07e6 * mva : 15e6 + 0.08e6 * mva)));
+    var volt = kv === 20 ? (mva <= 2 ? ['LV/MV service (≤ 20 kV, PLN TM)', '低压/中压供电（≤20 kV，PLN中压）'] : ['MV 20 kV (PLN TM), ' + circ + ' dedicated feeders', '中压20 kV（PLN中压），' + circ + '路专用馈线'])
+      : kv === 70 ? ['HV 70 kV (PLN TT) with on-site GIS substation', '高压70 kV（PLN高压），自建GIS变电站']
+      : kv === 150 ? ['HV 150 kV (PLN TT) with on-site GIS substation', '高压150 kV（PLN高压），自建GIS变电站']
+      : kv === 230 ? ['220/230 kV GIS substation (international practice, not a PLN voltage)', '220/230 kV GIS变电站（国际做法，非PLN电压等级）']
+      : ['EHV ' + kv + ' kV (PLN TET) GIS substation with ' + kv + '/150 kV transformers', '超高压' + kv + ' kV（PLN超高压）GIS变电站，配' + kv + '/150 kV变压器'];
+    return { kv: kv, rule: rule, name: kvName(kv), ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, ik: ik, busA: busA,
+             ibt: ibt, ht: ht, mv: mv, fit: fit, avail: V.intl ? 0 : (av[kv] || 0), opts: opts, lead: lead, cost: cost, volt: volt };
+  }
+
   /* ============================================================ ASSESS */
   function assess(p) {
     p = Object.assign({}, p);
@@ -170,7 +243,9 @@
     p.tier = clamp(Math.round(num(p.tier, 3)), 1, 4); p.floors = clamp(Math.round(num(p.floors, 2)), 1, 8);
     p.phases = clamp(Math.round(num(p.phases, 1)), 1, 12); p.life = clamp(Math.round(num(p.life, 20)), 5, 40);
     ['fuelH', 'upsMin', 'renewable', 'targetPUE', 'siteArea', 'gridMVA', 'price', 'markup', 'tariffIDR', 'fx', 'landPrice', 'waterPrice', 'capexOverride',
-     'wacc', 'tax', 'rampYears', 'targetOcc', 'contingency', 'itCostKW', 'staffCost', 'kdb', 'exitMult', 'bessMW', 'bessH', 'rackW', 'rackD', 'rackU', 'phaseInterval', 'startYear']
+     'wacc', 'tax', 'rampYears', 'targetOcc', 'contingency', 'itCostKW', 'staffCost', 'kdb', 'exitMult', 'bessMW', 'bessH', 'rackW', 'rackD', 'rackU', 'phaseInterval', 'startYear',
+     /* engineering overrides (0 = follow the design rule) */
+     'pkPUE', 'mdKVA', 'hvKV', 'htMVA', 'txKVA', 'txLoad', 'txUk', 'genKW', 'upsKW', 'tankM3', 'fuelQ', 'battAge', 'rackRow', 'chKW', 'chwDT', 'tesS', 'cduKW', 'bessSh']
       .forEach(function (k) { p[k] = num(p[k], 0); });
     if (!p.fx) p.fx = DB.idFx || 17900;
     if (!p.kdb) p.kdb = 60;
@@ -195,38 +270,49 @@
     var liquidKW = m.liquid, airKW = m.air, airTech = m.airTech;
     R.cool = { tech: cool, obj: coolObj, airTech: airTech, liquidKW: liquidKW, airKW: airKW, liquidShare: liquidKW / itKW };
     function pueAt(u) { u = clamp(u, 0.1, 1); return 1 + (m.mech + m.elec + m.misc) * (0.55 + 0.45 / u); }
-    R.eff = { pue: m.pue, puePeak: m.puePeak, pue50: pueAt(0.5), mech: m.mech, elec: m.elec, misc: m.misc, wue: m.wue, pueAt: pueAt,
+    var puePk = p.pkPUE > 0 ? p.pkPUE : m.puePeak;
+    R.eff = { pue: m.pue, puePeak: puePk, pueRule: m.puePeak, pue50: pueAt(0.5), mech: m.mech, elec: m.elec, misc: m.misc, wue: m.wue, pueAt: pueAt,
               gbGrade: m.pue <= 1.2 ? 1 : (m.pue <= 1.3 ? 2 : (m.pue <= 1.5 ? 3 : 0)) };
 
-    /* ------------------------------------------------ electrical */
+    /* ------------------------------------------------ electrical
+       Every rating follows its design rule unless an engineering override is set (p.txKVA, p.genKW … > 0). */
     var mechUPS = ((p.tier === 4 || avgDens >= 25) ? 0.06 * airKW : 0) + 0.025 * liquidKW;
     var upsLoad = itKW + mechUPS;
-    var demandKW = itKW * m.puePeak + K.UPS_LOSS * upsLoad + Math.max(50, 0.01 * itKW);
-    var demandKVA = demandKW / K.PF, mva = demandKVA / 1000;
-    var volt, vclass;
-    if (mva <= 2) { volt = ['LV/MV service (≤ 20 kV, PLN TM)', '低压/中压供电（≤20 kV，PLN中压）']; vclass = 'TM'; }
-    else if (mva <= 30) { volt = ['MV 20 kV (PLN TM), dedicated feeders', '中压20 kV（PLN中压），专用馈线']; vclass = 'TM'; }
-    else if (mva <= 300) { volt = ['HV 150 kV (PLN TT) with on-site substation', '高压150 kV（PLN高压），自建变电站']; vclass = 'TT'; }
-    else { volt = ['EHV 500 kV / multiple 150 kV substations', '超高压500 kV/多座150 kV变电站']; vclass = 'TT'; }
+    var demandRule = (itKW * puePk + K.UPS_LOSS * upsLoad + Math.max(50, 0.01 * itKW)) / K.PF;
+    var demandKVA = p.mdKVA > 0 ? p.mdKVA : demandRule, demandKW = demandKVA * K.PF, mva = demandKVA / 1000;
+    var hv = connection(mva, p, L), volt = hv.volt, vclass = hv.kv >= 70 ? 'TT' : 'TM';
     var feeds = p.tier >= 3 ? 2 : 1;
-    var txSize = demandKVA <= 1600 ? pick([500, 630, 800, 1000, 1250, 1600], demandKVA / 0.8) : (demandKVA > 40000 ? 3150 : 2500);
-    var txN = ceil(demandKVA / (txSize * K.TX_LOAD)), txR = redundancy(p.tier, txN, 'tx'); if (p.tier === 3 && txN === 1) txR = 1;
-    var genSize;
-    if (demandKW <= 1500) genSize = pick([300, 500, 800, 1000, 1250, 1500], demandKW / 0.95);
-    else if (demandKW <= 12000) genSize = 2000; else if (demandKW <= 60000) genSize = 2500; else genSize = 3000;
+    var txLoad = p.txLoad > 0 ? p.txLoad / 100 : K.TX_LOAD;
+    var txRule = demandKVA / txLoad <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], demandKVA / txLoad) : (demandKVA > 40000 ? 3150 : 2500);
+    var txSize = p.txKVA > 0 ? p.txKVA : txRule;
+    var txN = ceil(demandKVA / (txSize * txLoad)), txR = redundancy(p.tier, txN, 'tx'); if (p.tier === 3 && txN === 1) txR = 1;
+    /* LV side of one transformer: full-load current → main ACB (IEC 60947-2), fault level → switchboard rating (IEC 61439-2) */
+    var txUk = p.txUk > 0 ? p.txUk : (txSize <= 630 ? 4 : (txSize <= 1250 ? 5 : (txSize <= 2500 ? 6 : 7))), lvI = txSize * 1000 / (1.732 * 400), lvIk = lvI / (txUk / 100) / 1000;
+    var lv = { i: lvI, acb: pick([630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6300], lvI), ik: lvIk, icw: pick([50, 65, 80, 100], lvIk), uk: txUk };
+    var genRule = demandKW <= 1500 ? pick([300, 500, 800, 1000, 1250, 1500], demandKW / K.GEN_LOAD) : (demandKW <= 12000 ? 2000 : (demandKW <= 60000 ? 2500 : 3000));
+    var genSize = p.genKW > 0 ? p.genKW : genRule;
     var genN = ceil(demandKW / (genSize * K.GEN_LOAD)), genR = redundancy(p.tier, genN, 'gen');
-    var fuelLph = demandKW * K.FUEL_L_KWH, fuelL = fuelLph * p.fuelH;
-    var tankSize = fuelL > 400000 ? 200 : (fuelL > 100000 ? 100 : (fuelL > 20000 ? 50 : 20));
+    /* generator voltage: LV sets with ATS on small sites, a 20 kV paralleled plant (MV alternators or step-up) above ≈ 6 MW */
+    var genV = p.genV === 'LV' || p.genV === 'MV' ? p.genV : (demandKW > 6000 ? 'MV' : 'LV');
+    var fuelQ = p.fuelQ > 0 ? p.fuelQ : K.FUEL_L_KWH;
+    var fuelLph = demandKW * fuelQ, fuelL = fuelLph * p.fuelH;
+    var tankRule = fuelL > 400000 ? 200 : (fuelL > 100000 ? 100 : (fuelL > 20000 ? 50 : 20));
+    var tankSize = p.tankM3 > 0 ? p.tankM3 : tankRule;
     var tanks = Math.max(p.tier >= 3 ? 2 : 1, ceil(fuelL / 1000 / tankSize));
-    var upsSize = upsLoad <= 250 ? 300 : (upsLoad <= 1000 ? 500 : (upsLoad <= 6000 ? 1200 : 1600));
+    var upsRule = upsLoad <= 250 ? 300 : (upsLoad <= 1000 ? 500 : (upsLoad <= 6000 ? 1200 : 1600));
+    var upsSize = p.upsKW > 0 ? p.upsKW : upsRule;
     var upsN = ceil(upsLoad / (upsSize * K.UPS_LOAD)), upsR = redundancy(p.tier, upsN, 'ups');
-    var battKWh = (upsN + upsR) * upsSize * (p.upsMin / 60) * K.BATT_AGE / K.BATT_EFF;
+    var battAge = p.battAge > 0 ? p.battAge : K.BATT_AGE;
+    var battKWh = (upsN + upsR) * upsSize * (p.upsMin / 60) * battAge / K.BATT_EFF;
     var feedsPerRack = p.tier >= 2 ? 2 : 1;
     var stdW = p.rackW || sp.w || 600, stdD = p.rackD || sp.d || 1200;
-    var rows = ceil(racks / (stdW >= 800 ? 16 : 20));
+    /* rows: racks per row (rule 20, or 16 for 800 mm racks), shortened where the row load would exceed a 2,500 A busway */
+    var rackRow = p.rackRow > 0 ? Math.round(p.rackRow) : (stdW >= 800 ? 16 : 20);
+    var BWL = [160, 250, 400, 630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000], bwK = K.BW_V * 1.732 * K.BW_F, rowMax = 2500 * bwK;
+    var nStd = Math.max(2, Math.min(rackRow, Math.floor(rowMax / Math.max(sd, 0.1)))), nHd = hdR > 0 ? Math.max(2, Math.min(rackRow, Math.floor(rowMax / Math.max(hd, 0.1)))) : 0;
+    var rowsStd = stdR > 0 ? ceil(stdR / nStd) : 0, rowsHd = hdR > 0 ? ceil(hdR / nHd) : 0, rows = Math.max(1, rowsStd + rowsHd);
     var useBusway = itKW >= 1000 || avgDens >= 10;
-    var rowKW = itKW / rows;
-    var bwA = pick([160, 250, 400, 630, 800, 1000, 1250, 1600], rowKW / (K.BW_V * 1.732 * K.BW_F));
+    var bwA = pick(BWL, (stdR > 0 ? nStd * sd : nHd * hd) / bwK), bwHdA = hdR > 0 ? pick(BWL, nHd * hd / bwK) : 0;
     var busways = useBusway ? rows * (feedsPerRack === 2 ? 2 : 1) : 0;
     var pdus = useBusway ? 0 : ceil(itKW / 120) * (feedsPerRack === 2 ? 2 : 1);
     function rpduType(d, pl) {
@@ -240,14 +326,15 @@
     var rStd = rpduType(sd, sp), rHd = hdR > 0 ? rpduType(hd, hp) : null;
     var rpdus = stdR * feedsPerRack * rStd[2] + (rHd ? hdR * feedsPerRack * rHd[2] : 0);
     var bess = null;
-    if (p.bessOn && p.bessMW > 0) {
-      var mwh = p.bessMW * Math.max(0.25, p.bessH);
-      bess = { mw: p.bessMW, mwh: mwh, h: p.bessH, containers: ceil(mwh / K.BESS_MWH_BOX), area: ceil(mwh / K.BESS_MWH_BOX) * 40, capex: mwh * 1000 * BESS_USD_KWH };
+    if (p.bessOn && (p.bessMW > 0 || p.bessSh > 0)) {
+      var bmw = p.bessSh > 0 ? Math.max(0.05, itMW * p.bessSh / 100) : p.bessMW, mwh = bmw * Math.max(0.25, p.bessH);
+      bess = { mw: bmw, mwh: mwh, h: p.bessH, containers: ceil(mwh / K.BESS_MWH_BOX), area: ceil(mwh / K.BESS_MWH_BOX) * 40, capex: mwh * 1000 * BESS_USD_KWH };
     }
-    R.el = { upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, mva: mva, volt: volt, vclass: vclass, feeds: feeds,
-             txSize: txSize, txN: txN, txR: txR, txTotal: txN + txR, genSize: genSize, genN: genN, genR: genR, genTotal: genN + genR,
-             fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tanks: tanks, upsSize: upsSize, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
-             battKWh: battKWh, rows: rows, useBusway: useBusway, bwA: bwA, busways: busways, pdus: pdus, rpdus: rpdus, rStd: rStd, rHd: rHd,
+    R.el = { upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
+             txSize: txSize, txRule: txRule, txLoad: txLoad, txN: txN, txR: txR, txTotal: txN + txR, lv: lv, genSize: genSize, genRule: genRule, genN: genN, genR: genR, genTotal: genN + genR, genV: genV,
+             fuelQ: fuelQ, fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tankRule: tankRule, tanks: tanks, upsSize: upsSize, upsRule: upsRule, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
+             battAge: battAge, battKWh: battKWh, rows: rows, rackRow: rackRow, rowStd: nStd, rowHd: nHd, rowsStd: rowsStd, rowsHd: rowsHd, useBusway: useBusway, bwA: bwA, bwHdA: bwHdA, busways: busways,
+             pdus: pdus, rpdus: rpdus, rStd: rStd, rHd: rHd,
              feedsPerRack: feedsPerRack, txLabel: redLabel(txN, txR), genLabel: redLabel(genN, genR), upsLabel: redLabel(upsN, upsR),
              gridOK: !(p.gridMVA > 0 && p.gridMVA < mva), bess: bess };
 
@@ -259,11 +346,15 @@
     if (airTech === 'DX') { var crac = (airKW + greyHeat) <= 500 ? 50 : 100; M.cracSize = crac; M.cracN = ceil((airKW + greyHeat) / crac); M.cracR = redundancy(p.tier, M.cracN, 'term'); }
     else if (airTech === 'IEC') { M.iecN = ceil((airKW + greyHeat) / 400); M.iecR = redundancy(p.tier, M.iecN, 'plant'); }
     else {
-      var chSize = airTech === 'WCCH' ? (chwLoad >= 20000 ? 3517 : (chwLoad >= 6000 ? 2461 : 1407)) : (chwLoad >= 3000 ? 1000 : 500);
-      M.chSize = chSize; M.chN = Math.max(1, ceil(chwLoad / chSize)); M.chR = redundancy(p.tier, M.chN, 'plant'); M.chLabel = redLabel(M.chN, M.chR);
+      var chRule = airTech === 'WCCH' ? (chwLoad >= 20000 ? 3517 : (chwLoad >= 6000 ? 2461 : 1407)) : (chwLoad >= 3000 ? 1000 : 500);
+      var chSize = p.chKW > 0 ? p.chKW : chRule;
+      M.chSize = chSize; M.chRule = chRule; M.chN = Math.max(1, ceil(chwLoad / chSize)); M.chR = redundancy(p.tier, M.chN, 'plant'); M.chLabel = redLabel(M.chN, M.chR);
       if (airTech === 'WCCH') { M.ctN = M.chN; M.ctR = M.chR; M.rejKW = chwLoad * K.REJ; }
       M.pumps = (M.chN + M.chR) * (airTech === 'WCCH' ? 2 : 1);
-      M.tesM3 = (p.tier >= 3 || avgDens >= 15) ? chwLoad * K.TES_S / (K.CP_W * K.CHW_DT) : 0;
+      /* chilled-water ΔT sets the flow and pipe size; storage covers the chiller restart (5 / 10 / 15 min below Tier III / Tier III / Tier IV) */
+      M.chwDT = p.chwDT > 0 ? p.chwDT : K.CHW_DT; M.tesS = p.tesS > 0 ? p.tesS : (p.tier >= 4 ? 900 : (p.tier >= 3 ? 600 : 300));
+      M.chwFlow = chwLoad / (4.186 * M.chwDT); M.chwDN = pick([100, 125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200], Math.sqrt(4 * M.chwFlow / 1000 / (Math.PI * 2.4)) * 1000);
+      M.tesM3 = (p.tier >= 3 || avgDens >= 15) ? chwLoad * M.tesS / (K.CP_W * M.chwDT) : 0;
       var airRackDens = (cool === 'DLC' || cool === 'IMM') ? sd : avgDens, term;
       if (airRackDens > 25) term = { en: 'In-row coolers (50 kW)', zh: '列间空调（50 kW）', size: 50, id: 'ME-10' };
       else if (itMW / Math.max(1, ceil(itMW / 4)) >= 2) term = { en: 'Fan walls (400 kW)', zh: '风墙（400 kW）', size: 400, id: 'ME-08' };
@@ -273,8 +364,8 @@
       term.n = ceil(Math.max(termLoad, 1) / term.size); term.r = redundancy(p.tier, term.n, 'term'); M.term = term;
     }
     if (liquidKW > 0) {
-      var cduSize = liquidKW >= 3000 ? 1500 : 800;
-      M.cduSize = cduSize; M.cduN = ceil(liquidKW / cduSize); M.cduR = Math.max(1, ceil(M.cduN / K.CDU_N_PER_R));
+      var cduRule = liquidKW >= 3000 ? 1500 : 800, cduSize = p.cduKW > 0 ? p.cduKW : cduRule;
+      M.cduSize = cduSize; M.cduRule = cduRule; M.cduN = ceil(liquidKW / cduSize); M.cduR = Math.max(1, ceil(M.cduN / K.CDU_N_PER_R));
       M.dcN = ceil(liquidKW * 1.05 / K.DC_KW); M.dcR = redundancy(p.tier, M.dcN, 'plant');
       if (cool === 'IMM') M.tanks = ceil(liquidKW / 100);
     }
@@ -297,7 +388,7 @@
     if (airTech === 'WCCH') yard += M.rejKW * 0.025;
     if (airTech === 'ACCH') yard += chwLoad * 0.04;
     if (liquidKW > 0) yard += liquidKW * 1.05 * 0.05;
-    var subst = mva > 30 ? (mva > 300 ? 15000 : (mva > 120 ? 8000 : 4000)) : 150;
+    var subst = hv.kv === 20 ? 150 : (hv.kv === 70 ? 2500 : (hv.kv === 150 ? (mva > 120 ? 8000 : 4000) : (hv.kv === 500 ? 15000 : 10000)));
     var siteNeed = Math.max(footprint / (clamp(p.kdb, 20, 90) / 100), (footprint + yard + subst) * 1.6);
     var raised = p.raised === 'YES' || (p.raised !== 'NO' && avgDens <= 10 && itMW < 30 && liquidKW === 0);
     var heavy = Math.max(hdR > 0 ? (hp.kg || 0) : 0, sp.kg || 0);
@@ -337,7 +428,7 @@
     var base = p.capexOverride > 0 ? p.capexOverride : ID_CAPEX * (L.capexF || 1);
     var perMW = base * TIER_CAPEX[p.tier] * scaleF * (COOL_CAPEX[cool] || 1) * (p.prefab ? 1.03 : 1);
     var facility = itMW * perMW * 1e6;
-    var utility = mva > 30 ? Math.max(6e6, 0.12e6 * mva) : Math.max(0.3e6, 0.05e6 * mva);
+    var utility = hv.cost;
     var landArea = p.siteArea > 0 ? p.siteArea : siteNeed;
     var land = landArea * p.landPrice;
     var cont = (facility + utility) * p.contingency / 100;
@@ -365,7 +456,7 @@
     opex.co2t = energyMWh * (1 - clamp(p.renewable, 0, 100) / 100) * (DB.idGridEF || 0.79);
     R.opex = opex;
 
-    R.sched = schedule(p, itMW, mva, cool);
+    R.sched = schedule(p, itMW, mva, cool, hv.lead);
     R.fin = finance(p, R, itKW, facility + bessCapex, utility, land, cont, itHW, pueAt, opex, tariff);
     R.reqs = requirements(p, R);
     R.risks = risks(p, R);
@@ -435,12 +526,12 @@
   }
 
   /* ---------------------------------------------------------- schedule */
-  function schedule(p, itMW, mva, cool) {
+  function schedule(p, itMW, mva, cool, lead) {
     var giant = itMW >= 200, big = itMW >= 30, med = itMW >= 5;
     var pre = giant ? 8 : (big ? 6 : (med ? 4 : 3)), permit = giant ? 15 : (big ? 12 : (med ? 9 : 6)), design = giant ? 10 : (big ? 9 : (med ? 7 : 5));
     var proc = giant ? 20 : (big ? 16 : (med ? 12 : 9)), cons = giant ? 22 : (big ? 20 : (med ? 15 : (itMW >= 1 ? 11 : 8)));
     if (p.prefab) cons = Math.round(cons * 0.75);
-    var cx = big ? 4 : (med ? 3 : 2), util = mva > 300 ? 36 : (mva > 30 ? 24 : (mva > 2 ? 12 : 6));
+    var cx = big ? 4 : (med ? 3 : 2), util = lead || (mva > 300 ? 36 : (mva > 30 ? 24 : (mva > 2 ? 12 : 6)));
     var T = [];
     function add(en, zh, s, d, c) { T.push({ en: en, zh: zh, s: s, d: d, c: c }); return s + d; }
     var e1 = add('Feasibility, site selection & land', '可行性研究、选址及土地', 0, pre, 'plan');
@@ -464,8 +555,13 @@
         'IT平台：' + fmt(c.stdR) + '个标准机柜（' + R.stdP.zh + '，' + fmt(c.sd, 1) + ' kW）' + (c.hdR ? '+' + fmt(c.hdR) + '个高密度机柜（' + R.hdP.zh + '，' + fmt(c.hd, 0) + ' kW）。' : '。'));
     add('GEN', 'Target ' + c.tier.en + ' (≈ TIA-942 ' + c.tier.tia + ', SNI 8799 ' + c.tier.sni + ', EN 50600 ' + c.tier.en50600 + ').',
         '目标等级' + c.tier.zh + '（约对应TIA-942 ' + c.tier.tia + '、SNI 8799 ' + c.tier.sni + '、EN 50600 ' + c.tier.en50600 + '）。');
-    add('EL', 'PLN supply ≈ ' + fmt(el.mva, 1) + ' MVA maximum demand via ' + el.volt[0] + '; ' + el.feeds + ' feed(s)' + (p.tier >= 3 ? ' from diverse substations recommended.' : '.'),
-        'PLN最大需量约' + fmt(el.mva, 1) + ' MVA，' + el.volt[1] + '；' + el.feeds + '路进线' + (p.tier >= 3 ? '，建议来自不同变电站。' : '。'));
+    var hv = el.hv;
+    add('EL', 'PLN supply ≈ ' + fmt(el.mva, 1) + ' MVA maximum demand via ' + el.volt[0] + '; ' + hv.circ + ' incoming circuit(s)' + (p.tier >= 3 ? ' (N-1) from diverse substations.' : '.'),
+        'PLN最大需量约' + fmt(el.mva, 1) + ' MVA，' + el.volt[1] + '；' + hv.circ + '回进线' + (p.tier >= 3 ? '（N-1），来自不同变电站。' : '。'));
+    if (hv.kv > 20) add('EL', hv.name + ' GIS (Ur ' + hv.ur + ' kV, ' + hv.ik + ' kA, ' + fmt(hv.busA) + ' A, ' + hv.scheme[0].toLowerCase() + ')' + (hv.ibt ? '; ' + hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio + ' interbus transformers' : '') +
+        '; ' + hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' transformers; ' + hv.mv.boards + ' × 24 kV switchboard(s) ' + fmt(hv.mv.busA) + ' A / ' + hv.mv.ik + ' kA. Substation scope and hand-over per the PLN connection agreement.',
+        hv.name + ' GIS（Ur ' + hv.ur + ' kV，' + hv.ik + ' kA，' + fmt(hv.busA) + ' A，' + hv.scheme[1] + '）' + (hv.ibt ? '；' + hv.ibt.total + '台' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio + '联络变压器' : '') +
+        '；' + hv.ht.total + '台' + hv.ht.mva + ' MVA ' + hv.ht.ratio + '主变压器；' + hv.mv.boards + '段24 kV开关柜' + fmt(hv.mv.busA) + ' A/' + hv.mv.ik + ' kA。变电站范围及移交按PLN接入协议。');
     add('EL', 'Generators: ' + el.genTotal + ' × ' + el.genSize + ' kWe (' + el.genLabel + '), continuous (COP/DCC) rating; on-site fuel ' + p.fuelH + ' h ≈ ' + fmt(el.fuelL / 1000, 0) + ' m³.',
         '发电机：' + el.genTotal + '台×' + el.genSize + ' kWe（' + el.genLabel + '），持续功率；现场储油' + p.fuelH + ' h，约' + fmt(el.fuelL / 1000, 0) + ' m³。');
     add('EL', 'UPS: ' + el.upsTotal + ' × ' + el.upsSize + ' kW (' + el.upsLabel + '), ' + p.upsMin + ' min with ' + (p.battery === 'LI' ? 'Li-ion (LFP)' : 'VRLA') + ' ≈ ' + fmt(el.battKWh, 0) + ' kWh.',
@@ -513,7 +609,15 @@
     if (p.targetPUE > 0 && R.eff.pue > p.targetPUE + 0.02) add('M', 'Estimated PUE ' + fmt(R.eff.pue, 2) + ' is above the target ' + fmt(p.targetPUE, 2) + '.', '预计PUE ' + fmt(R.eff.pue, 2) + '高于目标' + fmt(p.targetPUE, 2) + '。', 'Raise supply temperatures, eco-mode UPS, liquid cooling or highland siting.', '提高供水/送风温度、UPS节能模式、液冷或高原选址。');
     if (c.type.id === 'AI') add('M', 'Synchronous GPU load swings (tens of % within seconds) stress UPS, generators and the PLN grid.', 'GPU同步负荷波动（数秒内数十个百分点）冲击UPS、发电机及PLN电网。', R.el.bess ? 'BESS included for smoothing; confirm ramp-rate limits with PLN.' : 'Add BESS / UPS buffering and agree ramp-rate limits with PLN.', R.el.bess ? '已配置储能平抑；与PLN确认爬坡率限值。' : '增设储能/UPS缓冲并与PLN约定爬坡率限值。');
     if (p.battery === 'LI' || R.el.bess) add('M', 'Lithium-ion batteries / BESS introduce thermal-runaway fire risk.', '锂电池/储能存在热失控火灾风险。', 'LFP chemistry, UL 9540A-tested systems, off-gas detection and NFPA 855 separation.', '采用磷酸铁锂、UL 9540A测试系统、逸出气体探测及NFPA 855间距。');
-    if (R.el.mva > 30) add('M', 'HV connection > 30 MVA needs a dedicated 150 kV substation and 18–36 months of PLN works.', '超过30 MVA的高压接入需专用150 kV变电站及18–36个月电网工程。', 'Start the PLN application (SLO, PJBTL) at feasibility; consider phased energisation.', '可研阶段即启动PLN申请（SLO、供电协议）；考虑分期送电。');
+    var hv = R.el.hv, gEn = R.grid ? R.grid.en : '', gZh = R.grid ? R.grid.zh : '';
+    if (hv.kv > 20) add('M', 'The ' + hv.name + ' connection needs a dedicated GIS substation' + (hv.ibt ? ' with ' + hv.ibt.ratio + ' interbus transformers' : '') + ' and ≈ ' + hv.lead + ' months of PLN works.', hv.name + '接入需专用GIS变电站' + (hv.ibt ? '及' + hv.ibt.ratio + '联络变压器' : '') + '，PLN工程约需' + hv.lead + '个月。', 'Start the PLN application (SLO, PJBTL) at feasibility; consider phased energisation.', '可研阶段即启动PLN申请（SLO、供电协议）；考虑分期送电。');
+    if (hv.fit === 'over') add('H', 'Maximum demand ' + fmt(R.el.mva, 1) + ' MVA exceeds the practical range of a ' + hv.name + ' connection (≤ ' + fmt(hv.hi) + ' MVA): ' + hv.circ + ' circuits would be needed.', '最大需量' + fmt(R.el.mva, 1) + ' MVA超出' + hv.name + '接入的实际范围（≤' + fmt(hv.hi) + ' MVA）：需' + hv.circ + '回线路。', hv.rule !== hv.kv ? 'Use the recommended ' + kvName(hv.rule) + ' connection.' : 'Split the campus into several ' + hv.name + ' substations fed from different PLN substations, phase the build with PLN reinforcement (RUPTL) or add on-site generation.',
+        hv.rule !== hv.kv ? '采用建议的' + kvName(hv.rule) + '接入。' : '将园区拆分为由不同PLN变电站供电的多座' + hv.name + '变电站，结合PLN电网加强（RUPTL）分期建设，或增设现场发电。');
+    if (hv.fit === 'under') add('L', hv.name + ' is oversized for ' + fmt(R.el.mva, 1) + ' MVA (typical from ' + fmt(hv.lo) + ' MVA) — higher substation cost and lead time.', hv.name + '对' + fmt(R.el.mva, 1) + ' MVA而言偏大（通常' + fmt(hv.lo) + ' MVA起）——变电站投资及工期增加。', 'Use the recommended ' + kvName(hv.rule) + ' connection unless PLN requires otherwise.', '除PLN另有要求外，采用建议的' + kvName(hv.rule) + '接入。');
+    if (hv.intl) add('M', '220/230 kV is not a PLN transmission voltage (PLN uses 150, 275 and 500 kV).', '220/230 kV不是PLN输电电压等级（PLN采用150、275、500 kV）。', 'Applies to sites outside Indonesia; in Indonesia use 150, 275 or 500 kV.', '仅适用于印尼以外站点；印尼境内采用150、275或500 kV。');
+    else if (!hv.avail) add('H', hv.name + ' is not available in the ' + gEn + '.', gZh + '无' + hv.name + '电压等级。', 'Use a voltage available in this PLN system (recommended ' + kvName(hv.rule) + ').', '采用该PLN电网现有电压等级（建议' + kvName(hv.rule) + '）。');
+    else if (hv.avail === 3) add('M', hv.name + ' in the ' + gEn + ' is planned (RUPTL), not yet in service — timing risk.', gZh + '的' + hv.name + '为规划（RUPTL）尚未投运——存在时间风险。', 'Confirm the RUPTL schedule with PLN; phase the campus or connect early phases at a lower voltage.', '与PLN确认RUPTL进度；园区分期或早期以较低电压接入。');
+    else if (hv.avail === 2) add('L', hv.name + ' is limited / legacy in the ' + gEn + '.', gZh + '的' + hv.name + '为有限/存量网络。', 'Confirm available capacity and the nearest substation with PLN.', '与PLN确认可用容量及最近变电站。');
     if (R.grid && R.grid.rel !== 'high') add('M', 'Grid reliability in ' + R.L.provEn + ' (' + R.grid.en + ') is lower than JAMALI.', R.L.provZh + '电网（' + R.grid.zh + '）可靠性低于JAMALI电网。', 'Longer fuel autonomy, generator run-hours budget and BESS for grid support.', '延长燃油自持、预留发电机运行小时并配置储能支撑电网。');
     if (c.itMW >= 5) add('M', 'Long-lead equipment (transformers, generators, MV switchgear) currently 12–24 months.', '长周期设备（变压器、发电机、中压开关柜）交期12–24个月。', 'Early procurement / reservation agreements and framework contracts.', '提前采购/产能预留及框架合同。');
     if (p.seismic === 'high') add('M', 'High seismic hazard at ' + R.L.en + '.', R.L.zh + '地震风险高。', 'Importance factor 1.5, seismic bracing of MEP and racks, base isolation option (SNI 1726:2019).', '重要性系数1.5，机电及机柜抗震支撑，可考虑隔震（SNI 1726:2019）。');
@@ -532,17 +636,19 @@
     function add(id, qty, unit, rating, note, noteZh, unitZh) { var e = find(DB.equipment, id); B.push({ id: id, sys: e ? e.sys : '', en: e ? e.en : id, zh: e ? e.zh : id, qty: qty, unit: unit, unitZh: unitZh || unit, rating: rating || '', note: note || '', noteZh: noteZh || note || '' }); }
     var fr = el.feedsPerRack, sp0 = R.stdP, hp0 = R.hdP, integ = function (pl) { return !!(pl && ((pl.cat === 'AI' && pl.kw >= 100) || pl.id === 'OCP-ORV3')); }, rpN = function (r) { return r ? fr * r[2] : 0; };
     var taps = c.stdR * fr * Math.max(1, el.rStd[2]) + (c.hdR ? c.hdR * fr * (el.rHd && el.rHd[2] ? el.rHd[2] : ceil(c.hd / 43)) : 0);
-    add('EL-01', 3 + el.txTotal + Math.max(1, ceil(el.txTotal * 0.2)), 'panels', el.vclass === 'TT' ? '24 kV (from 150 kV substation)' : '24 kV', el.feeds + ' incomer(s) + bus coupler');
-    add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel);
-    add('EL-03', el.txTotal, 'line-ups', '4,000 A', 'One per transformer');
-    add('EL-04', el.genTotal, 'no.', el.genSize + ' kWe', el.genLabel + ', COP/DCC');
+    var hv = el.hv, mvB = hv.mv.boards;
+    add('EL-01', mvB * (p.tier >= 3 ? 3 : 2) + el.txTotal + Math.max(1, ceil(el.txTotal * 0.2)) + (el.genV === 'MV' ? el.genTotal : 0), 'panels', '24 kV · ' + fmt(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA' + (hv.kv > 20 ? ' (from ' + hv.name + ' substation)' : ''),
+      mvB + ' board(s): incomers + bus coupler, ' + el.txTotal + ' transformer feeders' + (el.genV === 'MV' ? ', ' + el.genTotal + ' generator incomers' : ''), mvB + '段：进线+母联，' + el.txTotal + '路变压器馈线' + (el.genV === 'MV' ? '，' + el.genTotal + '路发电机进线' : ''), '面');
+    add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel + ' · uk ' + el.lv.uk + ' %');
+    add('EL-03', el.txTotal, 'line-ups', fmt(el.lv.acb) + ' A · ' + el.lv.icw + ' kA', 'One per transformer', '每台变压器一组', '组');
+    add('EL-04', el.genTotal, 'no.', el.genSize + ' kWe', el.genLabel + ', COP/DCC · ' + (el.genV === 'MV' ? '20 kV paralleled plant' : '400 V'), el.genLabel + '，持续功率 · ' + (el.genV === 'MV' ? '20 kV并机' : '400 V'), '台');
     if (el.genTotal > 1) add('EL-05', Math.max(1, ceil(el.genTotal / 10)), 'systems', '', 'Redundant controllers');
     add('EL-06', el.tanks, 'tanks', el.tankSize + ' m³', fmt(el.fuelL / 1000, 0) + ' m³ total, ' + p.fuelH + ' h');
     add('EL-07', Math.max(2, Math.round(el.txTotal / 2)), 'no.', '1,600–3,200 A', 'Mechanical boards');
     add('EL-09', el.upsTotal, 'systems', el.upsSize + ' kW', el.upsLabel);
     add(p.battery === 'LI' ? 'EL-10' : 'EL-11', Math.round(el.battKWh), 'kWh', p.upsMin + ' min', 'EOL sizing');
     if (el.bess) add('EL-23', el.bess.containers, 'containers', fmt(el.bess.mw, 1) + ' MW / ' + fmt(el.bess.mwh, 1) + ' MWh', 'LFP, ' + el.bess.h + ' h');
-    if (el.useBusway) add('EL-13', el.busways, 'runs', el.bwA + ' A', el.rows + ' rows × ' + fr + ' (A/B) · ≈ ' + fmt(taps, 0) + ' tap-off units (1 per rack per feed, more for HD racks)', el.rows + '排 × ' + fr + '（A/B）· 约' + fmt(taps, 0) + '个插接箱（每柜每路1个，高密度机柜更多）', '条');
+    if (el.useBusway) add('EL-13', el.busways, 'runs', el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : ''), el.rows + ' rows × ' + fr + ' (A/B) · ≈ ' + fmt(taps, 0) + ' tap-off units (1 per rack per feed, more for HD racks)', el.rows + '排 × ' + fr + '（A/B）· 约' + fmt(taps, 0) + '个插接箱（每柜每路1个，高密度机柜更多）', '条');
     else add('EL-12', el.pdus, 'no.', '150 kVA', 'A/B pairs', 'A/B成对', '台');
     if (el.rpdus) add('EL-14', el.rpdus, 'no.', el.rStd[0] + (el.rHd && el.rHd[2] && el.rHd[0] !== el.rStd[0] ? ' · HD: ' + el.rHd[0] : ''),
       fmt(c.stdR, 0) + ' standard racks × ' + rpN(el.rStd) + (el.rStd[2] ? '' : ' (power shelves)') + (c.hdR ? ' + ' + fmt(c.hdR, 0) + ' HD racks × ' + rpN(el.rHd) + (el.rHd && !el.rHd[2] ? ' (OEM power shelves fed by busway tap-offs)' : '') : '') + ' — A + B feeds',
@@ -606,5 +712,6 @@
   }
 
   g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, find: find, capacity: capacity, coolingMatrix: coolingMatrix,
-                 loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K };
+                 loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
+                 KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection };
 })(typeof window !== 'undefined' ? window : globalThis);

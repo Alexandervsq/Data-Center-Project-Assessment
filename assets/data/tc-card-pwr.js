@@ -61,8 +61,8 @@
     o += L.banner(560, 290, 900, ['② CRITICAL POWER · 关键供电', '② 关键供电 · CRITICAL POWER'], ['UPS + batteries → busway → rack PDUs, on A and B paths', 'UPS+电池 → 母线 → 机柜PDU，A、B双路'], null, 'tcZone');
     o += L.banner(130, 290, 410, ['③ PROTECTION · 保护与监控', '③ 保护与监控 · PROTECTION'], ['earthing · monitoring', '接地 · 监控'], null, 'tcZone5');
     /* row 1 */
-    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, L.pylon(50, 232, 150) + L.powerTx(80, 232, .92) + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.vclass === 'TT' ? '150 kV · ' + F(el.mva, 1) + ' MVA' : '20 kV · ' + F(el.mva, 1) + ' MVA'));
-    o += L.hot('mvsg', ['MV switchgear', '中压开关柜'], 194, 38, 140, 200, L.switchgear(200, 140, 5, 122, 92) + L.label(262, 60, '02', ['MV switchgear', '中压开关柜'], [el.feeds + ' feeders', el.feeds + '路进线']));
+    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, L.pylon(50, 232, 150) + L.powerTx(80, 232, .92) + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.hv.name + ' · ' + F(el.mva, 1) + ' MVA'));
+    o += L.hot('mvsg', ['MV switchgear', '中压开关柜'], 194, 38, 140, 200, L.switchgear(200, 140, 5, 122, 92) + L.label(262, 60, '02', ['MV switchgear', '中压开关柜'], el.hv.kv > 20 ? ['GIS ' + el.hv.ur + ' kV · ' + el.hv.mv.boards + ' × 24 kV', 'GIS ' + el.hv.ur + ' kV · ' + el.hv.mv.boards + '段24 kV'] : [el.hv.circ + ' feeders · 24 kV', el.hv.circ + '路进线 · 24 kV']));
     o += L.hot('tx', ['Transformers', '变压器'], 344, 38, 196, 200, L.dryTx(350, 130, 86, 102) + L.dryTx(446, 130, 86, 102) + L.text(393, 126, 'A', 'tc-lt', ' text-anchor="middle"') + L.text(489, 126, 'B', 'tc-lt', ' text-anchor="middle"') + L.label(442, 60, '03', ['Transformers', '变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA'));
     o += L.hot('lv', ['LV switchboard', '低压配电柜'], 562, 38, 150, 200, L.lvBoard(572, 140, 4, 118, 92) + L.label(628, 60, '04', ['LV + ATS', '低压+ATS'], [el.txTotal + ' line-ups', el.txTotal + '组']));
     o += L.hot('gen', ['Generators', '发电机'], 720, 38, 196, 200, L.genset(725, 160, 180, 72) + L.label(815, 60, '05', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe'));

@@ -16,20 +16,47 @@
   function bat(c) { return c.p.battery === 'LI' ? ['Li-ion (LFP)', '锂电（磷酸铁锂）'] : ['VRLA lead-acid', '阀控铅酸']; }
   function W2(en, zh) { return [en, zh]; }
 
+  /* PLN connection options for the demand of the design (engine connection solution) and the resulting power chain */
+  var AVT = { 0: ['not in this PLN system', '本电网无'], 1: ['in service', '已投运'], 2: ['limited / legacy', '有限/存量'], 3: ['planned (RUPTL)', '规划中（RUPTL）'] };
+  function connTable(c) {
+    var hv = c.R.el.hv, gr = DB.idGrids[c.R.L.grid] || {};
+    var rows = hv.opts.map(function (o) {
+      var st = o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail], fit = o.fit === 'ok' ? ['✓ in range', '✓ 范围内'] : (o.fit === 'over' ? ['✗ above range', '✗ 超出范围'] : ['△ oversized', '△ 偏大']);
+      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), L.te(fit)];
+      r.cur = o.sel; return r;
+    });
+    return '<div><h3>' + L.te(['Connection options for ' + F(c.R.el.mva, 1) + ' MVA — ' + gr.en, gr.zh + ' — ' + F(c.R.el.mva, 1) + ' MVA的接入方案']) + '</h3>' +
+      L.ptable([['Voltage', '电压'], ['Switchgear', '开关设备'], ['Practical range', '适用范围'], ['Circuits', '回路'], ['In this grid', '本电网'], ['Fit', '匹配']], rows) +
+      '<p class="tc-src">' + L.te(['Highlighted: the connection of this design. Change the voltage in the calculator below or in Connected design — substation, transformers, switchgear, tariff, cost and programme follow. Planning view of the PLN network (RUPTL 2025–2034); confirm with PLN.', '高亮行：本设计的接入方式。可在下方计算器或“关联设计”中修改电压——变电站、变压器、开关设备、电价、投资及工期随之联动。PLN电网为规划层面判断（RUPTL 2025–2034），须与PLN确认。']) + '</p></div>';
+  }
+  function chainTable(c) {
+    var el = c.R.el, h = el.hv, rows = [];
+    rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' · ' + h.circ + ' circuit(s)', h.name + ' · ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
+    if (h.gis) rows.push([L.te(['HV substation (GIS, IEC 62271-203)', '高压变电站（GIS，IEC 62271-203）']), L.te(h.scheme), h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
+    if (h.ibt) rows.push([L.te(['EHV/HV interbus transformers', '超高压/高压联络变压器']), h.ibt.ratio, h.ibt.total + ' × ' + h.ibt.mva + ' MVA']);
+    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' · uk ' + h.ht.uk + ' %', h.ht.total + ' × ' + h.ht.mva + ' MVA']);
+    rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']), h.mv.boards + ' × ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA']);
+    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV · uk ' + el.lv.uk + ' % · ' + el.txLabel, el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
+    rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB · fault level', '主框架断路器 · 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA']);
+    rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V sets with ATS', '400 V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
+    rows.push([L.te(['UPS · batteries', 'UPS · 蓄电池']), el.upsLabel + ' · ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW · ' + F(el.battKWh) + ' kWh']);
+    return '<div><h3>' + L.te(['Power chain of this design — every rating follows the demand', '本设计供电链——各额定值随需量联动']) + '</h3>' + L.ptable([['Stage', '环节'], ['Arrangement', '配置'], ['Rating', '额定']], rows) + '</div>';
+  }
+
   /* ================================================================ unit library */
   var U = {
     grid: { name: ['PLN grid connection', 'PLN电网接入'], no: '01',
       func: ['Brings utility power from the PLN grid to the site through dedicated feeders or an on-site substation.', '通过专用馈线或场内变电站，将PLN电网电力引入场地。'],
-      how: ['Small and medium sites take 20 kV (PLN TM) on two independent feeders; above ≈ 30 MVA a 150 kV (TT) connection with an on-site substation is normal, and gigawatt campuses need 500 kV or several 150 kV substations. Tier III/IV sites ask PLN for two feeders from different substations so that one outage does not drop both.',
-        '中小型站点采用20 kV（PLN中压）两路独立馈线；约30 MVA以上通常采用150 kV（高压）接入并自建变电站；吉瓦级园区需500 kV或多座150 kV变电站。Tier III/IV站点要求PLN从不同变电站提供两路馈线，避免单一故障同时失电。'],
-      basis: function (c) { var R = c.R, gr = grid(c); return [t(R.el.volt) + ' · ' + F(R.el.mva, 1) + ' MVA · ' + R.el.feeds + ' feed(s) · ' + gr.en + ' (reliability ' + relTxt(gr.rel)[0] + ') · Rp ' + F(c.p.tariffIDR, 1) + '/kWh',
-        t(R.el.volt) + ' · ' + F(R.el.mva, 1) + ' MVA · ' + R.el.feeds + '路进线 · ' + gr.zh + '（可靠性' + relTxt(gr.rel)[1] + '）· 电价 ' + F(c.p.tariffIDR, 1) + ' 印尼盾/kWh']; },
+      how: ['The connection voltage follows the maximum demand and the PLN system: up to ≈ 30 MVA on dedicated 20 kV (TM) feeders; up to ≈ 300 MVA at 150 kV (TT) with an on-site GIS substation and 150/20 kV transformers; above that an extra-high-voltage connection — 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi — with 500/150 or 275/150 kV interbus transformers feeding a 150 kV campus network. 220/230 kV is the equivalent level in other ASEAN grids, not a PLN voltage. Tier III/IV sites take N-1 circuits from two PLN substations so that one outage does not drop the site.',
+        '接入电压由最大需量及所在PLN电网决定：约30 MVA以内采用20 kV（中压）专用馈线；约300 MVA以内采用150 kV（高压），自建GIS变电站及150/20 kV主变；更大时采用超高压接入——爪哇-巴厘为500 kV，苏门答腊、加里曼丹、苏拉威西为275 kV——经500/150或275/150 kV联络变压器向园区150 kV网络供电。220/230 kV为其他东盟电网的对应等级，非PLN电压。Tier III/IV站点按N-1配置来自两座PLN变电站的进线，避免单一故障导致全站失电。'],
+      basis: function (c) { var R = c.R, gr = grid(c), h = R.el.hv; return [R.el.volt[0] + ' · ' + F(R.el.mva, 1) + ' MVA · ' + h.circ + ' circuit(s) · ' + gr.en + ' (reliability ' + relTxt(gr.rel)[0] + ') · Rp ' + F(c.p.tariffIDR, 1) + '/kWh · ≈ ' + h.lead + ' months of PLN works',
+        R.el.volt[1] + ' · ' + F(R.el.mva, 1) + ' MVA · ' + h.circ + '回进线 · ' + gr.zh + '（可靠性' + relTxt(gr.rel)[1] + '）· 电价 ' + F(c.p.tariffIDR, 1) + ' 印尼盾/kWh · PLN工程约' + h.lead + '个月']; },
       om: [['Start the PLN application (SLO, connection agreement) at feasibility — high-voltage connections take 18–36 months.', '可研阶段即启动PLN申请（SLO、接入协议）——高压接入需18–36个月。'],
         ['Agree protection settings and fault levels with PLN; record power quality (sags, harmonics) during commissioning.', '与PLN确认保护定值与短路水平；调试期间记录电能质量（电压暂降、谐波）。'],
         ['Weaker grids outside Java–Bali justify longer fuel autonomy and a battery energy storage system (BESS).', '爪哇-巴厘以外电网较弱地区，需更长燃油自持并配置电池储能系统（BESS）。']],
       extra: function (c) {
         var gr = c.R.L.grid;
-        return '<div class="tc-g2"><div><h3>' + L.te(['PLN grid systems', 'PLN电网系统']) + '</h3>' + L.ptable(null, Object.keys(DB.idGrids).map(function (k) { var x = DB.idGrids[k], r = [L.te([x.en, x.zh]), L.te(relTxt(x.rel))]; r.cur = k === gr; return r; })) + '</div>' +
+        return connTable(c) + '<div class="tc-g2"><div><h3>' + L.te(['PLN grid systems', 'PLN电网系统']) + '</h3>' + L.ptable(null, Object.keys(DB.idGrids).map(function (k) { var x = DB.idGrids[k], r = [L.te([x.en, x.zh]), L.te(relTxt(x.rel))]; r.cur = k === gr; return r; })) + '</div>' +
           '<div><h3>' + L.te(['PLN tariffs used by the assessment', '评估采用的PLN电价']) + '</h3>' + L.ptable([['Class', '类别'], 'LWBP Rp/kWh', ['24/7 blended', '24/7加权']], DB.idTariffs.map(function (x) { return [L.te([x.en, x.zh]), F(x.lwbp, 2), F(x.eff, 1)]; })) + '</div></div>';
       }, calc: 'mva' },
     mvsg: { eq: 'EL-01', more: ['EL-15'],
@@ -37,7 +64,10 @@
         '每路进线接入金属铠装、内部燃弧分级（IAC AFLR）的开关柜，配真空断路器及保护继电器。母联使任一路进线可带两段母线，出线断路器向变压器供电，联锁防止误操作。'],
       om: [['Thermographic scan of terminations under load every year.', '每年在带负荷状态下对接头进行红外测温。'], ['Test protection relays and breaker timing every 2–3 years.', '每2–3年测试保护继电器及断路器动作时间。'],
         ['Arc-flash study and labels before energisation; switching only under a written method of procedure (MOP).', '送电前完成弧闪分析并张贴标识；倒闸操作必须依据书面操作程序（MOP）。']],
-      basis: function (c) { return [c.R.el.feeds + ' incoming feeder(s) at ' + (c.R.el.vclass === 'TT' ? '150 kV → 20 kV' : '20 kV') + ', feeding ' + c.R.el.txTotal + ' transformers', c.R.el.feeds + '路进线（' + (c.R.el.vclass === 'TT' ? '150 kV→20 kV' : '20 kV') + '），向' + c.R.el.txTotal + '台变压器供电']; },
+      basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers',
+        h.name + ' GIS（' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']
+        : [h.circ + ' incoming 20 kV feeder(s) on a 24 kV board (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers', h.circ + '路20 kV进线接入24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']; },
+      extra: function (c) { return chainTable(c); },
       calc: 'mva' },
     tx: { eq: 'EL-02',
       how: ['Cast-resin dry-type transformers step 20 kV down to 400 V close to the load, without oil, so they can stand indoors next to the LV switchboards. They are counted with the Tier redundancy so that normal loading stays moderate and a failed unit can be carried by the others.',
@@ -45,8 +75,8 @@
       key: [['N = ⌈kVA ÷ (unit kVA × ' + K.TX_LOAD + ')⌉ + redundancy', 'N = ⌈kVA ÷ (单台kVA × ' + K.TX_LOAD + ')⌉ + 冗余'], function (c) { var el = c.R.el; return F(el.demandKVA) + ' kVA ÷ (' + F(el.txSize) + ' × ' + K.TX_LOAD + ') → ' + el.txN + ' + ' + el.txR + ' (' + el.txLabel + ')'; }],
       om: [['Keep enclosure filters clean and check winding temperature (PT100) alarms monthly.', '保持外壳滤网清洁，每月检查绕组温度（PT100）报警。'], ['Partial-discharge test at commissioning; infrared scan of LV links every year.', '调试时进行局部放电测试；每年对低压连接进行红外测温。'],
         ['Order early: large transformers have 12–24 month lead times.', '尽早订货：大型变压器交货期12–24个月。']],
-      basis: function (c) { var el = c.R.el; return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ') for ' + F(el.demandKVA) + ' kVA maximum demand', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '），最大需量' + F(el.demandKVA) + ' kVA']; },
-      calc: 'tx' },
+      basis: function (c) { var el = c.R.el; return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ', uk ' + el.lv.uk + ' %) for ' + F(el.demandKVA) + ' kVA maximum demand · LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '，uk ' + el.lv.uk + '%），最大需量' + F(el.demandKVA) + ' kVA · 低压' + F(el.lv.acb) + ' A/' + el.lv.icw + ' kA']; },
+      extra: function (c) { return chainTable(c); }, calc: 'tx' },
     lv: { eq: 'EL-03', more: ['EL-07', 'EL-08', 'EL-16'],
       how: ['The main switchboard receives the transformer and generator supplies and distributes 400 V to the UPS, mechanical plant and building services. Automatic transfer (ATS or breaker interlocks) moves the load to the generators within seconds of a utility failure and back again when PLN returns.',
         '低压主配电柜接收变压器及发电机电源，向UPS、暖通设备及建筑负荷分配400 V电力。市电故障后数秒内通过自动转换（ATS或断路器联锁）切换至发电机，PLN恢复后再切回。'],
@@ -81,7 +111,7 @@
       key: ['I = P ÷ (√3 × ' + K.BW_V + ' kV × ' + K.BW_F + ')', function (c) { var el = c.R.el; return F(c.R.cap.itKW / el.rows) + ' kW per row → ' + el.bwA + ' A'; }],
       om: [['Infrared scan of joints and tap-offs every year; torque check after installation.', '每年红外测温接头及插接箱；安装后检查力矩。'], ['Label A/B feeds clearly; never load one side above 50 % of the pair rating.', '清晰标识A/B路；单路负载不得超过两路总额定的50%。'],
         ['Keep spare tap-off boxes of each rating on site.', '现场备用各规格插接箱。']],
-      basis: function (c) { var el = c.R.el; return el.useBusway ? [el.busways + ' busway runs × ' + el.bwA + ' A (' + el.rows + ' rows, A + B)', el.busways + '条母线 × ' + el.bwA + ' A（' + el.rows + '排，A+B）'] : [el.pdus + ' × 150 kVA PDUs', el.pdus + '台150 kVA列头柜']; }, calc: 'bwy' },
+      basis: function (c) { var el = c.R.el; return el.useBusway ? [el.busways + ' busway runs × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') + ' (' + el.rows + ' rows, A + B)', el.busways + '条母线 × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') + '（' + el.rows + '排，A+B）'] : [el.pdus + ' × 150 kVA PDUs', el.pdus + '台150 kVA列头柜']; }, calc: 'bwy' },
     rpdu: { eq: 'EL-14', more: ['IT-01'],
       how: ['Intelligent rack PDUs distribute power to each server inside the cabinet and meter it per outlet or per phase, which feeds capacity planning and billing in DCIM. Dual-corded servers plug into the A and the B PDU so either path can carry the full load.',
         '智能机柜PDU在机柜内为每台服务器配电，并按插座或相计量，为DCIM容量规划与计费提供数据。双电源服务器分别接入A、B路PDU，任一路均可承担全部负荷。'],
@@ -645,8 +675,8 @@
       ex: function (c) { var k = c.R.cap; return ['This basis: ' + F(k.itKW) + ' kW ÷ ' + F(k.avgDens, 1) + ' kW = <b>' + F(k.racks) + ' racks</b> (' + F(k.stdR) + ' × ' + F(k.sd, 1) + ' kW + ' + F(k.hdR) + ' × ' + F(k.hd) + ' kW).', '本基准：' + F(k.itKW) + ' kW ÷ ' + F(k.avgDens, 1) + ' kW = <b>' + F(k.racks) + '个机柜</b>（' + F(k.stdR) + ' × ' + F(k.sd, 1) + ' kW + ' + F(k.hdR) + ' × ' + F(k.hd) + ' kW）。']; },
       visual: function () { return IV.densRanges(); } },
     mva: { title: ['From IT load to PLN demand', '从IT负载到PLN需量'],
-      body: ['The utility connection must carry the IT load plus cooling at the hottest hour, UPS losses and battery recharge, and the building. The PLN voltage follows the demand: up to ≈ 30 MVA at 20 kV, up to ≈ 300 MVA at 150 kV with an on-site substation, beyond that 500 kV or several substations.',
-        '电网接入须承担IT负载、最热时段的制冷、UPS损耗与电池充电以及建筑负荷。PLN电压等级随需量确定：约30 MVA以内为20 kV，约300 MVA以内为150 kV并自建变电站，再大则需500 kV或多座变电站。'],
+      body: ['The utility connection must carry the IT load plus cooling at the hottest hour, UPS losses and battery recharge, and the building. The voltage follows the demand and the PLN system: up to ≈ 30 MVA at 20 kV, up to ≈ 300 MVA at 150 kV with an on-site GIS substation, beyond that 500 kV (Java–Bali) or 275 kV (Sumatra, Kalimantan, Sulawesi) with interbus transformers to a 150 kV campus network; 220/230 kV is the equivalent in other ASEAN grids. Every rating downstream — HV/MV and MV/LV transformers, switchgear, generators, UPS — follows the same demand.',
+        '电网接入须承担IT负载、最热时段的制冷、UPS损耗与电池充电以及建筑负荷。电压等级由需量及PLN电网决定：约30 MVA以内为20 kV，约300 MVA以内为150 kV并自建GIS变电站，更大时采用500 kV（爪哇-巴厘）或275 kV（苏门答腊、加里曼丹、苏拉威西），经联络变压器接入园区150 kV网络；220/230 kV为其他东盟电网的对应等级。下游各额定值——高/中压及中/低压变压器、开关设备、发电机、UPS——均随同一需量确定。'],
       formula: ['Demand (kW) = IT × PUE(design day) + ' + K.UPS_LOSS * 100 + ' % UPS losses + building\nkVA = kW ÷ ' + K.PF, '需量（kW）= IT × 设计日PUE + ' + K.UPS_LOSS * 100 + '% UPS损耗 + 建筑\nkVA = kW ÷ ' + K.PF],
       ex: function (c) { var el = c.R.el; return ['This basis: ' + F(c.R.cap.itKW) + ' kW × ' + F(c.R.eff.puePeak, 2) + ' + … = ' + F(el.demandKW) + ' kW → <b>' + F(el.mva, 1) + ' MVA</b>, ' + t(el.volt) + '.', '本基准：' + F(c.R.cap.itKW) + ' kW × ' + F(c.R.eff.puePeak, 2) + ' + … = ' + F(el.demandKW) + ' kW → <b>' + F(el.mva, 1) + ' MVA</b>，' + el.volt[1] + '。']; } },
     space: { title: ['Space, building & site', '空间、建筑与场地'],

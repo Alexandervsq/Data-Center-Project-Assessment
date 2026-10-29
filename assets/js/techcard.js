@@ -465,8 +465,12 @@
     how: ['How it works', '工作原理'], forBasis: ['In this design basis', '本设计基准中'], ratings: ['Typical ratings', '典型规格'],
     params: ['Design parameters (TPG excerpt)', '设计参数（TPG摘录）'], req: ['Key technical requirements', '主要技术要求'], stds: ['Applicable standards', '适用标准'],
     tests: ['Inspection & testing', '检验与试验'], om: ['Operation, maintenance & common issues', '运行、维护与常见问题'], see: ['See also', '另见'],
-    calc: ['Step-by-step calculation', '分步计算'], calcHint: ['Change any input — linked AUTO inputs follow their code / standard rule and every step recalculates. Editing an AUTO value makes it MANUAL; ↺ restores the rule.', '修改任一输入——联动的“自动”参数按规范/标准规则调整，每一步即时重算。修改“自动”值即转为“手动”；↺恢复规则值。'],
+    calc: ['Step-by-step calculation', '分步计算'], calcHint: ['Change any input — AUTO inputs follow their code / standard rule and every step recalculates. Inputs marked with the link symbol belong to the whole facility: a change there re-sizes every connected system on every card. Editing an AUTO value makes it MANUAL; ↺ restores the rule.', '修改任一输入——“自动”参数按规范/标准规则调整，每一步即时重算。带链接符号的输入属于整个设施：修改后所有相关系统（各卡片）随之重新选型。修改“自动”值即转为“手动”；↺恢复规则值。'],
     auto: ['AUTO', '自动'], manual: ['MANUAL', '手动'], basisB: ['BASIS', '基准'], applyRule: ['Apply the rule again', '重新按规则取值'],
+    linked: ['Linked to the whole facility design — a change re-sizes every connected system', '与整个设施设计联动——修改后所有相关系统重新选型'], design: ['Connected design', '关联设计'],
+    designSub: ['One design for every system: change any parameter, connected parameters follow their engineering rule', '各系统共用同一设计：修改任一参数，相关参数按工程规则联动'],
+    resetAll: ['Reset changes', '撤销全部修改'], impact: ['Linked updates from your change', '本次修改引起的联动更新'], basisV: ['basis', '基准'], ruleV: ['rule', '规则'],
+    noImpact: ['No other result changed.', '其他结果未变化。'], more: ['more in Connected design', '更多见“关联设计”'],
     theory: ['Short theory & calculation', '原理简述与计算'], fullSpec: ['Full specification & TPG', '完整技术规范及TPG'], relEq: ['Related equipment', '相关设备'],
     desc: ['Description', '描述'], unit: ['Unit', '单位'], req2: ['Required', '要求值'], faq: ['Frequently asked questions', '常见问题'], faqSub: ['Short answers for owners and clients', '面向业主与客户的简要解答'],
     prev: ['Previous', '上一个'], next: ['Next', '下一个'], close: ['Close', '关闭'], openCard: ['Open simulation', '打开模拟'], note: ['Results are design checks for explanation, not detailed design.', '计算结果用于讲解与校核，并非详细设计。']
@@ -616,16 +620,18 @@
     var rows = [[['Basis', '基准'], e(ctx.name)], [['Location', '地点'], te([R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh])], [['Facility type', '设施类型'], te([c.type.en, c.type.zh])],
       [['Design IT load', '设计IT负载'], F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + te(['racks', '个机柜']) + ' · ' + F(c.avgDens, 1) + ' kW/' + te(['rack', '柜'])], [['Resilience', '韧性等级'], te([c.tier.en, c.tier.zh])],
       [['Cooling', '制冷'], te([R.cool.obj.en, R.cool.obj.zh]) + ' · PUE ' + F(R.eff.pue, 2)], [['PLN demand', 'PLN需量'], F(R.el.mva, 1) + ' MVA · ' + te(R.el.volt)],
-      [['Backup', '备用电源'], R.el.genTotal + ' × ' + F(R.el.genSize) + ' kWe (' + R.el.genLabel + ') · ' + p.fuelH + ' h · UPS ' + R.el.upsTotal + ' × ' + F(R.el.upsSize) + ' kW, ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')]];
+      [['Backup', '备用电源'], R.el.genTotal + ' × ' + F(R.el.genSize) + ' kWe (' + R.el.genLabel + ') · ' + p.fuelH + ' h · UPS ' + R.el.upsTotal + ' × ' + F(R.el.upsSize) + ' kW, ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')],
+      [['Design changes', '设计修改'], (Object.keys(ctx.chg || {}).length ? te([Object.keys(ctx.chg).length + ' change(s) applied', '已应用' + Object.keys(ctx.chg).length + '项修改']) : te(['none — the basis as published', '无——按基准原样'])) + ' · <button type="button" class="lnk" data-tco="design">' + te(UI.design) + ' →</button>']];
     var body = '<p class="tc-lead">' + te(['The numbers in this simulation are computed by the assessment engine for the design basis selected above the slide. Choose another benchmark, or a project from your workspace, to simulate that design.', '本模拟中的数值由评估引擎针对幻灯片上方所选的设计基准计算得出。选择其他基准或工作区中的项目，即可模拟该设计。']) + '</p>' +
       ptable(null, rows.map(function (r) { return [te(r[0]), r[1]]; })) + '<div class="tc-rel"><a class="tc-ext" href="#assess" target="_blank" rel="noopener">' + te(['Open Project Assessment (new tab)', '打开项目评估（新标签页）']) + ' ↗</a></div>';
     return freePanel('basis', 'B', UI.basis, [ctx.name, ctx.name], body, 'x');
   }
 
   /* ============================================================== viewer */
-  var CARDS = [], ST = { card: null, open: null, focus: false, userRot: null, basis: {} };
-  try { var sv = JSON.parse(localStorage.getItem('dcpa_tc')); if (sv) { ST.basis = sv.basis || {}; ST.card = sv.card || null; } } catch (x) { }
-  function save() { try { localStorage.setItem('dcpa_tc', JSON.stringify({ basis: ST.basis, card: ST.card })); } catch (x) { } }
+  /* ST.chg[basis][engineKey] = value: design changes shared by every card that uses the basis; ST.loc[basis][calc][input]: local calculator assumptions */
+  var CARDS = [], ST = { card: null, open: null, focus: false, userRot: null, basis: {}, chg: {}, loc: {} };
+  try { var sv = JSON.parse(localStorage.getItem('dcpa_tc')); if (sv) { ST.basis = sv.basis || {}; ST.card = sv.card || null; ST.chg = sv.chg || {}; ST.loc = sv.loc || {}; } } catch (x) { }
+  function save() { try { localStorage.setItem('dcpa_tc', JSON.stringify({ basis: ST.basis, card: ST.card, chg: ST.chg, loc: ST.loc })); } catch (x) { } }
   var VIEW = null, CTX = null, PANELS = [], CUR_CARD = null;
   var mm = function (q) { return !!(g.matchMedia && g.matchMedia(q).matches); };
   var TOUCH = mm('(pointer: coarse)') || (navigator.maxTouchPoints > 0 && mm('(hover: none)'));
@@ -640,13 +646,178 @@
     var r = E.find(DB.references, key) || E.find(DB.references, card.basis);
     return { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) };
   }
-  function buildCtx(card) {
-    var key = ST.basis[card.id] || card.basis, bi = basisInput(card, key), x = P.resolve(JSON.parse(JSON.stringify(bi.input))), fell = false;
-    if (card.basisOk && !card.basisOk(x)) { fell = true; var r = E.find(DB.references, card.basis); bi = { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) }; x = P.resolve(JSON.parse(JSON.stringify(r.input))); }
-    return { x: x, R: x.R, p: x.p, name: bi.name, key: key, fell: fell, card: card, K: E.K, F: F, t: t };
+  /* connected design: the basis input + the user's design changes go through the proposal layer and the engine together,
+     so every system follows its rules. '__auto__' returns a proposal key to its rule when the basis itself fixed it. */
+  function applyChg(input, chg) {
+    input.ov = input.ov || {};
+    Object.keys(chg || {}).forEach(function (k) {
+      var v = chg[k];
+      if (v === '__auto__') { delete input[k]; input.ov[k] = false; return; }
+      if (k === 'itMW') { input.sizing = 'mw'; input.itMW = v; return; }
+      if (k === 'racks') { input.sizing = 'racks'; input.racks = v; return; }
+      input[k] = v;
+      if (P.AUTO.indexOf(k) >= 0) input.ov[k] = true;
+    });
+    return input;
   }
+  var BASE = {};
+  function baseline(str) { if (!BASE[str]) { if (Object.keys(BASE).length > 24) BASE = {}; BASE[str] = P.resolve(JSON.parse(str)); } return BASE[str]; }
+  function resolveWith(str, chg) { return chg && Object.keys(chg).length ? P.resolve(applyChg(JSON.parse(str), chg)) : baseline(str); }
+  function buildCtx(card) {
+    var key = ST.basis._all || card.basis, bi = basisInput(card, key), str = JSON.stringify(bi.input), chg = ST.chg[key] || {}, fell = false, ckey = key;
+    var x = resolveWith(str, chg);
+    if (card.basisOk && !card.basisOk(x)) {
+      fell = true; ckey = card.basis; var r = E.find(DB.references, card.basis); bi = { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) }; str = JSON.stringify(r.input);
+      chg = ST.chg[ckey] || {}; x = resolveWith(str, chg);
+      if (!card.basisOk(x)) { chg = {}; x = baseline(str); }
+    }
+    var x0 = baseline(str);
+    return { x: x, R: x.R, p: x.p, x0: x0, R0: x0.R, base: JSON.parse(str), chg: chg, ckey: ckey, name: bi.name, key: key, fell: fell, card: card, K: E.K, F: F, t: t };
+  }
+
+  /* results compared before / after a change (grouped by system) */
+  function usd(v) { return v >= 1e9 ? 'USD ' + F(v / 1e9, 2) + ' B' : (v >= 1e6 ? 'USD ' + F(v / 1e6, 1) + ' M' : 'USD ' + F(v / 1e3, 0) + ' k'); }
+  var MG = { P: ['Power path', '供电路径'], W: ['White space & IT', '白区与IT'], C: ['Cooling', '制冷'], F: ['Fire · security · monitoring', '消防·安防·监控'], B: ['Building, cost & schedule', '建筑、投资与工期'] };
+  function metrics(x) {
+    var R = x.R, p = x.p, el = R.el, hv = el.hv, me = R.me, sp = R.sp, c = R.cap, fs = R.fs, M = [];
+    function m(g, id, l, v) { M.push({ g: g, id: id, l: l, v: v }); }
+    m('P', 'md', ['Maximum demand', '最大需量'], F(el.mva, 1) + ' MVA · ' + F(el.demandKW) + ' kW');
+    m('P', 'conn', ['PLN connection', 'PLN接入'], [hv.name + ' · ' + hv.circ + ' circuit(s)', hv.name + ' · ' + hv.circ + '回进线']);
+    m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.ur + ' kV GIS · ' + hv.ik + ' kA · ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
+    m('P', 'ibt', ['EHV/HV transformers', '超高压/高压联络变压器'], hv.ibt ? hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio : '–');
+    m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio : '–');
+    m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA');
+    m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')');
+    m('P', 'lv', ['LV main breaker · fault level', '低压主断路器 · 短路水平'], F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA');
+    m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + (el.genV === 'MV' ? '20 kV' : '400 V'));
+    m('P', 'fuel', ['Fuel storage', '燃油储存'], F(el.fuelL / 1000) + ' m³ · ' + el.tanks + ' × ' + el.tankSize + ' m³ · ' + p.fuelH + ' h');
+    m('P', 'ups', ['UPS', 'UPS'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')');
+    m('P', 'batt', ['Batteries', '蓄电池'], F(el.battKWh) + ' kWh · ' + p.upsMin + ' min · ' + (p.battery === 'LI' ? 'LFP' : 'VRLA'));
+    m('P', 'bess', ['BESS', '储能'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : '–');
+    m('P', 'tar', ['PLN tariff', 'PLN电价'], 'Rp ' + F(p.tariffIDR, 1) + '/kWh · ' + (el.vclass === 'TT' ? 'I-4 TT' : 'TM'));
+    m('W', 'it', ['IT load', 'IT负载'], F(c.itMW, 2) + ' MW');
+    m('W', 'racks', ['Racks (standard + high-density)', '机柜（标准+高密度）'], F(c.racks) + ' (' + F(c.stdR) + ' + ' + F(c.hdR) + ')');
+    m('W', 'dens', ['Rack density average / maximum', '机柜密度 平均/最大'], F(c.avgDens, 1) + ' / ' + F(c.maxDens, 0) + ' kW');
+    m('W', 'rows', ['Rows · IT distribution', '列数 · IT配电'], el.rows + ' · ' + (el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / ' + el.bwHdA + ' A' : '') : el.pdus + ' PDU'));
+    m('W', 'rpdu', ['Rack PDUs', '机柜PDU'], F(el.rpdus));
+    m('W', 'ws', ['White space · halls', '白区 · 机房'], F(sp.ws) + ' m² · ' + sp.halls);
+    m('C', 'pue', ['PUE annual / design day', 'PUE 年均/设计日'], F(R.eff.pue, 2) + ' / ' + F(R.eff.puePeak, 2));
+    m('C', 'cool', ['Cooling system', '制冷系统'], [R.cool.obj.en, R.cool.obj.zh]);
+    m('C', 'ch', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW · ' + F(me.chwLoad) + ' kW' : '–');
+    m('C', 'ct', ['Cooling towers', '冷却塔'], me.ctN ? (me.ctN + me.ctR) + ' · ' + F(me.rejKW) + ' kW' : '–');
+    m('C', 'tes', ['Thermal storage', '蓄冷'], me.tesM3 ? F(me.tesM3) + ' m³ · ' + F(me.tesS / 60) + ' min' : '–');
+    m('C', 'term', ['Air terminals', '末端空调'], me.term ? (me.term.n + me.term.r) + ' × ' + me.term.size + ' kW' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW' : '–')));
+    m('C', 'cdu', ['CDUs · dry coolers', 'CDU · 干冷器'], me.cduN ? (me.cduN + me.cduR) + ' × ' + F(me.cduSize) + ' kW · ' + (me.dcN + me.dcR) : '–');
+    m('C', 'water', ['WUE · make-up water', 'WUE · 补水量'], F(R.eff.wue, 2) + ' L/kWh · ' + F(me.waterDay) + ' m³/d');
+    m('F', 'gas', ['Gas zones · agent', '气体分区 · 灭火剂'], fs.gasZones ? fs.gasZones + ' · ' + F(fs.agentKg) + ' kg' : ['pre-action sprinklers', '预作用喷淋']);
+    m('F', 'asd', ['Aspirating detectors', '吸气式探测器'], F(fs.asd));
+    m('F', 'cams', ['Cameras · access doors', '摄像机 · 门禁'], F(fs.cams) + ' · ' + F(fs.readers));
+    m('F', 'pts', ['BMS points · EPMS meters', 'BMS点 · EPMS电表'], F(fs.bmsPts) + ' · ' + F(fs.meters));
+    m('B', 'gfa', ['GFA · storeys', '建筑面积 · 层数'], F(sp.gfa) + ' m² · ' + p.floors);
+    m('B', 'site', ['Site area · floor load', '用地 · 楼面荷载'], F(sp.siteNeed / 1e4, 2) + ' ha · ' + sp.floorLoad + ' kN/m²');
+    m('B', 'capex', ['CAPEX (facility, PLN connection, contingency)', '投资（设施、PLN接入、不可预见）'], usd(R.capex.facility + R.capex.utility + R.capex.cont));
+    m('B', 'util', ['PLN connection cost', 'PLN接入投资'], usd(R.capex.utility));
+    m('B', 'en', ['Energy cost per year', '年电费'], usd(R.opex.energy));
+    m('B', 'sch', ['Programme to ready-for-service', '至投产工期'], [R.sched.total + ' months', R.sched.total + '个月']);
+    return M;
+  }
+  function diffM(a, b) {
+    var out = [];
+    b.forEach(function (m, i) { var o = a[i]; if (o && o.id === m.id && t(o.v) !== t(m.v)) out.push({ g: m.g, id: m.id, l: m.l, from: o.v, to: m.v }); });
+    return out;
+  }
+  function impactStrip(list, max) {
+    if (!list) return '';
+    if (!list.length) return '<div class="tc-imp"><b>' + te(UI.impact) + '</b><span>' + te(UI.noImpact) + '</span></div>';
+    var sh = list.slice(0, max || 99);
+    return '<div class="tc-imp"><b>' + te(UI.impact) + ' (' + list.length + ')</b><ul>' + sh.map(function (d) {
+      return '<li><span>' + te(d.l) + '</span><s>' + te(d.from) + '</s><i>→</i><em>' + te(d.to) + '</em></li>';
+    }).join('') + '</ul>' + (list.length > sh.length ? '<button type="button" class="lnk" data-tco="design">+' + (list.length - sh.length) + ' ' + te(UI.more) + ' →</button>' : '') + '</div>';
+  }
+  /* design parameters editable from the Connected design panel: value now, rule value (AUTO), options or range */
+  var DG = { S: ['Site & load', '场地与负载'], W: ['IT & white space', 'IT与白区'], P: ['Power path', '供电路径'], C: ['Cooling', '制冷'], B: ['Building', '建筑'], $: ['Energy & commercial', '能源与商务'] };
+  function kOpts(list, unit) { return list.map(function (v) { return [v, F(v) + ' ' + unit]; }); }
+  function designParams(x) {
+    var R = x.R, p = x.p, pr = x.prop || {}, el = R.el, hv = el.hv, me = R.me, c = R.cap, K = E.K, yn = [[true, ['Yes', '是']], [false, ['No', '否']]];
+    var plats = DB.platforms.map(function (q) { return [q.id, [q.en + ' · ' + q.kw + ' kW', q.zh + ' · ' + q.kw + ' kW']]; });
+    var kvO = E.KV.map(function (o) { var a = hv.opts.filter(function (z) { return z.kv === o.kv; })[0] || {}; return [o.kv, [o.en + (a.rule ? ' — recommended' : (o.intl ? '' : (a.avail === 3 ? ' — planned' : (a.avail ? '' : ' — not in this grid')))), o.zh + (a.rule ? '——建议' : (o.intl ? '' : (a.avail === 3 ? '——规划中' : (a.avail ? '' : '——本电网无'))))]]; });
+    return [
+      { g: 'S', k: 'loc', l: ['Location (PLN system, climate, land)', '地点（PLN电网、气候、地价）'], o: DB.idLocs.map(function (L) { return [L.id, [L.en + ' · ' + L.provEn, L.zh + ' · ' + L.provZh]]; }), v: p.loc },
+      { g: 'S', k: 'itMW', l: ['IT load', 'IT负载'], u: 'MW', min: 0.05, max: 3000, st: 0.05, v: c.itMW },
+      { g: 'S', k: 'tier', l: ['Resilience (Uptime Tier)', '韧性等级（Uptime Tier）'], o: [[1, 'Tier I'], [2, 'Tier II'], [3, 'Tier III'], [4, 'Tier IV']], v: p.tier, r: pr.tier },
+      { g: 'W', k: 'stdPlat', l: ['Standard IT platform', '标准IT平台'], o: plats, v: p.stdPlat, r: pr.stdPlat },
+      { g: 'W', k: 'dens', l: ['Standard rack design load', '标准机柜设计功率'], u: 'kW', min: 1, max: 80, st: 0.5, v: c.sd, r: pr.dens },
+      { g: 'W', k: 'hdPlat', l: ['High-density IT platform', '高密度IT平台'], o: plats, v: p.hdPlat, r: pr.hdPlat },
+      { g: 'W', k: 'hdShare', l: ['High-density share of racks', '高密度机柜占比'], u: '%', min: 0, max: 100, st: 1, v: p.hdShare, r: pr.hdShare },
+      { g: 'W', k: 'hdDens', l: ['High-density rack design load', '高密度机柜设计功率'], u: 'kW', min: 5, max: 400, st: 1, v: p.hdDens, r: pr.hdDens },
+      { g: 'W', k: 'rackRow', l: ['Racks per row', '每列机柜数'], u: '', min: 4, max: 40, st: 1, v: el.rackRow, r: (p.rackW || 600) >= 800 ? 16 : 20 },
+      { g: 'P', k: 'hvKV', l: ['PLN connection voltage', 'PLN接入电压'], o: kvO, v: hv.kv, r: hv.rule },
+      { g: 'P', k: 'pkPUE', l: ['Design-day PUE (peak cooling)', '设计日PUE（峰值制冷）'], u: '', min: 1.03, max: 2.5, st: 0.01, v: +R.eff.puePeak.toFixed(2), r: +R.eff.pueRule.toFixed(2) },
+      { g: 'P', k: 'mdKVA', l: ['Maximum demand', '最大需量'], u: 'kVA', min: 10, max: 5000000, st: 10, v: Math.round(el.demandKVA), r: Math.round(el.demandRule) },
+      { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts([20, 30, 60, 100, 150], 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
+      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], 'kVA'), v: el.txSize, r: el.txRule },
+      { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
+      { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
+      { g: 'P', k: 'genV', l: ['Generator voltage', '发电机电压'], o: [['LV', ['400 V sets with ATS', '400 V机组+ATS']], ['MV', ['20 kV paralleled plant', '20 kV并机电站']]], v: el.genV, r: el.demandKW > 6000 ? 'MV' : 'LV' },
+      { g: 'P', k: 'fuelH', l: ['Fuel autonomy', '燃油自持时间'], u: 'h', min: 4, max: 120, st: 1, v: p.fuelH, r: pr.fuelH },
+      { g: 'P', k: 'upsKW', l: ['UPS system rating', 'UPS单系统容量'], o: kOpts([300, 500, 800, 1000, 1200, 1500, 1600], 'kW'), v: el.upsSize, r: el.upsRule },
+      { g: 'P', k: 'battery', l: ['Battery chemistry', '电池类型'], o: [['LI', ['Li-ion LFP', '磷酸铁锂']], ['VRLA', ['VRLA', '阀控铅酸']]], v: p.battery, r: pr.battery },
+      { g: 'P', k: 'upsMin', l: ['UPS autonomy', 'UPS后备时间'], u: 'min', min: 1, max: 30, st: 1, v: p.upsMin, r: pr.upsMin },
+      { g: 'P', k: 'eco', l: ['UPS eco-mode', 'UPS节能模式'], o: yn, v: !!p.eco, r: pr.eco },
+      { g: 'P', k: 'bessOn', l: ['Battery energy storage (BESS)', '电池储能（BESS）'], o: yn, v: !!p.bessOn, r: pr.bessOn },
+      { g: 'P', k: 'bessSh', l: ['BESS power share of IT', '储能功率占IT比例'], u: '%', min: 1, max: 60, st: 1, v: el.bess ? Math.round(el.bess.mw / c.itMW * 100) : 10, off: !p.bessOn },
+      { g: 'P', k: 'bessH', l: ['BESS duration', '储能时长'], u: 'h', min: 0.5, max: 6, st: 0.5, v: p.bessH, r: pr.bessH, off: !p.bessOn },
+      { g: 'C', k: 'cooling', l: ['Cooling system', '制冷系统'], o: DB.cooling.map(function (q) { return [q.id, [q.en, q.zh]]; }), v: p.cooling, r: pr.cooling },
+      { g: 'C', k: 'chKW', l: ['Chiller size', '冷机单机容量'], o: kOpts([500, 1000, 1407, 2461, 3517], 'kW'), v: me.chSize || 1407, r: me.chRule, off: !me.chN },
+      { g: 'C', k: 'chwDT', l: ['Chilled-water ΔT', '冷冻水温差'], u: 'K', min: 4, max: 14, st: 0.5, v: me.chwDT || K.CHW_DT, r: K.CHW_DT, off: !me.chN },
+      { g: 'C', k: 'tesS', l: ['Thermal-storage ride-through', '蓄冷后备时间'], u: 's', min: 60, max: 1800, st: 30, v: me.tesS || 600, r: p.tier >= 4 ? 900 : (p.tier >= 3 ? 600 : 300), off: !me.chN },
+      { g: 'C', k: 'cduKW', l: ['CDU capacity', 'CDU容量'], o: kOpts([400, 800, 1000, 1500, 2000, 2500], 'kW'), v: me.cduSize || 800, r: me.cduRule, off: !me.cduN },
+      { g: 'C', k: 'liqSh', l: ['Share of high-density rack heat to liquid', '高密度机柜热量液冷占比'], u: '%', min: 50, max: 100, st: 1, v: Math.round((p.liqSh > 0 ? p.liqSh / 100 : (R.hdP.liq || 0.8)) * 100), r: Math.round((R.hdP.liq || 0.8) * 100), off: R.cool.tech !== 'DLC' || !c.hdR },
+      { g: 'C', k: 'coc', l: ['Cooling-tower cycles of concentration', '冷却塔浓缩倍数'], u: '', min: 2, max: 10, st: 0.5, v: p.coc > 1 ? p.coc : 5, r: 5, off: !(me.ctN || R.cool.airTech === 'IEC' || R.cool.liquidKW > 0) },
+      { g: 'B', k: 'floors', l: ['Storeys', '层数'], u: '', min: 1, max: 8, st: 1, v: p.floors, r: pr.floors },
+      { g: 'B', k: 'raised', l: ['Raised floor', '架空地板'], o: [['YES', ['Yes', '是']], ['NO', ['No', '否']]], v: R.sp.raised ? 'YES' : 'NO', r: pr.raised },
+      { g: 'B', k: 'kdb', l: ['Site coverage (KDB)', '建筑密度（KDB）'], u: '%', min: 20, max: 90, st: 5, v: p.kdb, r: pr.kdb },
+      { g: '$', k: 'tariffIDR', l: ['PLN tariff', 'PLN电价'], u: 'Rp/kWh', min: 500, max: 3000, st: 0.01, v: p.tariffIDR, r: pr.tariffIDR },
+      { g: '$', k: 'targetOcc', l: ['Average utilisation', '平均利用率'], u: '%', min: 10, max: 100, st: 5, v: p.targetOcc, r: pr.targetOcc },
+      { g: '$', k: 'renewable', l: ['Renewable energy share', '可再生能源占比'], u: '%', min: 0, max: 100, st: 5, v: p.renewable, r: pr.renewable }
+    ];
+  }
+  function optLabel(list, v) { var o = list.filter(function (z) { return String(z[0]) === String(v); })[0]; return o ? t(o[1]) : String(v); }
+  function dv(d, v) { return d.o ? optLabel(d.o, v) : (v === undefined || v === null ? '–' : F(v, d.st < 0.1 ? 2 : (d.st < 1 ? 1 : 0)) + (d.u ? ' ' + d.u : '')); }
+  function designPanel(card, ctx, diff) {
+    var list = designParams(ctx.x), base = designParams(ctx.x0), chg = ctx.chg || {}, ov0 = (ctx.base && ctx.base.ov) || {}, n = Object.keys(chg).length;
+    var body = '<p class="tc-lead">' + te(['Every card and panel of this simulation reads one design. Change any parameter below — or a linked input in any calculator — and the engine re-sizes every connected system (power path, white space, cooling, fire, security, building, cost) by its code / standard rule. AUTO values follow their rule; a value you set is MANUAL and stays until you press ↺.',
+      '本模拟的所有卡片和面板读取同一设计。修改下方任一参数（或任一计算器中带链接符号的输入），引擎即按规范/标准规则对所有相关系统（供电路径、白区、制冷、消防、安防、建筑、投资）重新选型。“自动”值跟随规则；您设定的值为“手动”，按↺前保持不变。']) + '</p>';
+    body += '<div class="tc-dbar"><span>' + te(['Design basis', '设计基准']) + ': <b>' + e(ctx.name) + '</b> · ' + (n ? te([n + ' change(s)', n + '项修改']) : te(['no changes', '无修改'])) + '</span>' +
+      (n ? '<button type="button" class="tc-btn" data-resetall>' + te(UI.resetAll) + '</button>' : '') + '</div>';
+    if (diff) body += impactStrip(diff);
+    var groups = {};
+    list.forEach(function (d, i) { (groups[d.g] = groups[d.g] || []).push([d, base[i]]); });
+    body += '<div class="tc-dgrid">' + Object.keys(DG).filter(function (g) { return groups[g]; }).map(function (g) {
+      return '<section class="tc-dgrp"><h3>' + te(DG[g]) + '</h3>' + groups[g].map(function (pr) {
+        var d = pr[0], b = pr[1], st = chg[d.k] !== undefined && chg[d.k] !== '__auto__' ? 'mn' : (P.AUTO.indexOf(d.k) >= 0 && ov0[d.k] ? 'bs' : (d.r !== undefined && d.r !== null ? 'au' : ''));
+        var ctl = d.o ? '<select data-gk="' + d.k + '"' + (d.off ? ' disabled' : '') + '>' + d.o.map(function (o) { return '<option value="' + e(String(o[0])) + '"' + (String(o[0]) === String(d.v) ? ' selected' : '') + '>' + te(o[1]) + '</option>'; }).join('') + '</select>'
+          : '<input type="number" data-gk="' + d.k + '" min="' + d.min + '" max="' + d.max + '" step="' + d.st + '" value="' + (isFinite(+d.v) ? +(+d.v).toFixed(d.st < 1 ? 2 : 0) : '') + '"' + (d.off ? ' disabled' : '') + '>';
+        var bd = st ? '<b class="' + st + '">' + te(st === 'mn' ? UI.manual : (st === 'bs' ? UI.basisB : UI.auto)) + '</b>' + (st === 'mn' ? '<button type="button" class="tc-rst" data-gr="' + d.k + '" title="' + te(['Back to the design basis', '恢复设计基准值']) + '">↺</button>' : (st === 'bs' ? '<button type="button" class="tc-rst" data-gauto="' + d.k + '" title="' + te(UI.applyRule) + '">↺</button>' : '')) : '';
+        var note = [];
+        if (d.r !== undefined && d.r !== null && String(d.r) !== String(d.v)) note.push(te(UI.ruleV) + ': ' + e(dv(d, d.r)));
+        if (b && String(b.v) !== String(d.v) && !(typeof d.v === 'number' && Math.abs(d.v - b.v) < 1e-6)) note.push(te(UI.basisV) + ': ' + e(dv(b, b.v)));
+        return '<label class="tc-drow' + (st === 'mn' ? ' isman' : '') + (d.off ? ' off' : '') + '"><span class="nm">' + te(d.l) + (d.u ? ' <small>(' + e(d.u) + ')</small>' : '') + '</span><span class="ip">' + ctl + '</span><span class="tc-bd">' + bd + '</span>' +
+          (note.length ? '<span class="nt">' + note.join(' · ') + '</span>' : '') + '</label>';
+      }).join('') + '</section>';
+    }).join('') + '</div>';
+    var m0 = metrics(ctx.x0), m1 = metrics(ctx.x), lastG = '';
+    body += '<div><h3>' + te(['Every system: design basis → now', '各系统：设计基准 → 当前']) + '</h3><div class="tc-tbl"><table class="tc-t tc-imt"><thead><tr><th>' + te(['Result', '结果']) + '</th><th>' + te(['Design basis', '设计基准']) + '</th><th>' + te(['Now', '当前']) + '</th></tr></thead><tbody>' +
+      m1.map(function (m, i) {
+        var o = m0[i], ch = o && t(o.v) !== t(m.v), h = '';
+        if (m.g !== lastG) { lastG = m.g; h = '<tr class="g"><td colspan="3">' + te(MG[m.g]) + '</td></tr>'; }
+        return h + '<tr' + (ch ? ' class="cur"' : '') + '><td>' + te(m.l) + '</td><td>' + te(o ? o.v : '') + '</td><td class="v">' + te(m.v) + '</td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+    return freePanel('design', '⇄', UI.design, UI.designSub, body, 'x');
+  }
+
   function basisSelect(card) {
-    var cur = ST.basis[card.id] || card.basis;
+    var cur = ST.basis._all || card.basis;
     var opts = archList().map(function (r) { return '<option value="' + r.id + '"' + (r.id === cur ? ' selected' : '') + '>' + e(r.id + ' · ' + t([r.en, r.zh])) + '</option>'; }).join('');
     if (g.DCApp && g.DCApp.activeName && g.DCApp.activeName()) opts = '<option value="ACTIVE"' + (cur === 'ACTIVE' ? ' selected' : '') + '>' + e(t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName()) + '</option>' + opts;
     return '<select data-basis aria-label="' + te(UI.basis) + '">' + opts + '</select>';
@@ -654,23 +825,61 @@
   var BTN_EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
   var BTN_ROT = '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>';
   var BTN_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var LINK_SVG = '<svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>';
+  var PREV_X = null, DIFF = null, LAST_SRC = null;
+  /* apply one design change (engine key → value; null removes it), re-run every system and keep the reader's place */
+  function commit(ek, v, src, extra) {
+    var key = CTX.ckey, c = ST.chg[key] || (ST.chg[key] = {});
+    if (v === null || v === undefined) delete c[ek];
+    else { c[ek] = v; if (ek === 'itMW') delete c.racks; if (ek === 'racks') delete c.itMW; }
+    if (extra) Object.keys(extra).forEach(function (k) { c[k] = extra[k]; });
+    if (!Object.keys(c).length) delete ST.chg[key];
+    PREV_X = CTX.x; LAST_SRC = src || null;
+    save(); rerender();
+  }
+  function resetAll() { var key = CTX.ckey; delete ST.chg[key]; delete ST.loc[key]; PREV_X = CTX.x; LAST_SRC = 'design'; save(); rerender(); }
+  function hotTexts() { var m = {}; if (VIEW) Array.prototype.forEach.call(VIEW.querySelectorAll('.tc-stage [data-tco]'), function (el, i) { m[el.getAttribute('data-tco') + '#' + i] = el.textContent; }); return m; }
+  function rerender() {
+    var ov = VIEW.querySelector('.tc-ov'), sc = ov && !ov.hidden ? ov.scrollTop : 0, old = hotTexts();
+    var ae = document.activeElement, foc = null;
+    if (ae && ae.closest && ov && ov.contains(ae)) { var bx = ae.closest('.tc-calc'); foc = { c: bx ? bx.getAttribute('data-c') : null, k: ae.getAttribute('data-k'), gk: ae.getAttribute('data-gk'), ty: ae.type }; }
+    render();
+    Array.prototype.forEach.call(VIEW.querySelectorAll('.tc-stage [data-tco]'), function (el, i) { var k = el.getAttribute('data-tco') + '#' + i; if (old[k] !== undefined && old[k] !== el.textContent) el.classList.add('tc-upd'); });
+    ov = VIEW.querySelector('.tc-ov');
+    if (ov && !ov.hidden) {
+      ov.scrollTop = sc;
+      if (foc) {
+        var sel = foc.gk ? '[data-gk="' + foc.gk + '"]' : (foc.c ? '.tc-calc[data-c="' + foc.c + '"] ' : '') + '[data-k="' + foc.k + '"]' + (foc.ty === 'range' ? '[type=range]' : (foc.ty === 'number' ? '[type=number]' : ''));
+        var el = (foc.gk || foc.k) && ov.querySelector(sel); if (el) try { el.focus({ preventScroll: true }); } catch (x) { }
+      }
+    }
+    LAST_SRC = null;
+  }
+  /* calculator input ↔ engine parameter: f scales the input to the engine unit, map translates select values */
+  function bindKey(b) { return b ? (typeof b.k === 'function' ? b.k(CTX) : b.k) : null; }
+  function toEng(b, v) { if (b.map) { var m = b.map.filter(function (z) { return +z[0] === +v; })[0]; return m ? m[1] : v; } return b.f ? +(v * b.f).toFixed(6) : v; }
+  function fromEng(b, ev) { if (b.map) { var m = b.map.filter(function (z) { return z[1] === ev; })[0]; return m ? +m[0] : null; } return b.f ? ev / b.f : +ev; }
 
   function render() {
     if (!VIEW || !CARDS.length) return;
     var card = cardById(ST.card || CARDS[0].id); ST.card = card.id; CUR_CARD = card;
     CTX = buildCtx(card);
+    DIFF = PREV_X ? diffM(metrics(PREV_X), metrics(CTX.x)) : null; PREV_X = null;
     var stage = card.stage(CTX, LIB);
     PANELS = card.panels(CTX, LIB);
     var textAll = stage.replace(/<[^>]+>/g, ' ') + ' ' + PANELS.map(function (p) { return p.html.replace(/<[^>]+>/g, ' '); }).join(' ');
-    PANELS.push(basisPanel(card, CTX)); PANELS.push(glossPanel(card, textAll));
+    PANELS.push(designPanel(card, CTX, LAST_SRC === 'design' ? DIFF : null)); PANELS.push(basisPanel(card, CTX)); PANELS.push(glossPanel(card, textAll));
     var sel = '<div class="tc-sel" role="tablist">' + CARDS.map(function (c) {
       return '<button type="button" class="tc-cardbtn' + (c.id === card.id ? ' on' : '') + '" data-card="' + c.id + '" role="tab" aria-selected="' + (c.id === card.id) + '"><i>' + svgIcon(c.icon) + '</i><span><b>' + te(c.short || c.title) + '</b><span>' + te(c.blurb) + '</span></span></button>';
     }).join('') + '</div>';
+    var nCh = Object.keys(CTX.chg || {}).length;
     var bar = '<div class="tc-bar"><span>' + te(UI.basis) + ':</span>' + basisSelect(card) + (CTX.fell ? '<span style="color:#B0302A">' + te(card.fallNote || ['The selected design does not use this technology; the card shows its benchmark.', '所选设计未采用该技术；卡片显示其基准设计。']) + '</span>' : '') +
+      '<button type="button" class="tc-btn tc-dz' + (nCh ? ' on' : '') + '" data-tco="design" title="' + te(UI.designSub) + '">' + LINK_SVG + te(UI.design) + (nCh ? ' <b>' + nCh + '</b>' : '') + '</button>' +
+      (nCh ? '<button type="button" class="tc-btn" data-resetall>' + te(UI.resetAll) + '</button>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
     if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
     VIEW.querySelector('.tc-head').innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Project Technology Simulation', '项目技术模拟']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
-      te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. Choose a system and a design basis, then click any part of the slide for the detailed panel; ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。选择系统与设计基准后，点击幻灯片任意部分查看详细面板；← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
+      te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. All five systems share one design: choose a design basis, then change any parameter in Connected design or any linked calculator input — every connected system on every card is re-sized by its code / standard rule. Click any part of the slide for the detailed panel; ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。五个系统共用同一设计：选择设计基准后，在“关联设计”或任一计算器中带链接符号的输入修改参数，所有卡片中的相关系统即按规范/标准规则重新选型。点击幻灯片任意部分查看详细面板；← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
     var wrapEl = VIEW.querySelector('.tc-wrap'), stEl = VIEW.querySelector('.tc-stage');
     wrapEl.classList.toggle('tc-focus', !!ST.focus);
     stEl.setAttribute('aria-label', t(card.title)); stEl.innerHTML = stage; stEl.__s = null;
@@ -767,19 +976,31 @@
      An AUTO input whose design-basis value differs from its rule starts as BASIS. */
   function calc(id) {
     var ov = VIEW.querySelector('.tc-ov'); if (!ov) return;
+    var chg = CTX.chg || {}, ov0 = (CTX.base && CTX.base.ov) || {};
     Array.prototype.forEach.call(ov.querySelectorAll('.tc-calc'), function (box) {
       var key = box.getAttribute('data-c'), C = CUR_CARD.calc && CUR_CARD.calc[key]; if (!C) { box.remove(); return; }
-      var A = C.a || {}, man = {}, cin = box.querySelector('.tc-cin'), ol = box.querySelector('.tc-steps');
+      var A = C.a || {}, Bd = C.b || {}, man = {}, gk = {}, cin = box.querySelector('.tc-cin'), ol = box.querySelector('.tc-steps');
+      var LOC = ST.loc[CTX.ckey] || {}, loc = LOC[key] || {};
       function snap(p, x) { x = Math.round(x / p[5]) * p[5]; return +x.toFixed(6); }
       function dflt(p) { return snap(p, typeof p[6] === 'function' ? p[6](CTX) : p[6]); }
-      var v0 = {}; C.i.forEach(function (p) { v0[p[0]] = dflt(p); });
-      C.i.forEach(function (p) { var r = A[p[0]]; if (!r) return; var x; try { x = snap(p, r.f(v0, CTX)); } catch (e) { return; } if (Math.abs(x - v0[p[0]]) > 1e-9) man[p[0]] = 'basis'; });
+      /* start values: the user's design change (global), else a stored local assumption, else the engine / basis value */
+      var v0 = {};
+      C.i.forEach(function (p) {
+        var k = p[0], b = Bd[k], ek = bindKey(b); gk[k] = ek;
+        var cv = ek ? chg[ek] : undefined;
+        if (ek && cv !== undefined && cv !== '__auto__') { var fv = fromEng(b, cv); v0[k] = fv === null || !isFinite(fv) ? dflt(p) : snap(p, fv); man[k] = 'g'; }
+        else if (!ek && loc[k] !== undefined) { v0[k] = loc[k]; if (A[k]) man[k] = 'man'; }
+        else { v0[k] = dflt(p); if (ek && A[k] && P.AUTO.indexOf(ek) >= 0 && ov0[ek] && cv !== '__auto__') man[k] = 'basis'; }
+      });
+      var hasImp = LAST_SRC === key && DIFF;
+      if (hasImp && !box.querySelector('.tc-imp')) box.querySelector('.ct').insertAdjacentHTML('afterend', impactStrip(DIFF, 8));
       cin.innerHTML = C.i.map(function (p) {
-        var val = v0[p[0]], lab = te(p[1]), un = te(p[2]), r = A[p[0]], ctl;
+        var val = v0[p[0]], lab = te(p[1]), un = te(p[2]), r = A[p[0]], g = gk[p[0]], ctl;
         if (p[7]) ctl = '<span class="r o"><select data-k="' + p[0] + '" aria-label="' + lab + '">' + p[7].map(function (o) { return '<option value="' + o[0] + '"' + (+o[0] === val ? ' selected' : '') + '>' + te(o[1]) + '</option>'; }).join('') + '</select></span>';
         else ctl = '<span class="r"><input type="range" min="' + p[3] + '" max="' + Math.max(p[4], val) + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '">' +
           '<input type="number" min="' + p[3] + '" step="' + p[5] + '" value="' + val + '" data-k="' + p[0] + '" aria-label="' + lab + '"></span>';
-        return '<label class="' + (r ? 'lk' : '') + '"><span class="lh"><span>' + lab + (un ? ' <small>(' + un + ')</small>' : '') + '</span>' + (r ? '<span class="tc-bd" data-bd="' + p[0] + '"></span>' : '') + '</span>' + ctl +
+        var lnk = g ? '<i class="tc-lnk" title="' + te(UI.linked) + '">' + LINK_SVG + '</i>' : '';
+        return '<label class="' + (r ? 'lk' : '') + (g ? ' gl' : '') + '"><span class="lh"><span>' + lnk + lab + (un ? ' <small>(' + un + ')</small>' : '') + '</span>' + (r || g ? '<span class="tc-bd" data-bd="' + p[0] + '"></span>' : '') + '</span>' + ctl +
           (r ? '<span class="tc-why" title="' + te(r.b) + '">' + te(r.b) + '</span>' : '') + '</label>';
       }).join('');
       function setDom(p, x) {
@@ -790,11 +1011,13 @@
         C.i.forEach(function (p) { var el = cin.querySelector('select[data-k="' + p[0] + '"], input[type=number][data-k="' + p[0] + '"]'), x = parseFloat(String(el.value).replace(',', '.')); v[p[0]] = isFinite(x) ? x : dflt(p); });
         return v;
       }
-      function propagate(v) {
+      /* AUTO inputs follow their rule; linked (global) AUTO inputs are already sized by the engine, so they move only while the
+         reader is editing this calculator (preview), until the change is applied to the whole design */
+      function propagate(v, preview) {
         for (var pass = 0; pass < 4; pass++) {
           var changed = false;
           C.i.forEach(function (p) {
-            var r = A[p[0]]; if (!r || man[p[0]]) return;
+            var r = A[p[0]]; if (!r || man[p[0]] || (gk[p[0]] && !preview)) return;
             var x; try { x = snap(p, r.f(v, CTX)); } catch (e) { return; }
             if (isFinite(x) && x !== v[p[0]]) { v[p[0]] = x; setDom(p, x); changed = true; }
           });
@@ -802,29 +1025,53 @@
         }
       }
       function badges() {
-        Object.keys(A).forEach(function (k) {
-          var bd = cin.querySelector('[data-bd="' + k + '"]'); if (!bd) return;
-          var m = man[k], lab = m === 'basis' ? UI.basisB : (m ? UI.manual : UI.auto);
-          bd.innerHTML = '<b class="' + (m === 'basis' ? 'bs' : (m ? 'mn' : 'au')) + '">' + te(lab) + '</b>' + (m ? '<button type="button" class="tc-rst" data-rst="' + k + '" title="' + te(UI.applyRule) + '">↺</button>' : '');
-          bd.parentNode.parentNode.classList.toggle('isman', !!m);
+        C.i.forEach(function (p) {
+          var k = p[0], bd = cin.querySelector('[data-bd="' + k + '"]'); if (!bd) return;
+          var m = man[k], g = gk[k], s = m === 'g' || m === 'man' || m === 'p' ? 'mn' : (m === 'basis' ? 'bs' : (A[k] ? 'au' : ''));
+          bd.innerHTML = s ? '<b class="' + s + '">' + te(s === 'mn' ? UI.manual : (s === 'bs' ? UI.basisB : UI.auto)) + '</b>' + (s !== 'au' && m !== 'p' ? '<button type="button" class="tc-rst" data-rst="' + k + '" title="' + te(g && m === 'g' ? ['Back to the design basis / rule', '恢复设计基准/规则值'] : UI.applyRule) + '">↺</button>' : '') : '';
+          bd.parentNode.parentNode.classList.toggle('isman', s === 'mn');
         });
       }
-      function run() {
-        var v = read(); propagate(v); badges();
+      function run(preview) {
+        var v = read(); propagate(v, preview); badges();
         var rows; try { rows = C.f(v, CTX); } catch (err) { rows = [[['Error', '错误'], String(err), '–']]; }
         ol.innerHTML = rows.map(function (r) { return '<li><span class="t">' + te(r[0]) + '</span><span class="f">' + te(r[1]) + '</span><span class="r">' + te(r[2]) + '</span></li>'; }).join('');
       }
       function onEdit(ev) {
         var k = ev.target.getAttribute('data-k'); if (!k) return;
         Array.prototype.forEach.call(cin.querySelectorAll('[data-k="' + k + '"]'), function (x) { if (x !== ev.target) x.value = ev.target.value; });
-        if (A[k]) man[k] = 'man';
-        run();
+        if (gk[k]) man[k] = 'p'; else if (A[k]) man[k] = 'man';
+        run(true);
+      }
+      /* apply: a linked input changes the whole design (every system re-sized); a local one is kept as this calculator's assumption */
+      function onApply(ev) {
+        var k = ev.target.getAttribute('data-k'); if (!k) return;
+        var x = parseFloat(String(ev.target.value).replace(',', '.')); if (!isFinite(x)) return;
+        var p = C.i.filter(function (q) { return q[0] === k; })[0]; x = snap(p, Math.max(p[3], x));
+        if (gk[k]) { var b = Bd[k]; setTimeout(function () { commit(gk[k], toEng(b, x), key, b.also ? b.also(x) : null); }, 0); return; }
+        LOC = ST.loc[CTX.ckey] = ST.loc[CTX.ckey] || {}; loc = LOC[key] = LOC[key] || {}; loc[k] = x; save();
       }
       cin.addEventListener('input', onEdit);
-      cin.addEventListener('change', function (ev) { if (ev.target.tagName === 'SELECT') onEdit(ev); });
-      cin.addEventListener('click', function (ev) { var b = ev.target.closest('[data-rst]'); if (!b) return; ev.preventDefault(); delete man[b.getAttribute('data-rst')]; run(); });
-      run();
+      cin.addEventListener('change', function (ev) { if (ev.target.tagName === 'SELECT') onEdit(ev); onApply(ev); });
+      cin.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.type === 'number') { ev.preventDefault(); ev.target.blur(); } });
+      cin.addEventListener('click', function (ev) {
+        var b = ev.target.closest('[data-rst]'); if (!b) return; ev.preventDefault();
+        var k = b.getAttribute('data-rst');
+        if (gk[k] && man[k] === 'g') { commit(gk[k], null, key); return; }
+        if (gk[k] && man[k] === 'basis') { commit(gk[k], '__auto__', key); return; }
+        delete man[k]; if (loc[k] !== undefined) { delete loc[k]; save(); }
+        run(true);
+      });
+      run(false);
     });
+  }
+
+  /* a parameter edited in the Connected design panel */
+  function applyDesign(el) {
+    var k = el.getAttribute('data-gk'), d = designParams(CTX.x).filter(function (q) { return q.k === k; })[0], v; if (!d) return;
+    if (d.o) { var o = d.o.filter(function (z) { return String(z[0]) === el.value; })[0]; if (!o) return; v = o[0]; }
+    else { v = parseFloat(String(el.value).replace(',', '.')); if (!isFinite(v)) return; v = Math.min(d.max, Math.max(d.min, v)); }
+    setTimeout(function () { commit(k, v, 'design', (k === 'bessSh' || k === 'bessH') ? { bessOn: true } : null); }, 0);
   }
 
   /* focus (expanded) mode */
@@ -876,14 +1123,19 @@
       if (tg.closest('[data-rot]')) { ST.userRot = (ST.userRot === 'on' || (ST.userRot === null && TOUCH && vhGtVw())) ? 'off' : 'on'; fit(); return; }
       var eqb = tg.closest('[data-eqlink]'); if (eqb) { var id = eqb.getAttribute('data-eqlink'); closePanel(); if (ST.focus) setFocus(false); if (g.DCApp && g.DCApp.openEquipment) g.DCApp.openEquipment(id); return; }
       if (tg.closest('[data-goassess]')) { closePanel(); if (ST.focus) setFocus(false); if (g.DCApp) g.DCApp.show('assess'); return; }
+      if (tg.closest('[data-resetall]')) { resetAll(); return; }
+      var gr = tg.closest('[data-gr]'); if (gr) { ev.preventDefault(); commit(gr.getAttribute('data-gr'), null, 'design'); return; }
+      var ga = tg.closest('[data-gauto]'); if (ga) { ev.preventDefault(); commit(ga.getAttribute('data-gauto'), '__auto__', 'design'); return; }
       var op = tg.closest('[data-tco]'); if (op) { ev.preventDefault(); openPanel(op.getAttribute('data-tco')); return; }
       if (tg.closest('[data-x]')) { closePanel(); return; }
       var nv = tg.closest('[data-nav]'); if (nv) { stepPanel(+nv.getAttribute('data-nav')); return; }
       if (tg.classList && tg.classList.contains('tc-ov')) closePanel();
     });
     el.addEventListener('change', function (ev) {
-      if (ev.target.matches('[data-basis]')) { ST.basis[ST.card] = ev.target.value; save(); render(); }
+      if (ev.target.matches('[data-basis]')) { ST.basis = { _all: ev.target.value }; save(); render(); return; }
+      if (ev.target.matches('[data-gk]')) applyDesign(ev.target);
     });
+    el.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' && ev.target.matches && ev.target.matches('input[data-gk]')) { ev.preventDefault(); ev.target.blur(); } });
     if (g.ResizeObserver) try { new ResizeObserver(function () { if (visible && !ST.focus) fit(); }).observe(el); } catch (x) { }
   }
   document.addEventListener('keydown', function (ev) {

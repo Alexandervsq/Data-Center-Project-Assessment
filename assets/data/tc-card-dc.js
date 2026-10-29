@@ -56,7 +56,7 @@
     o += L.banner(10, 290, 380, ['④ NETWORK · 网络', '④ 网络 · NETWORK'], ['carriers', '运营商'], null, 'tcZone5');
     /* row 1 */
     var g1 = L.pylon(48, 232, 150) + L.powerTx(78, 232, .9);
-    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, g1 + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.vclass === 'TT' ? ['150 kV · ' + F(el.mva, 1) + ' MVA', '150 kV · ' + F(el.mva, 1) + ' MVA'] : ['20 kV · ' + F(el.mva, 1) + ' MVA', '20 kV · ' + F(el.mva, 1) + ' MVA']));
+    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, g1 + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.hv.name + ' · ' + F(el.mva, 1) + ' MVA'));
     o += L.hot('tx', UNITS[1].name, 184, 38, 200, 200, L.switchgear(190, 150, 4, 96, 82) + L.dryTx(300, 140, 78, 92) + L.label(280, 60, '02', ['MV & transformers', '中压与变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA'));
     o += L.hot('lv', ['LV switchboards', '低压配电柜'], 388, 38, 176, 200, L.lvBoard(420, 150, 4, 100, 82) + L.label(474, 60, '03', ['LV switchboards', '低压配电'], [el.txTotal + ' line-ups', el.txTotal + '组']));
     o += L.hot('gen', ['Generators', '发电机'], 584, 38, 184, 200, L.genset(590, 160, 170, 72) + L.label(675, 60, '04', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe · ' + c.p.fuelH + ' h'));
@@ -93,7 +93,7 @@
       L.kpis([['pue', F(R.eff.pue, 2), '', ['Annual PUE', '年均PUE'], ['facility ÷ IT energy', '设施能耗÷IT能耗']],
         ['tier', F(R.cap.tier.avail, 3), '%', 'Tier ' + roman, ['availability target', '可用性目标']],
         ['dens', F(R.cap.avgDens, 1), 'kW', ['Average rack', '平均机柜'], [F(R.cap.racks) + ' racks', F(R.cap.racks) + '个机柜']],
-        ['mva', F(R.el.mva, 1), 'MVA', ['PLN demand', 'PLN需量'], R.el.vclass === 'TT' ? ['150 kV connection', '150 kV接入'] : ['20 kV feeders', '20 kV馈线']]]);
+        ['mva', F(R.el.mva, 1), 'MVA', ['PLN demand', 'PLN需量'], R.el.hv.kv > 20 ? [R.el.hv.name + ' connection', R.el.hv.name + '接入'] : [R.el.hv.circ + ' × 20 kV feeders', R.el.hv.circ + '路20 kV馈线']]]);
   }
   function bottom(c) {
     var R = c.R, e = R.eff, sp = R.sp, h = '';

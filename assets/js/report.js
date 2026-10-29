@@ -139,11 +139,11 @@
     para((p.ov && p.ov.tier && x.prop.tier !== p.tier ? T('Owner selection: ' + tierName + ' (assessment proposal: Tier ' + ['I', 'II', 'III', 'IV'][x.prop.tier - 1] + '). Basis of the proposal: ', '业主选择：' + tierName + '（评估建议：Tier ' + ['I', 'II', 'III', 'IV'][x.prop.tier - 1] + '）。建议依据：') : '') + TP(x.why.tier));
     table([T('Standard', '标准'), T('Level', '等级'), T('Key requirements for this level', '该等级主要要求')], x.tierStd.map(function (r) { return [r[0], r[1], T(r[2], r[3])]; }), [24, 20, 56]);
     kv([
-      [T('Maximum demand', '最大需量'), F(el.demandKW) + ' kW · ' + F(el.mva, 1) + ' MVA · ' + T(el.volt[0], el.volt[1])], [T('Utility feeds', '市电进线'), el.feeds],
+      [T('Maximum demand', '最大需量'), F(el.demandKW) + ' kW · ' + F(el.mva, 1) + ' MVA · ' + T(el.volt[0], el.volt[1])], [T('Utility circuits', '市电进线回路'), el.hv.circ + (el.hv.gis ? ' · GIS ' + el.hv.ur + ' kV · ' + el.hv.ik + ' kA' + (el.hv.ibt ? ' · ' + el.hv.ibt.total + ' × ' + el.hv.ibt.mva + ' MVA ' + el.hv.ibt.ratio : '') + ' · ' + el.hv.ht.total + ' × ' + el.hv.ht.mva + ' MVA ' + el.hv.ht.ratio : '')],
       [T('Transformers', '变压器'), el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')'], [T('Generators', '发电机'), el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC'],
       [T('Fuel storage', '储油'), F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) — ' + TP(x.why.fuelH)], [T('UPS', 'UPS'), el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') — ' + TP(x.why.upsMin)],
       [T('Batteries', '电池'), F(el.battKWh) + ' kWh ' + (p.battery === 'LI' ? 'Li-ion LFP' : 'VRLA') + ' — ' + TP(x.why.battery)],
-      [T('IT distribution', 'IT配电'), el.useBusway ? el.busways + T(' busway runs × ', '条母线×') + el.bwA + ' A' : el.pdus + ' × 150 kVA PDU'],
+      [T('IT distribution', 'IT配电'), el.useBusway ? el.busways + T(' busway runs × ', '条母线×') + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') : el.pdus + ' × 150 kVA PDU'],
       [T('BESS', '储能'), el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh, ' + el.bess.containers + T(' containers — ', '个集装箱——') + TP(x.why.bessOn) : T('Not included — ', '不配置——') + TP(x.why.bessOn)]
     ]);
 
