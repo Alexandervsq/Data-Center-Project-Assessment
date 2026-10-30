@@ -26,24 +26,30 @@
   /* maximum demand from the IT load, the design-day PUE and the UPS-fed share (same formula as the engine) */
   function demandFrom(it, pk, c) { var uf = c && c.R.cap.itKW > 0 ? c.R.el.upsLoad / c.R.cap.itKW : 1; return it * pk + K.UPS_LOSS * it * uf + Math.max(50, 0.01 * it); }
   function pkOf(v, c) { var e = c.R.eff.puePeak; return Math.abs(v.pk - +e.toFixed(2)) < 1e-9 ? e : v.pk; }
-  function conn(mva, t, kv, hm, c) { return E.connection(mva, { tier: t, hvKV: kv, htMVA: hm }, c.R.L); }
-  var KVO = E.KV.map(function (o) { return [o.kv, [o.en, o.zh]]; });
-  function fitTxt(h) {
-    if (h.intl) return ['✗ not a PLN voltage (international)', '✗ 非PLN电压等级（国际）'];
-    if (!h.avail) return ['✗ not available in this PLN system', '✗ 本PLN电网无此电压'];
-    if (h.fit === 'over') return ['✗ demand above the practical range', '✗ 需量超出适用范围'];
-    if (h.fit === 'under') return ['△ oversized for this demand', '△ 对该需量偏大'];
-    if (h.avail === 3) return ['△ planned (RUPTL), not yet in service', '△ 规划中（RUPTL），尚未投运'];
-    if (h.avail === 2) return ['✓ limited / legacy network', '✓ 有限/存量网络'];
-    return ['✓ suitable', '✓ 适用'];
-  }
+  function conn(mva, t, kv, hm, c) { return E.connection(mva, { tier: t, hvKV: kv, htMVA: hm, ikPCC: chg(c, 'ikPCC') }, c.R.L); }
+  var KVO = E.KV.map(function (o) { return [o.kv, [o.en, o.zh]]; }), HMO = E.HT_STD.map(function (m) { return [m, m + ' MVA']; });
+  /* select inputs carry numbers: index lists map them to the engine's text values */
+  function idx(list, lab) { return { o: list.map(function (q, i) { return [i, lab(q)]; }), m: list.map(function (q, i) { return [i, q.id]; }), ids: list.map(function (q) { return q.id; }) }; }
+  var LOC = idx(DB.idLocs, function (q) { return [q.en + ' · ' + q.provEn, q.zh + ' · ' + q.provZh]; }), COOL = idx(DB.cooling, function (q) { return [q.en, q.zh]; }),
+      PLAT = idx(DB.platforms, function (q) { return [q.en + ' · ' + q.kw + ' kW', q.zh + ' · ' + q.kw + ' kW']; });
+  var GSO = [300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500].map(function (x) { return [x, F(x) + ' kWe']; });
+  function locOf(v, c) { return v.loc === undefined ? c.R.L : E.loc(LOC.ids[Math.round(v.loc)]); }
+  /* connection assessment of the selected voltage (engine: standard / possible with conditions / not practical) */
+  function asmTxt(h) { return h.asm.c === 'std' ? ['✓ standard solution', '✓ 标准方案'] : (h.asm.c === 'opt' ? ['△ possible — see conditions', '△ 可行——见条件'] : ['✗ not practical', '✗ 不可行']); }
+  var LLC = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load 75–300 MW: ride-through study', '大负荷75–300 MW：穿越研究'], vlarge: ['very large load > 300 MW: dynamic and EMT studies', '超大负荷>300 MW：动态及电磁暂态研究'] };
   var B = {
     tariff: ['PLN tariff class follows the connection voltage (Q4 2026): 20 kV (TM) → B-3 / I-3, ≈ Rp' + F(DB.idTariffs[0].eff, 1) + '/kWh blended 24/7; 70 kV and above (TT / TET) → I-4, Rp' + F(DB.idTariffs[2].eff, 2) + '/kWh.',
       'PLN电价类别取决于接入电压（2026年第四季度）：20 kV（中压）→B-3/I-3，24/7加权约' + F(DB.idTariffs[0].eff, 1) + '印尼盾/kWh；70 kV及以上（高压/超高压）→I-4，' + F(DB.idTariffs[2].eff, 2) + '印尼盾/kWh。'],
     kv: ['Connection rule: ≤ 30 MVA at 20 kV (PLN TM), ≤ 300 MVA at 150 kV (TT); above that 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi (≤ 900 MVA), otherwise several 150 kV substations. 220 / 230 kV is the international equivalent, not a PLN voltage.',
       '接入规则：≤30 MVA接入20 kV（PLN中压），≤300 MVA接入150 kV（高压）；更大时爪哇-巴厘接入500 kV，苏门答腊、加里曼丹、苏拉威西接入275 kV（≤900 MVA），否则采用多座150 kV变电站。220/230 kV为国际等级，非PLN电压。'],
-    hm: ['IEC 60076 power transformers: 150/20 kV units of 30 MVA (≤ 25 MVA demand), 60 MVA (≤ 150 MVA) or 100 MVA; 70/20 kV 20–30 MVA; one standby per four duty units (Tier III), 2N (Tier IV).',
-      'IEC 60076电力变压器：150/20 kV单台30 MVA（需量≤25 MVA）、60 MVA（≤150 MVA）或100 MVA；70/20 kV为20–30 MVA；每4台工作配1台备用（Tier III），Tier IV为2N。'],
+    hm: ['IEC 60076 / SPLN T3.007-2:2016 power transformers: PLN standard 150/20 kV units are 30 and 60 MVA (ONAN/ONAF); customer substations use 30 MVA up to ≈ 25 MVA of demand, 60 MVA up to 150 MVA, 100 MVA up to 400 MVA and 150 MVA split-winding units above (two 20 kV boards per unit); 70/20 kV 20–30 MVA; manufacturers build 20–250 MVA. One standby per four duty units (Tier III), 2N (Tier IV).',
+      'IEC 60076/SPLN T3.007-2:2016电力变压器：PLN标准150/20 kV主变为30及60 MVA（ONAN/ONAF）；用户变电站需量约25 MVA以内用30 MVA，150 MVA以内用60 MVA，400 MVA以内用100 MVA，更大时用150 MVA分裂绕组变压器（每台带两段20 kV母线）；70/20 kV为20–30 MVA；制造商可供20–250 MVA。每4台工作配1台备用（Tier III），Tier IV为2N。'],
+    ik: ['Planning fault level at the connection point (Grid Code: PLN states the actual value on request): 500 kV ≈ 40 kA, 275 kV ≈ 20 kA, 150 kV ≈ 25 kA in Java–Bali and ≈ 15 kA elsewhere, 20 kV ≈ 10 kA. The switchgear short-time rating must be at least this value.',
+      '接入点规划短路电流（电网规范：实际值由PLN应要求提供）：500 kV约40 kA，275 kV约20 kA，150 kV爪哇-巴厘约25 kA、其他地区约15 kA，20 kV约10 kA。开关设备短时耐受电流不得低于该值。'],
+    gs: ['Generator rule: up to 1.5 MW of demand one set size to the load (300–1,500 kWe); up to 12 MW 2,000 kWe sets; up to 60 MW 2,500 kWe; above 3,000 kWe (data-center continuous rating, ISO 8528-1).',
+      '发电机规则：需量1.5 MW以内按负荷选单机（300–1,500 kWe）；12 MW以内2,000 kWe；60 MW以内2,500 kWe；以上3,000 kWe（数据中心持续功率，ISO 8528-1）。'],
+    gv: ['Generators connect at 400 V with ATS up to ≈ 6 MW of demand; above that a 20 kV paralleled plant (MV alternators or step-up transformers) on the 20 kV board.', '需量约6 MW以内发电机以400 V经ATS接入；以上采用20 kV并机电站（中压发电机或升压变压器）接入20 kV母线。'],
+    n: ['UPS systems = ⌈UPS load ÷ (rating × ' + K.UPS_LOAD + ')⌉ + Tier redundancy (one per eight for Tier III, 2N for Tier IV).', 'UPS系统数 = ⌈UPS负载 ÷（单系统容量 × ' + K.UPS_LOAD + '）⌉ + Tier冗余（Tier III每8台加1台，Tier IV为2N）。'],
     txSize: ['IEC 60076-1 / -11 preferred ratings: a single unit up to 3,150 kVA for small loads, otherwise 2,500 kVA blocks (3,150 kVA above 40 MVA) so each 400 V switchboard stays within a 4,000–5,000 A ACB and ≤ 65 kA (IEC 61439-2).',
       'IEC 60076-1/-11优选容量：小负荷单台不超过3,150 kVA，否则采用2,500 kVA单元（40 MVA以上采用3,150 kVA），使每段400 V配电柜不超过4,000–5,000 A框架断路器及≤65 kA（IEC 61439-2）。'],
     uk: ['IEC 60076-5 Table 1 short-circuit impedance: 4 % up to 630 kVA, 5 % to 1,250 kVA, 6 % to 2,500 kVA, 7 % above — limits the LV fault level.', 'IEC 60076-5表1短路阻抗：630 kVA及以下4%，至1,250 kVA为5%，至2,500 kVA为6%，以上7%——用于限制低压短路水平。'],
@@ -73,9 +79,11 @@
   var CALC = {
     pue: { i: [['it', ['IT load', 'IT负载'], 'MW', .1, 1000, .1, function (c) { return c.R.cap.itMW; }], ['mech', ['Cooling overhead', '制冷附加'], ['× IT', '× IT'], 0, 1, .01, function (c) { return +c.R.eff.mech.toFixed(2); }],
       ['elec', ['Electrical losses', '电气损耗'], ['× IT', '× IT'], 0, .2, .005, function (c) { return c.R.eff.elec; }], ['misc', ['Lighting & other', '照明及其他'], ['× IT', '× IT'], 0, .1, .005, function (c) { return c.R.eff.misc; }],
-      ['occ', ['Average utilisation', '平均利用率'], '%', 10, 100, 5, function (c) { return c.p.targetOcc; }], ['tar', ['PLN tariff', 'PLN电价'], 'Rp/kWh', 500, 3000, .01, function (c) { return c.p.tariffIDR; }]],
+      ['occ', ['Average utilisation', '平均利用率'], '%', 10, 100, 5, function (c) { return c.p.targetOcc; }], ['tar', ['PLN tariff', 'PLN电价'], 'Rp/kWh', 500, 3000, .01, function (c) { return c.p.tariffIDR; }],
+      ['cool', ['Cooling system', '制冷系统'], '', 0, COOL.ids.length - 1, 1, function (c) { return Math.max(0, COOL.ids.indexOf(c.p.cooling)); }, COOL.o],
+      ['ren', ['Renewable energy share (RECs, PPA)', '可再生能源占比（绿证、PPA）'], '%', 0, 100, 5, function (c) { return c.p.renewable || 0; }]],
       a: { tar: { b: B.tariff, f: function (v, c) { var mva = demandFrom(v.it * 1000, 1 + v.mech * 1.3 + v.elec + v.misc, c) / K.PF / 1000, kv = chg(c, 'hvKV') || E.kvRule(mva, c.R.L.grid); return kv >= 70 ? DB.idTariffs[2].eff : DB.idTariffs[0].eff; } } },
-      b: { it: { k: 'itMW' }, mech: { k: 'mechOv' }, elec: { k: 'elecOv' }, misc: { k: 'miscOv' }, occ: { k: 'targetOcc' }, tar: { k: 'tariffIDR' } },
+      b: { it: { k: 'itMW' }, mech: { k: 'mechOv' }, elec: { k: 'elecOv' }, misc: { k: 'miscOv' }, occ: { k: 'targetOcc' }, tar: { k: 'tariffIDR' }, cool: { k: 'cooling', map: COOL.m }, ren: { k: 'renewable' } },
       f: function (v) {
         var pue = 1 + v.mech + v.elec + v.misc, itE = v.it * v.occ / 100 * 8760, fac = itE * pue, cost = fac * 1000 * v.tar;
         return [[['PUE', 'PUE'], '1 + ' + F(v.mech, 2) + ' + ' + F(v.elec, 3) + ' + ' + F(v.misc, 3), F(pue, 2)],
@@ -83,7 +91,7 @@
           [['Facility energy per year', '年设施总能耗'], F(itE) + ' × ' + F(pue, 2), F(fac) + ' MWh'],
           [['Overhead energy', '附加能耗'], F(fac) + ' − ' + F(itE), F(fac - itE) + ' MWh'],
           [['Electricity cost', '电费'], F(fac) + ' MWh × Rp ' + F(v.tar, 1) + '/kWh', rp(cost)],
-          [['Scope-2 emissions (grid ' + DB.idGridEF + ' t/MWh)', '范围二排放（电网' + DB.idGridEF + ' t/MWh）'], F(fac) + ' × ' + DB.idGridEF, F(fac * DB.idGridEF) + ' tCO₂e'],
+          [['Scope-2 emissions (grid ' + DB.idGridEF + ' t/MWh, ' + F(v.ren) + ' % renewable)', '范围二排放（电网' + DB.idGridEF + ' t/MWh，可再生' + F(v.ren) + '%）'], F(fac) + ' × ' + DB.idGridEF + ' × (1 − ' + F(v.ren) + ' %)', F(fac * DB.idGridEF * (1 - v.ren / 100)) + ' tCO₂e'],
           [['Saving if PUE were 0.10 lower', 'PUE降低0.10可节省'], F(itE) + ' × 0.10 × Rp ' + F(v.tar, 1), rp(itE * 0.1 * 1000 * v.tar)]];
       } },
     tier: { i: [tierIn(), ['n', ['Duty units needed (N)', '所需工作单元（N）'], ['units', '台'], 1, 60, 1, function (c) { return c.R.el.upsN; }]],
@@ -97,26 +105,43 @@
           [['Concurrently maintainable / fault tolerant', '可同时维护 / 容错'], tr.cm ? 'CM ✓' : 'CM ✗', (tr.ft ? 'FT ✓' : 'FT ✗')],
           [['PLN feeds · generator fuel (rule)', 'PLN进线 · 发电机燃油（规则）'], 'Uptime / TIA-942-C', (t >= 3 ? '2' : '1') + ' × PLN · ≥ ' + ({ 1: 12, 2: 24, 3: 24, 4: 48 })[t] + ' h']];
       } },
-    dens: Object.assign({}, OLD.dens, { b: { it: { k: 'itMW' }, sd: { k: 'dens' }, s: { k: 'hdShare' }, hd: { k: 'hdDens' } } }),
+    dens: Object.assign({}, OLD.dens, {
+      i: OLD.dens.i.concat([['spf', ['Standard IT platform', '标准IT平台'], '', 0, PLAT.ids.length - 1, 1, function (c) { return Math.max(0, PLAT.ids.indexOf(c.p.stdPlat)); }, PLAT.o],
+        ['hpf', ['High-density IT platform', '高密度IT平台'], '', 0, PLAT.ids.length - 1, 1, function (c) { return Math.max(0, PLAT.ids.indexOf(c.p.hdPlat)); }, PLAT.o]]),
+      b: { it: { k: 'itMW' }, sd: { k: 'dens' }, s: { k: 'hdShare' }, hd: { k: 'hdDens' }, spf: { k: 'stdPlat', map: PLAT.m }, hpf: { k: 'hdPlat', map: PLAT.m } },
+      f: function (v, c) {
+        var rows = OLD.dens.f(v, c), sp = DB.platforms[Math.round(v.spf)] || c.R.stdP, hp = DB.platforms[Math.round(v.hpf)] || c.R.hdP;
+        rows.unshift([['IT platforms (standard / high-density)', 'IT平台（标准/高密度）'], [sp.en + ' / ' + hp.en, sp.zh + ' / ' + hp.zh], F(sp.kw) + ' / ' + F(hp.kw) + ' kW']);
+        return rows;
+      } }),
     /* PLN connection: demand → voltage level → circuits → GIS → transformation chain → 20 kV switchgear → MV/LV transformers */
     mva: { i: [['it', ['IT load', 'IT负载'], 'kW', 50, 1000000, 50, function (c) { return c.R.cap.itKW; }], ['pk', ['PUE on the design day', '设计日PUE'], '', 1.05, 2.5, .01, function (c) { return +c.R.eff.puePeak.toFixed(2); }], tierIn(),
+      ['loc', ['Site location (PLN system, climate)', '场址（PLN电网、气候）'], '', 0, LOC.ids.length - 1, 1, function (c) { return Math.max(0, LOC.ids.indexOf(c.p.loc)); }, LOC.o],
       ['kv', ['PLN connection voltage', 'PLN接入电压'], '', 20, 500, 1, function (c) { return c.R.el.hv.kv; }, KVO],
-      ['hm', ['HV/MV transformer rating', '高压/中压主变容量'], 'MVA', 20, 150, 1, function (c) { return c.R.el.hv.ht ? c.R.el.hv.ht.mva : 60; }, [[20, '20 MVA'], [30, '30 MVA'], [60, '60 MVA'], [100, '100 MVA'], [150, '150 MVA']]]],
-      a: { kv: { b: B.kv, f: function (v, c) { return E.kvRule(mvaOf(v, c), c.R.L.grid); } },
-        hm: { b: B.hm, f: function (v, c) { var h = conn(mvaOf(v, c), T(v), v.kv, 0, c); return h.ht ? h.ht.rule : 60; } } },
-      b: { it: { k: 'itMW', f: 0.001 }, pk: { k: 'pkPUE' }, tier: { k: 'tier' }, kv: { k: 'hvKV' }, hm: { k: 'htMVA' } },
+      ['ik', ['Fault level at the connection point', '接入点短路电流'], 'kA', 5, 80, .5, function (c) { return c.R.el.hv.pccIk; }],
+      ['hm', ['HV/MV transformer rating', '高压/中压主变容量'], 'MVA', 20, 250, 1, function (c) { var h = c.R.el.hv; return h.ht ? h.ht.mva : E.connection(c.R.el.mva, { tier: c.p.tier, hvKV: 150 }, c.R.L).ht.rule; }, HMO]],
+      a: { kv: { b: B.kv, f: function (v, c) { return E.kvRule(mvaOf(v, c), locOf(v, c).grid); } },
+        ik: { b: B.ik, f: function (v, c) { return E.connection(mvaOf(v, c), { tier: T(v), hvKV: v.kv }, locOf(v, c)).pccRule; } },
+        hm: { b: B.hm, f: function (v, c) { var h = E.connection(mvaOf(v, c), { tier: T(v), hvKV: v.kv, ikPCC: v.ik }, locOf(v, c)); return h.ht ? h.ht.rule : 60; } } },
+      b: { it: { k: 'itMW', f: 0.001 }, pk: { k: 'pkPUE' }, tier: { k: 'tier' }, loc: { k: 'loc', map: LOC.m }, kv: { k: 'hvKV' }, ik: { k: 'ikPCC' }, hm: { k: 'htMVA' } },
       f: function (v, c) {
-        var t = T(v), d = demandFrom(v.it, pkOf(v, c), c), md = chg(c, 'mdKVA'), kva = md ? +md : d / K.PF, mva = kva / 1000, h = conn(mva, t, v.kv, v.hm, c), gr = c.R.grid || {};
+        var t = T(v), d = demandFrom(v.it, pkOf(v, c), c), md = chg(c, 'mdKVA'), kva = md ? +md : d / K.PF, mva = kva / 1000, Lc = locOf(v, c);
+        var h = E.connection(mva, { tier: t, hvKV: v.kv, htMVA: v.hm, ikPCC: v.ik }, Lc), gr = DB.idGrids[Lc.grid] || {};
         var ld = (chg(c, 'txLoad') || K.TX_LOAD * 100) / 100, size = chg(c, 'txKVA') || txSize(kva, ld * 100), n = Math.ceil(kva / (size * ld)), r = E.redundancy(t, n, 'tx'); if (t === 3 && n === 1) r = 1;
         var steps = [[['Maximum demand', '最大需量'], [F(v.it) + ' × ' + F(v.pk, 2) + ' + UPS losses + building', F(v.it) + ' × ' + F(v.pk, 2) + ' + UPS损耗 + 建筑负荷'], F(d) + ' kW'],
-          [['Apparent power', '视在功率'], md ? ['set manually (MV switchgear panel)', '手动设定（中压开关柜面板）'] : F(d) + ' ÷ ' + K.PF, F(kva) + ' kVA = ' + F(mva, 1) + ' MVA'],
+          [['Apparent power', '视在功率'], md ? ['set manually (transformer panel)', '手动设定（变压器面板）'] : F(d) + ' ÷ ' + K.PF, F(kva) + ' kVA = ' + F(mva, 1) + ' MVA'],
           [['Recommended connection (' + gr.en + ')', '建议接入（' + gr.zh + '）'], [F(mva, 1) + ' MVA → connection rule', F(mva, 1) + ' MVA → 接入规则'], E.kvName(h.rule)],
-          [['Selected connection', '所选接入'], [h.name + ' · practical ' + F(h.lo) + '–' + F(h.hi) + ' MVA', h.name + ' · 适用' + F(h.lo) + '–' + F(h.hi) + ' MVA'], fitTxt(h)],
-          [['Incoming circuits' + (t >= 3 ? ' (N-1)' : ''), '进线回路' + (t >= 3 ? '（N-1）' : '')], '⌈' + F(mva, 1) + ' ÷ ' + F(h.capC) + ' MVA⌉' + (t >= 3 ? ' + 1' : ''), [h.circ + ' circuit(s) from ' + (t >= 3 ? '2 PLN substations' : '1 PLN substation'), h.circ + '回，来自' + (t >= 3 ? '2座PLN变电站' : '1座PLN变电站')]]];
-        if (h.gis) steps.push([['HV switchgear (IEC 62271-203)', '高压开关设备（IEC 62271-203）'], h.scheme, 'GIS ' + h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
-        if (h.ibt) steps.push([['EHV/HV interbus transformers', '超高压/高压联络变压器'], '⌈' + F(mva, 1) + ' ÷ ' + h.ibt.mva + '⌉ + ' + h.ibt.r, h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio]);
-        if (h.ht) steps.push([['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）'], '⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' · uk ≈ ' + h.ht.uk + ' %', h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + (h.ht.loadOut ? ' · ' + F(h.ht.loadOut) + ' % one out' : '')]);
-        steps.push([['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）'], (h.ht ? F(h.ht.mva) : F(mva, 1)) + ' MVA ÷ (√3 × 20 kV) = ' + F(h.mv.i) + ' A', h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.mv.gis ? ' · GIS' : '')]);
+          [['Selected connection: ' + h.name, '所选接入：' + h.name], [h.asm.en, h.asm.zh], asmTxt(h)],
+          [['Incoming circuits' + (t >= 3 ? ' (N-1)' : ''), '进线回路' + (t >= 3 ? '（N-1）' : '')], '⌈' + F(mva, 1) + ' ÷ ' + F(h.capC) + ' MVA⌉' + (t >= 3 ? ' + 1' : ''), [h.circ + ' circuit(s) from ' + (t >= 3 ? '2 PLN substations' : '1 PLN substation'), h.circ + '回，来自' + (t >= 3 ? '2座PLN变电站' : '1座PLN变电站')]],
+          [['Fault level at the connection point', '接入点短路水平'], '√3 × ' + h.kv + ' kV × ' + F(h.pccIk, 1) + ' kA', F(h.ssc) + ' MVA · Isc/IL ≈ ' + F(h.ssc / Math.max(mva, 0.01))]];
+        if (h.gis) steps.push([['HV switchgear (IEC 62271-203)', '高压开关设备（IEC 62271-203）'], [h.scheme[0] + ' · Ik ≥ ' + F(h.pccIk, 1) + ' kA · load ' + F(mva * 1000 / (1.732 * h.kv)) + ' A', h.scheme[1] + ' · Ik ≥ ' + F(h.pccIk, 1) + ' kA · 负荷电流' + F(mva * 1000 / (1.732 * h.kv)) + ' A'], 'GIS ' + h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
+        if (h.ibt) steps.push([['EHV/HV interbus transformers', '超高压/高压联络变压器'], '⌈' + F(mva, 1) + ' ÷ ' + h.ibt.mva + '⌉ + ' + h.ibt.r + ' · uk ≈ ' + h.ibt.uk + ' %', h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio]);
+        if (h.ht) {
+          steps.push([['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）'], ['⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' · uk ' + h.ht.uk + ' % (IEC 60076-5)' + (h.ht.split ? ' · split winding' : ''), '⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' · uk ' + h.ht.uk + '%（IEC 60076-5）' + (h.ht.split ? ' · 分裂绕组' : '')],
+            h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' · ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + (h.ht.loadOut ? ' · ' + F(h.ht.loadOut) + ' % one out' : '')]);
+          steps.push([['20 kV fault level (IEC 60909)', '20 kV短路电流（IEC 60909）'], F(h.mv.sb) + ' MVA ÷ ((' + F(h.mv.sb) + ' ÷ ' + F(h.mv.ssc150) + ' + ' + F(h.ht.uk, 1) + ' %) × √3 × 20 kV) × 1.05', F(h.mv.ikCalc, 1) + ' kA → ' + h.mv.ik + ' kA']);
+        }
+        steps.push([['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）'], F(h.mv.sb) + ' MVA ÷ (√3 × 20 kV) = ' + F(h.mv.i) + ' A', h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.mv.gis ? ' · GIS' : '')]);
         steps.push([['MV/LV transformers (Tier ' + roman(t) + ')', '中/低压变压器（Tier ' + roman(t) + '）'], '⌈' + F(kva) + ' ÷ (' + F(size) + ' × ' + F(ld, 2) + ')⌉ + ' + r, F(n + r) + ' × ' + F(size) + ' kVA']);
         steps.push([['PLN tariff · lead time · indicative cost', 'PLN电价 · 工期 · 参考投资'], h.kv >= 70 ? 'I-4 TT / TET' : 'B-3 / I-3 TM', 'Rp ' + F(h.kv >= 70 ? DB.idTariffs[2].eff : DB.idTariffs[0].eff, 1) + '/kWh · ≈ ' + h.lead + ' mo · ' + usd(h.cost)]);
         return steps;
@@ -138,38 +163,50 @@
           [['Loading with one unit out', '一台退出时负载率'], fail === null ? '–' : F(v.kva) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')', fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
           [['LV full-load current → main ACB', '低压满载电流→主框架断路器'], F(v.size) + ' kVA ÷ (√3 × 400 V) → IEC 60947-2', F(iFL) + ' A → ' + F(acb) + ' A'],
           [['LV fault level → switchboard rating', '低压短路电流→配电柜额定'], F(iFL) + ' A ÷ ' + F(v.uk, 1) + ' % → IEC 61439-2', F(ik, 1) + ' kA → ' + icw + ' kA'],
-          [['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' · ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio : ''), fitTxt(h)],
+          [['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' · ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio : ''), asmTxt(h)],
           [['MV switchgear', '中压开关设备'], [F(tot) + ' TX feeders + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot) + '路变压器馈线 + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.ur + ' kV GIS' : '')]];
       } },
     fuel: { i: [['d', ['Maximum demand', '最大需量'], 'kW', 50, 1000000, 10, function (c) { return Math.round(c.R.el.demandKW); }], tierIn(),
       ['h', ['Fuel autonomy', '燃油自持'], 'h', 4, 120, 1, function (c) { return c.p.fuelH; }],
       ['q', ['Specific consumption', '比油耗'], 'L/kWh', .2, .35, .01, function (c) { return c.R.el.fuelQ; }],
-      ['tank', ['Tank size', '储罐容量'], 'm³', 10, 200, 10, function (c) { return c.R.el.tankSize; }]],
+      ['tank', ['Tank size', '储罐容量'], 'm³', 10, 200, 10, function (c) { return c.R.el.tankSize; }],
+      ['gs', ['Generator rating (continuous)', '发电机容量（持续功率）'], 'kWe', 300, 3500, 1, function (c) { return c.R.el.genSize; }, GSO],
+      ['gv', ['Generator voltage', '发电机电压'], '', 1, 2, 1, function (c) { return c.R.el.genV === 'MV' ? 2 : 1; }, [[1, ['400 V sets with ATS', '400 V机组+ATS']], [2, ['20 kV paralleled plant', '20 kV并机电站']]]]],
       a: { h: { b: B.fuelH, f: function (v, c) { var rel = gridRel(c); return Math.min(96, ({ 1: 12, 2: 24, 3: 24, 4: 48 })[T(v)] + (rel === 'med' ? 24 : (rel === 'low' ? 48 : 0))); } },
-        tank: { b: B.tank, f: function (v) { var L = v.d * v.q * v.h; return L > 400000 ? 200 : (L > 100000 ? 100 : (L > 20000 ? 50 : 20)); } } },
-      b: { d: { k: 'mdKVA', f: 1 / K.PF }, tier: { k: 'tier' }, h: { k: 'fuelH' }, q: { k: 'fuelQ' }, tank: { k: 'tankM3' } },
+        tank: { b: B.tank, f: function (v) { var L = v.d * v.q * v.h; return L > 400000 ? 200 : (L > 100000 ? 100 : (L > 20000 ? 50 : 20)); } },
+        gs: { b: B.gs, f: function (v) { return genSize(v.d); } }, gv: { b: B.gv, f: function (v) { return v.d > 6000 ? 2 : 1; } } },
+      b: { d: { k: 'mdKVA', f: 1 / K.PF }, tier: { k: 'tier' }, h: { k: 'fuelH' }, q: { k: 'fuelQ' }, tank: { k: 'tankM3' }, gs: { k: 'genKW' }, gv: { k: 'genV', map: [[1, 'LV'], [2, 'MV']] } },
       f: function (v, c) {
         var t = T(v), lph = v.d * v.q, L = lph * v.h, tanks = Math.max(t >= 3 ? 2 : 1, Math.ceil(L / 1000 / v.tank)), trucks = Math.ceil(L / 16000);
-        var gs = +(chg(c, 'genKW') || genSize(v.d)), gn = Math.ceil(v.d / (gs * K.GEN_LOAD)), gr = E.redundancy(t, gn, 'gen'), gv = chg(c, 'genV') || (v.d > 6000 ? 'MV' : 'LV');
+        var gs = v.gs, gn = Math.ceil(v.d / (gs * K.GEN_LOAD)), gr = E.redundancy(t, gn, 'gen'), mv = Math.round(v.gv) === 2;
         return [[['Consumption at full load', '满载耗油'], F(v.d) + ' kW × ' + F(v.q, 2), F(lph) + ' L/h'],
           [['Fuel for the autonomy', '自持所需燃油'], F(lph) + ' × ' + F(v.h) + ' h', F(L / 1000, 1) + ' m³'],
           [['Bulk tanks', '主储油罐'], 'max(' + (t >= 3 ? 2 : 1) + ', ⌈' + F(L / 1000, 1) + ' ÷ ' + F(v.tank) + '⌉)', F(tanks) + ' × ' + F(v.tank) + ' m³'],
           [['Generators (continuous rating, ' + K.GEN_LOAD * 100 + ' %)', '发电机（持续功率，' + K.GEN_LOAD * 100 + '%）'], '⌈' + F(v.d) + ' ÷ (' + F(gs) + ' × ' + K.GEN_LOAD + ')⌉ + ' + gr, F(gn + gr) + ' × ' + F(gs) + ' kWe (' + E.redLabel(gn, gr) + ')'],
-          [['Generator voltage', '发电机电压'], v.d > 6000 ? ['> 6 MW: paralleled plant on the 20 kV board', '>6 MW：在20 kV母线并机'] : ['≤ 6 MW: 400 V sets with ATS', '≤6 MW：400 V机组+ATS'], gv === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V (LV)', '400 V（低压）']],
+          [['Generator voltage', '发电机电压'], v.d > 6000 ? ['> 6 MW: paralleled plant on the 20 kV board', '>6 MW：在20 kV母线并机'] : ['≤ 6 MW: 400 V sets with ATS', '≤6 MW：400 V机组+ATS'], mv ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V (LV)', '400 V（低压）']],
+          mv ? [['20 kV generator incomers', '20 kV发电机进线'], ['one breaker panel per set on the 20 kV board', '20 kV母线每台机组一面断路器柜'], [F(gn + gr) + ' panels', F(gn + gr) + '面']]
+            : [['400 V changeover', '400 V切换'], ['one ATS per LV switchboard', '每段低压配电一台ATS'], [F(c.R.el.txTotal) + ' ATS', F(c.R.el.txTotal) + '台ATS']],
+          [['Generator yard (≈ 75 m² per set)', '发电机场地（每台约75 m²）'], F(gn + gr) + ' × 75', F((gn + gr) * 75) + ' m²'],
           [['Refill by 16 kL tankers', '16 kL油罐车补油'], F(L / 1000, 1) + ' ÷ 16', [F(trucks) + ' trucks', F(trucks) + ' 车']]];
       } },
     batt: { i: [['kw', ['UPS system rating', 'UPS单系统容量'], 'kW', 100, 2000, 50, function (c) { return c.R.el.upsSize; }], ['n', ['Installed UPS systems', '安装UPS系统数'], ['units', '台'], 1, 4000, 1, function (c) { return c.R.el.upsTotal; }],
       ['chem', ['Battery chemistry', '电池类型'], '', 1, 2, 1, function (c) { return c.p.battery === 'VRLA' ? 2 : 1; }, [[1, ['Li-ion LFP', '磷酸铁锂']], [2, ['VRLA', '阀控铅酸']]]], tierIn(),
-      ['m', ['Autonomy', '后备时间'], 'min', 1, 30, 1, function (c) { return c.p.upsMin; }], ['age', ['Ageing factor', '老化系数'], '', 1, 1.5, .05, function (c) { return c.R.el.battAge; }]],
-      a: { m: { b: B.ups, f: function (v, c) { var li = Math.round(v.chem) !== 2, t = T(v); if (li && c.p.type === 'AI') return 5; return li ? (t === 4 ? 10 : 5) : (t === 4 ? 15 : 10); } } },
-      b: { kw: { k: 'upsKW' }, chem: { k: 'battery', map: [[1, 'LI'], [2, 'VRLA']] }, tier: { k: 'tier' }, m: { k: 'upsMin' }, age: { k: 'battAge' } },
-      f: function (v) {
+      ['m', ['Autonomy', '后备时间'], 'min', 1, 30, 1, function (c) { return c.p.upsMin; }], ['age', ['Ageing factor', '老化系数'], '', 1, 1.5, .05, function (c) { return c.R.el.battAge; }],
+      ['eco', ['Operating mode', '运行模式'], '', 0, 1, 1, function (c) { return c.p.eco ? 1 : 0; }, [[0, ['Double conversion', '双变换']], [1, ['Eco-mode (high efficiency)', '节能模式（高效）']]]]],
+      a: { m: { b: B.ups, f: function (v, c) { var li = Math.round(v.chem) !== 2, t = T(v); if (li && c.p.type === 'AI') return 5; return li ? (t === 4 ? 10 : 5) : (t === 4 ? 15 : 10); } },
+        n: { b: B.n, f: function (v, c) { var n = Math.ceil(c.R.el.upsLoad / (v.kw * K.UPS_LOAD)); return n + E.redundancy(T(v), n, 'ups'); } } },
+      b: { kw: { k: 'upsKW' }, chem: { k: 'battery', map: [[1, 'LI'], [2, 'VRLA']] }, tier: { k: 'tier' }, m: { k: 'upsMin' }, age: { k: 'battAge' }, eco: { k: 'eco', map: [[0, false], [1, true]] } },
+      f: function (v, c) {
         var li = Math.round(v.chem) !== 2, e1 = v.kw * v.m / 60, e2 = e1 * v.age / K.BATT_EFF, tot = e2 * v.n;
+        var occ = (c.p.targetOcc || 90) / 100, ul = c.R.el.upsLoad, x = Math.min(1, Math.max(0.05, ul * occ / (v.n * v.kw))), eco = Math.round(v.eco) === 1, lf = (0.008 + 0.015 * x + 0.007 * x * x) / x * (eco ? 0.3 : 1);
         return [[['Energy at the inverter', '逆变器所需能量'], F(v.kw) + ' kW × ' + F(v.m) + ' ÷ 60', F(e1, 1) + ' kWh'],
           [['With ageing and DC losses', '计入老化及直流损耗'], F(e1, 1) + ' × ' + F(v.age, 2) + ' ÷ ' + K.BATT_EFF, F(e2, 1) + ' kWh'],
           [['Total battery energy', '电池总能量'], F(e2, 1) + ' × ' + F(v.n), F(tot) + ' kWh'],
           [['Bridging margin over generator start (15 s)', '相对发电机启动（15 s）的裕度'], F(v.m * 60) + ' s ÷ 15 s', '× ' + F(v.m * 60 / 15)],
-          [['Battery room criteria', '电池室要求'], li ? 'NFPA 855 · UL 9540A' : 'IEC 62485-2', li ? ['off-gas detection, BMS, fire separation', '逸出气体探测、BMS、防火分隔'] : ['hydrogen ventilation, acid-resistant floor', '氢气通风、耐酸地面']]];
+          [['Battery room criteria', '电池室要求'], li ? 'NFPA 855 · UL 9540A' : 'IEC 62485-2', li ? ['off-gas detection, BMS, fire separation', '逸出气体探测、BMS、防火分隔'] : ['hydrogen ventilation, acid-resistant floor', '氢气通风、耐酸地面']],
+          [['UPS loading at average utilisation', '平均利用率下UPS负载率'], F(ul) + ' kW × ' + F(occ * 100) + ' % ÷ (' + F(v.n) + ' × ' + F(v.kw) + ' kW)', F(x * 100) + ' %'],
+          [['UPS losses at this loading (IEC 62040-3 curve)', '该负载率下UPS损耗（IEC 62040-3曲线）'], eco ? ['eco-mode ≈ 30 % of the double-conversion losses', '节能模式约为双变换损耗的30%'] : ['(0.8 % + 1.5 % · x + 0.7 % · x²) ÷ x', '(0.8% + 1.5%·x + 0.7%·x²) ÷ x'], F(lf * 100, 1) + ' % = ' + F(lf * ul * occ) + ' kW'],
+          [['Electrical losses → PUE of the design', '电气损耗→设计PUE'], F(c.R.eff.elec, 3) + ' × IT', 'PUE ' + F(c.R.eff.pue, 3) + ' · ' + F(c.R.el.mva, 1) + ' MVA']];
       } },
     bwy: { i: [['nr', ['Racks per row', '每排机柜数'], '', 4, 40, 1, function (c) { return c.R.el.rackRow; }], ['rk', ['Rack design density', '机柜设计功率'], 'kW', 1, 400, 1, function (c) { return Math.round(c.R.cap.maxDens); }],
       ['row', ['IT load per row', '每排IT负载'], 'kW', 5, 8000, 5, function (c) { return Math.min(c.R.el.rackRow, Math.max(2, Math.floor(ROW_MAX / Math.max(1, Math.round(c.R.cap.maxDens))))) * Math.round(c.R.cap.maxDens); }]],
@@ -201,26 +238,36 @@
       } },
     air: { i: [['nr', ['Air-cooled racks', '风冷机柜数'], '', 1, 200000, 1, function (c) { return Math.max(1, Math.round(c.R.cool.airKW / Math.max(1, c.R.cap.sd))); }], ['kw', ['Rack load', '机柜负载'], 'kW', 1, 80, .5, function (c) { return c.R.cap.sd; }],
       ['hall', ['Air-cooled heat in the hall', '机房风冷热负荷'], 'kW', 10, 5000000, 10, function (c) { return Math.max(1, Math.round(c.R.cool.airKW / Math.max(1, c.R.cap.sd))) * c.R.cap.sd; }],
-      ['dt', ['Temperature rise across the servers', '服务器温升'], 'K', 6, 20, 1, function () { return 12; }], tierIn()],
+      ['dt', ['Temperature rise across the servers', '服务器温升'], 'K', 6, 20, 1, function (c) { return c.R.me.cp ? c.R.me.cp.airDT : 12; }], tierIn()],
       a: { hall: { b: B.hall, f: function (v) { return v.nr * v.kw; } } },
-      b: { kw: { k: 'dens' }, tier: { k: 'tier' } },
-      f: function (v) {
-        var q = v.kw / (1.2 * 1.006 * v.dt), qh = q * 3600, H = v.hall / (1.2 * 1.006 * v.dt) * 3600, fw = Math.ceil(v.hall / K.FANWALL_KW), fr = E.redundancy(T(v), fw, 'term');
+      b: { kw: { k: 'dens' }, tier: { k: 'tier' }, dt: { k: 'airDT' } },
+      f: function (v, c) {
+        var q = v.kw / (1.2 * 1.006 * v.dt), qh = q * 3600, H = v.hall / (1.2 * 1.006 * v.dt) * 3600, cap = Math.round(K.FANWALL_KW * Math.min(1.6, Math.max(0.5, v.dt / 12)));
+        var fw = Math.ceil(v.hall / cap), fr = E.redundancy(T(v), fw, 'term'), fan = v.hall / (1.2 * 1.006 * v.dt) * 400 / 0.65 / 1000;
         return [[['Airflow per rack', '单柜风量'], F(v.kw, 1) + ' ÷ (1.2 × 1.006 × ' + F(v.dt) + ')', F(q, 2) + ' m³/s'], [['Per hour', '每小时'], F(q, 2) + ' × 3,600', F(qh) + ' m³/h (' + F(qh * 0.5886) + ' CFM)'],
           [['Hall airflow', '机房总风量'], F(v.hall) + ' kW at ΔT ' + F(v.dt) + ' K', F(H) + ' m³/h'],
-          [['Fan walls of ' + K.FANWALL_KW + ' kW (Tier ' + roman(T(v)) + ')', K.FANWALL_KW + ' kW风墙（Tier ' + roman(T(v)) + '）'], '⌈' + F(v.hall) + ' ÷ ' + K.FANWALL_KW + '⌉ + ' + fr, F(fw + fr) + ' (' + E.redLabel(fw, fr) + ')'],
-          [['Hot-aisle temperature (supply 24 °C, ASHRAE 18–27 °C)', '热通道温度（送风24 °C，ASHRAE 18–27 °C）'], '24 + ' + F(v.dt), F(24 + v.dt) + ' °C']];
+          [['Fan-wall capacity at this ΔT (fixed airflow)', '该温差下风墙能力（风量不变）'], K.FANWALL_KW + ' kW × ' + F(v.dt) + ' ÷ 12', F(cap) + ' kW'],
+          [['Fan walls (Tier ' + roman(T(v)) + ')', '风墙（Tier ' + roman(T(v)) + '）'], '⌈' + F(v.hall) + ' ÷ ' + F(cap) + '⌉ + ' + fr, F(fw + fr) + ' (' + E.redLabel(fw, fr) + ')'],
+          [['Fan power (400 Pa, efficiency 0.65)', '风机功率（400 Pa，效率0.65）'], F(H / 3600, 1) + ' m³/s × 400 Pa ÷ 0.65', F(fan) + ' kW'],
+          [['Hot-aisle temperature (supply 24 °C, ASHRAE 18–27 °C)', '热通道温度（送风24 °C，ASHRAE 18–27 °C）'], '24 + ' + F(v.dt), F(24 + v.dt) + ' °C'],
+          [['Effect on the design PUE', '对设计PUE的影响'], ['fans and chillers at this ΔT', '该温差下风机及冷机'], 'PUE ' + F(c.R.eff.pue, 3)]];
       } },
     chw: { i: [['q', ['Chilled-water load', '冷冻水负荷'], 'kW', 50, 5000000, 50, function (c) { return Math.round(c.R.me.chwLoad || c.R.cool.airKW); }], tierIn(),
-      ['size', ['Chiller size', '单机容量'], 'kW', 300, 4000, 1, function (c) { return c.R.me.chSize || 1407; }], ['dt', ['Chilled-water ΔT', '冷冻水温差'], 'K', 4, 14, .5, function (c) { return c.R.me.chwDT || K.CHW_DT; }]],
+      ['size', ['Chiller size', '单机容量'], 'kW', 300, 4000, 1, function (c) { return c.R.me.chSize || 1407; }], ['dt', ['Chilled-water ΔT', '冷冻水温差'], 'K', 4, 14, .5, function (c) { return c.R.me.chwDT || K.CHW_DT; }],
+      ['tw', ['Chilled-water supply temperature', '冷冻水供水温度'], '°C', 6, 24, .5, function (c) { return c.R.me.cp ? c.R.me.cp.chws : E.COOLDEF.chws; }]],
       a: { size: { b: B.chSize, f: function (v, c) { var q = v.q; return c.R.cool.airTech === 'WCCH' ? (q >= 20000 ? 3517 : (q >= 6000 ? 2461 : 1407)) : (q >= 3000 ? 1000 : 500); } } },
-      b: { tier: { k: 'tier' }, size: { k: 'chKW' }, dt: { k: 'chwDT' } },
-      f: function (v) {
+      b: { tier: { k: 'tier' }, size: { k: 'chKW' }, dt: { k: 'chwDT' }, tw: { k: 'chws' } },
+      f: function (v, c) {
         var t = T(v), n = Math.ceil(v.q / v.size), r = E.redundancy(t, n, 'plant'), fl = v.q / (4.186 * v.dt), dn = pick(DN, Math.sqrt(4 * fl / 1000 / (Math.PI * 2.4)) * 1000);
+        var ac = c.R.cool.airTech === 'ACCH', cp0 = c.R.me.cp || E.COOLDEF, md = E.coolModel(ac ? 'ACCH' : 'WCCH', { chws: v.tw, chwDT: v.dt, airDT: cp0.airDT, twAppr: cp0.twAppr }, c.R.L, v.q, 0);
         return [[['Cooling capacity', '冷量'], F(v.q) + ' ÷ ' + K.RT_KW, F(v.q / K.RT_KW) + ' RT'], [['Duty chillers', '工作冷机'], '⌈' + F(v.q) + ' ÷ ' + F(v.size) + '⌉', F(n)],
           [['Installed (Tier ' + roman(t) + ')', '安装（Tier ' + roman(t) + '）'], E.redLabel(n, r), F(n + r) + ' × ' + F(v.size) + ' kW'], [['Chilled-water flow', '冷冻水流量'], F(v.q) + ' ÷ (4.186 × ' + F(v.dt, 1) + ')', F(fl) + ' L/s (' + F(fl * 3.6) + ' m³/h)'],
           [['Main header (≤ 2.4 m/s)', '主干管（≤2.4 m/s）'], '√(4 × ' + F(fl / 1000, 3) + ' ÷ (π × 2.4))', 'DN ' + dn],
-          [['Heat at the cooling towers', '冷却塔散热量'], F(v.q) + ' × ' + K.REJ, F(v.q * K.REJ) + ' kW']];
+          [['Heat at the cooling towers', '冷却塔散热量'], F(v.q) + ' × ' + K.REJ, F(v.q * K.REJ) + ' kW'],
+          [['Chiller efficiency (average design-day conditions)', '冷机效率（设计日平均工况）'], [(ac ? 'air-cooled condensing ' : 'tower water ' + F(md.cws, 1) + ' °C → condensing ') + F(md.tcond, 1) + ' °C · evaporating ' + F(v.tw - 1.5, 1) + ' °C', (ac ? '风冷冷凝' : '冷却水' + F(md.cws, 1) + ' °C → 冷凝') + F(md.tcond, 1) + ' °C · 蒸发' + F(v.tw - 1.5, 1) + ' °C'], 'COP ' + F(md.cop, 2)],
+          [['Chiller power', '冷机功率'], F(v.q) + ' ÷ ' + F(md.cop, 2) + (md.free > 0 ? ' × (1 − 0.8 × ' + F(md.free * 100) + ' % free cooling)' : ''), F(md.chiller) + ' kW'],
+          [['Chilled-water pumps (250 kPa, efficiency 0.7)', '冷冻水泵（250 kPa，效率0.7）'], F(fl) + ' L/s × 250 kPa ÷ 0.7', F(md.chwPump) + ' kW'],
+          [['Effect on the design PUE', '对设计PUE的影响'], ['cooling ' + F(c.R.eff.mech, 3) + ' × IT', '制冷 ' + F(c.R.eff.mech, 3) + ' × IT'], 'PUE ' + F(c.R.eff.pue, 3)]];
       } },
     tes: { i: [['q', ['Chilled-water load', '冷冻水负荷'], 'kW', 50, 5000000, 50, function (c) { return Math.round(c.R.me.chwLoad || c.R.cool.airKW); }], tierIn(),
       ['s', ['Ride-through time', '后备时间'], 's', 60, 1800, 30, function (c) { return c.R.me.tesS || K.TES_S; }], ['dt', ['Usable ΔT', '可用温差'], 'K', 4, 14, .5, function (c) { return c.R.me.chwDT || K.CHW_DT; }]],
@@ -232,10 +279,17 @@
           [['Tank diameter (height = 1.5 × D)', '储罐直径（高 = 1.5 × D）'], '∛(' + F(m3) + ' ÷ (π/4 × 1.5))', F(d, 1) + ' m'], [['Tanks for concurrent maintenance', '可同时维护所需储罐'], 'Tier ' + roman(T(v)), T(v) >= 3 ? ['2 × 50 % (or valved bypass)', '2×50%（或带阀旁通）'] : ['1', '1']]];
       } },
     wue: { i: [['it', ['IT load', 'IT负载'], 'kW', 50, 5000000, 50, function (c) { return c.R.cap.itKW; }], ['occ', ['Average utilisation', '平均利用率'], '%', 10, 100, 5, function (c) { return c.p.targetOcc; }],
-      ['heat', ['Heat to the towers', '冷却塔散热量'], 'kW', 0, 10000000, 50, function (c) { return Math.round(c.R.me.rejKW || c.R.cap.itKW * K.REJ); }], ['coc', ['Cycles of concentration', '浓缩倍数'], '', 2, 10, .5, function (c) { return c.p.coc > 1 ? c.p.coc : 5; }]],
+      ['heat', ['Heat to the towers', '冷却塔散热量'], 'kW', 0, 10000000, 50, function (c) { return Math.round(c.R.me.rejKW || c.R.cap.itKW * K.REJ); }], ['coc', ['Cycles of concentration', '浓缩倍数'], '', 2, 10, .5, function (c) { return c.p.coc > 1 ? c.p.coc : 5; }],
+      ['ap', ['Cooling-tower approach', '冷却塔逼近度'], 'K', 2, 8, .5, function (c) { return c.R.me.cp ? c.R.me.cp.twAppr : E.COOLDEF.twAppr; }]],
       a: { heat: { b: B.heat, f: function (v, c) { return v.it * (c.R.me.rejKW ? c.R.me.rejKW / c.R.cap.itKW : K.REJ); } } },
-      b: { it: { k: 'itMW', f: 0.001 }, occ: { k: 'targetOcc' }, coc: { k: 'coc' } },
-      f: OLD.wue.f },
+      b: { it: { k: 'itMW', f: 0.001 }, occ: { k: 'targetOcc' }, coc: { k: 'coc' }, ap: { k: 'twAppr' } },
+      f: function (v, c) {
+        var rows = OLD.wue.f(v, c), wb = c.R.L.wb;
+        rows.push([['Tower leaving water (design wet-bulb ' + wb + ' °C)', '冷却塔出水（设计湿球' + wb + ' °C）'], wb + ' + ' + F(v.ap, 1) + ' K', F(wb + v.ap, 1) + ' °C']);
+        rows.push([['Tower fan power (≈ 0.95 % of heat × 4 ÷ approach)', '冷却塔风机功率（约0.95%×散热量×4÷逼近度）'], F(v.heat) + ' × 0.0095 × 4 ÷ ' + F(v.ap, 1), F(v.heat * 0.0095 * 4 / v.ap) + ' kW']);
+        rows.push([['Effect on the design PUE', '对设计PUE的影响'], ['warmer tower water → higher chiller lift', '冷却水温升高→冷机压比增大'], 'PUE ' + F(c.R.eff.pue, 3)]);
+        return rows;
+      } },
     flow: Object.assign({}, OLD.flow, { i: [['kw', ['Rack power', '机柜功率'], 'kW', 10, 400, 1, function (c) { return c.R.cap.hd || c.R.hdP.kw; }], ['liq', ['Share to liquid', '液冷占比'], '%', 50, 100, 1, function (c) { return Math.round((c.p.liqSh > 0 ? c.p.liqSh / 100 : (c.R.hdP.liq || .85)) * 100); }],
       ['dt', ['Coolant temperature rise', '冷却液温升'], 'K', 4, 20, 1, function () { return 10; }]], b: { kw: { k: 'hdDens' }, liq: { k: 'liqSh' } } }),
     cdu: { i: [['q', ['Heat to liquid', '液冷热量'], 'kW', 100, 5000000, 100, function (c) { return Math.round(c.R.cool.liquidKW || 5000); }], ['size', ['CDU capacity', 'CDU容量'], 'kW', 200, 2500, 50, function (c) { return c.R.me.cduSize || 1500; }],
@@ -243,6 +297,27 @@
       a: { size: { b: B.cdu, f: function (v) { return v.q >= 3000 ? 1500 : 800; } } },
       b: { size: { k: 'cduKW' } },
       f: OLD.cdu.f },
+    gimp: { i: [['ik', ['Fault level at the connection point', '接入点短路电流'], 'kA', 5, 80, .5, function (c) { return c.R.el.hv.pccIk; }],
+      ['ahf', ['Active harmonic filters on drives', '驱动负荷有源滤波器'], '', 0, 2, 1, function (c) { return c.p.ahf === true ? 1 : (c.p.ahf === false ? 0 : 2); }, [[2, ['By the harmonic estimate (rule)', '按谐波估算（规则）']], [1, ['Yes', '是']], [0, ['No', '否']]]],
+      ['sw', ['AI load swing (share of AI load)', 'AI负荷波动（占AI负荷）'], '%', 0, 100, 5, function (c) { return c.R.gimp ? c.R.gimp.swing : 0; }]],
+      a: { ik: { b: B.ik, f: function (v, c) { return c.R.el.hv.pccRule; } } },
+      b: { ik: { k: 'ikPCC' }, ahf: { k: 'ahf', map: [[2, null], [1, true], [0, false]] }, sw: { k: 'aiSwing' } },
+      f: function (v, c) {
+        var el = c.R.el, hv = el.hv, S = el.mva, kv = hv.kv, hv2 = Object.assign({}, hv, { pccIk: v.ik, ssc: 1.732 * kv * v.ik });
+        var gi = E.gridImpact({ ahf: [false, true, undefined][Math.round(v.ahf)], aiSwing: v.sw }, Object.assign({}, c.R, { el: Object.assign({}, el, { hv: hv2 }) }));
+        function ok(b) { return b ? ' ✓' : ' ✗'; }
+        return [[['Short-circuit power at the connection point', '接入点短路容量'], '√3 × ' + kv + ' kV × ' + F(v.ik, 1) + ' kA', F(gi.ssc) + ' MVA'],
+          [['Short-circuit ratio Isc/IL', '短路比Isc/IL'], F(gi.ssc) + ' ÷ ' + F(S, 1) + ' MVA', F(gi.scr) + (gi.scr < 20 ? ' — low' : '')],
+          [['Harmonic current limit (Grid Code, ' + E.kvName(kv) + ')', '谐波电流限值（电网规范，' + E.kvName(kv) + '）'], ['TDD table by Isc/IL and voltage', '按Isc/IL及电压查TDD表'], '≤ ' + F(gi.tddLimit, 1) + ' % TDD'],
+          [['Estimated harmonic current', '估算谐波电流'], ['UPS active front end ≈ 3 %, drives ' + (gi.ahf ? 'with active filters ≈ 5 %' : 'without filters ≈ 35 %'), 'UPS有源整流约3%，驱动负荷' + (gi.ahf ? '加有源滤波约5%' : '无滤波约35%')], F(gi.tdd, 1) + ' %' + ok(gi.tdd <= gi.tddLimit)],
+          [['Voltage distortion THDv', '电压畸变THDv'], F(gi.tdd, 1) + ' % × ' + F(S, 1) + ' ÷ ' + F(gi.ssc) + ' × 5', F(gi.thdv, 2) + ' % / ' + gi.thdLim[1] + ' %' + ok(gi.thdv <= gi.thdLim[1])],
+          [['Voltage step from the AI load swing', 'AI负荷波动引起的电压阶跃'], F(gi.aiKW / 1000, 1) + ' MW × ' + F(gi.swing) + ' % ÷ (' + K.PF + ' × ' + F(gi.ssc) + ' MVA)', F(gi.dvAi, 2) + ' % / 2 %' + ok(gi.dvAi <= 2)],
+          [['Loss of the whole load (UPS to battery in a grid fault)', '全部负荷失去（电网故障时UPS转电池）'], F(S, 1) + ' ÷ ' + F(gi.ssc) + ' MVA', [F(gi.dvLoss, 1) + ' % · re-transfer in blocks ≤ ' + F(gi.blk3) + ' MVA (3 %)', F(gi.dvLoss, 1) + '% · 分块回切每块≤' + F(gi.blk3) + ' MVA（3%）']],
+          [['Power factor at the connection point', '接入点功率因数'], ['Grid Code: 0.9 lagging – 0.9 leading', '电网规范：滞后0.9至超前0.9'], '≈ ' + F(gi.pfEst, 2) + ' · Q ≈ ' + F(gi.q, 1) + ' MVAr'],
+          [['Fault clearing by PLN protection', 'PLN保护故障切除'], [E.kvName(kv) + ' main protection', E.kvName(kv) + '主保护'], gi.clearMs ? '≤ ' + gi.clearMs + ' ms' : ['20 kV: OCR incoming ≤ 1 s, feeders ≤ 0.7 s', '20 kV：进线过流≤1 s，馈线≤0.7 s']],
+          [['Large-load class (NERC / ERCOT practice)', '大负荷类别（NERC/ERCOT惯例）'], F(gi.lossMW) + ' MW UPS-fed', LLC[gi.llc]],
+          [['Connection studies and timeline', '接入研究与时间'], [gi.studies.length + ' studies (Grid Code CC 5.1)', gi.studies.length + '项研究（电网规范CC 5.1）'], ['≈ ' + gi.months + ' months · PLN reply ≤ 30 days', '约' + gi.months + '个月 · PLN 30天内答复']]];
+      } },
     appr: OLD.appr,
     floor: { i: OLD.floor.i,
       f: function (v, c) {
@@ -250,7 +325,10 @@
         rows.push([['Design live load for this rack (rule)', '该机柜对应设计活荷载（规则）'], 'SNI 1727:2020 + DC practice', '≥ ' + need + ' kN/m²']);
         return rows;
       } },
-    space: Object.assign({}, OLD.space, { b: { racks: { k: 'racks' }, fl: { k: 'floors' }, kdb: { k: 'kdb' } } }),
+    space: Object.assign({}, OLD.space, {
+      i: OLD.space.i.concat([['rf', ['Raised floor', '架空地板'], '', 0, 1, 1, function (c) { return c.R.sp.raised ? 1 : 0; }, [[1, ['Yes', '是']], [0, ['No (slab + overhead services)', '否（结构楼板+上走线）']]]]]),
+      b: { racks: { k: 'racks' }, fl: { k: 'floors' }, kdb: { k: 'kdb' }, rf: { k: 'raised', map: [[1, 'YES'], [0, 'NO']] } },
+      f: function (v, c) { var rows = OLD.space.f(v, c); rows.push([['Clear height', '净高'], Math.round(v.rf) ? ['raised floor', '架空地板'] : ['slab floor', '结构楼板'], [c.R.sp.clearH, c.R.sp.clearHzh]]); return rows; } }),
     agent: { i: [['a', ['Room area', '房间面积'], 'm²', 10, 2000, 1, function (c) { return Math.round(Math.min(800, c.R.sp.ws / Math.max(1, c.R.fs.gasZones || 1))); }], ['ht', ['Height incl. floor & ceiling voids', '高度（含地板及吊顶空间）'], 'm', 2.5, 8, .1, function () { return 4.5; }],
       ['v', ['Protected volume', '保护容积'], 'm³', 25, 20000, .1, function (c) { return Math.round(Math.min(800, c.R.sp.ws / Math.max(1, c.R.fs.gasZones || 1))) * 4.5; }],
       ['ag', ['Agent', '灭火剂'], '', 1, 2, 1, function () { return 1; }, [[1, ['HFC-227ea', '七氟丙烷']], [2, ['FK-5-1-12', '全氟己酮']]]],

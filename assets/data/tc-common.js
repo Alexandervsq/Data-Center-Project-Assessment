@@ -21,20 +21,38 @@
   function connTable(c) {
     var hv = c.R.el.hv, gr = DB.idGrids[c.R.L.grid] || {};
     var rows = hv.opts.map(function (o) {
-      var st = o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail], fit = o.fit === 'ok' ? ['✓ in range', '✓ 范围内'] : (o.fit === 'over' ? ['✗ above range', '✗ 超出范围'] : ['△ oversized', '△ 偏大']);
-      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), L.te(fit)];
+      var st = o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail], fit = o.asm.c === 'std' ? ['✓ standard', '✓ 标准方案'] : (o.asm.c === 'opt' ? ['△ possible / strategic', '△ 可行/战略方案'] : ['✗ not practical', '✗ 不可行']);
+      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
       r.cur = o.sel; return r;
     });
     return '<div><h3>' + L.te(['Connection options for ' + F(c.R.el.mva, 1) + ' MVA — ' + gr.en, gr.zh + ' — ' + F(c.R.el.mva, 1) + ' MVA的接入方案']) + '</h3>' +
-      L.ptable([['Voltage', '电压'], ['Switchgear', '开关设备'], ['Practical range', '适用范围'], ['Circuits', '回路'], ['In this grid', '本电网'], ['Fit', '匹配']], rows) +
-      '<p class="tc-src">' + L.te(['Highlighted: the connection of this design. Change the voltage in the calculator below or in Connected design — substation, transformers, switchgear, tariff, cost and programme follow. Planning view of the PLN network (RUPTL 2025–2034); confirm with PLN.', '高亮行：本设计的接入方式。可在下方计算器或“关联设计”中修改电压——变电站、变压器、开关设备、电价、投资及工期随之联动。PLN电网为规划层面判断（RUPTL 2025–2034），须与PLN确认。']) + '</p></div>';
+      L.ptable([['Voltage', '电压'], ['Switchgear', '开关设备'], ['Typical range', '典型范围'], ['Circuits', '回路'], ['In this grid', '本电网'], ['Assessment', '评估']], rows) +
+      '<div class="tc-basisbox"><b>' + L.te(['Selected: ' + hv.name, '所选：' + hv.name]) + ' — ' + L.te(hv.asm.c === 'std' ? ['standard solution', '标准方案'] : (hv.asm.c === 'opt' ? ['possible with conditions', '有条件可行'] : ['not practical', '不可行'])) + '.</b> ' + L.te([hv.asm.en, hv.asm.zh]) + '</div>' +
+      '<p class="tc-src">' + L.te(['Highlighted: the connection of this design. The typical range is guidance, not a limit: a 150 kV substation for a 10–30 MVA first phase is a common strategic choice for data-center campuses. Change the voltage, the fault level or the transformer rating in the calculator below — substation, transformers, 20 kV switchgear, tariff, cost, programme and the grid impact indicators follow. Planning view of the PLN network (RUPTL 2025–2034); confirm with PLN.', '高亮行：本设计的接入方式。典型范围为参考而非限值：数据中心园区首期10–30 MVA即自建150 kV变电站是常见的战略选择。可在下方计算器中修改电压、短路电流或主变容量——变电站、变压器、20 kV开关柜、电价、投资、工期及电网影响指标随之联动。PLN电网为规划层面判断（RUPTL 2025–2034），须与PLN确认。']) + '</p></div>';
+  }
+  /* PLN grid impact indicators of this design (Grid Code Permen ESDM 20/2020 limits; engine R.gimp) */
+  var LLCT = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load (75–300 MW)', '大负荷（75–300 MW）'], vlarge: ['very large load (> 300 MW)', '超大负荷（>300 MW）'] };
+  function gimpTable(c) {
+    var gi = c.R.gimp; if (!gi) return '';
+    function ok(b) { return b ? ' ✓' : ' ✗'; }
+    var rows = [[L.te(['Short-circuit power · Isc/IL', '短路容量 · Isc/IL']), F(gi.ssc) + ' MVA · ' + F(gi.scr), L.te(gi.scr < 20 ? ['low ratio: strictest limits', '短路比低：限值最严'] : ['adequate', '满足'])],
+      [L.te(['Harmonic current TDD (estimate / limit)', '谐波电流TDD（估算/限值）']), F(gi.tdd, 1) + ' % / ' + F(gi.tddLimit, 1) + ' %' + ok(gi.tdd <= gi.tddLimit), L.te(gi.ahf ? ['active harmonic filters on drives', '驱动负荷配有源滤波器'] : ['no filters needed by estimate', '估算无需滤波器'])],
+      [L.te(['Voltage distortion THDv (estimate / limit)', '电压畸变THDv（估算/限值）']), F(gi.thdv, 2) + ' % / ' + gi.thdLim[1] + ' %' + ok(gi.thdv <= gi.thdLim[1]), L.te(['individual harmonic ≤ ' + gi.thdLim[0] + ' %', '单次谐波≤' + gi.thdLim[0] + '%'])],
+      [L.te(['Voltage step from AI load swing', 'AI负荷波动电压阶跃']), F(gi.dvAi, 2) + ' %' + ok(gi.dvAi <= 2), L.te(['≤ 2 % repetitive, ≤ 3 % infrequent; flicker Pst ≤ ' + (gi.kv >= 66 ? '0.8' : '1.0'), '重复≤2%、偶发≤3%；闪变Pst≤' + (gi.kv >= 66 ? '0.8' : '1.0')])],
+      [L.te(['Loss of the whole load', '全部负荷失去']), F(gi.dvLoss, 1) + ' %', L.te(['re-transfer in blocks ≤ ' + F(gi.blk3) + ' MVA; ' + LLCT[gi.llc][0], '分块回切每块≤' + F(gi.blk3) + ' MVA；' + LLCT[gi.llc][1]])],
+      [L.te(['Power factor · voltage range', '功率因数 · 电压范围']), '≈ ' + F(gi.pfEst, 2), L.te(['0.9 lagging – 0.9 leading · ' + gi.vrange[0], '滞后0.9至超前0.9 · ' + gi.vrange[1]])],
+      [L.te(['Fault clearing · studies', '故障切除 · 研究']), gi.clearMs ? '≤ ' + gi.clearMs + ' ms' : '20 kV OCR', L.te([gi.studies.length + ' studies, ≈ ' + gi.months + ' months', gi.studies.length + '项研究，约' + gi.months + '个月'])]];
+    return '<div><h3>' + L.te(['PLN Grid Impact Study — indicators of this design', 'PLN电网影响研究——本设计指标']) + '</h3>' + L.ptable([['Check', '校核项'], ['This design', '本设计'], ['Grid Code / note', '电网规范/说明']], rows) +
+      '<div class="tc-rel" style="margin-top:10px"><button type="button" data-tco="gimp">' + L.te(['Grid Impact Study: limits, studies and process', '电网影响研究：限值、研究与流程']) + ' →</button></div></div>';
   }
   function chainTable(c) {
     var el = c.R.el, h = el.hv, rows = [];
     rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' · ' + h.circ + ' circuit(s)', h.name + ' · ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
     if (h.gis) rows.push([L.te(['HV substation (GIS, IEC 62271-203)', '高压变电站（GIS，IEC 62271-203）']), L.te(h.scheme), h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
     if (h.ibt) rows.push([L.te(['EHV/HV interbus transformers', '超高压/高压联络变压器']), h.ibt.ratio, h.ibt.total + ' × ' + h.ibt.mva + ' MVA']);
-    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' · uk ' + h.ht.uk + ' %', h.ht.total + ' × ' + h.ht.mva + ' MVA']);
+    rows.push([L.te(['Fault level at the connection point', '接入点短路水平']), L.te(['planning value, PLN confirms', '规划值，以PLN确认为准']), F(h.pccIk, 1) + ' kA · ' + F(h.ssc) + ' MVA']);
+    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' · uk ' + h.ht.uk + ' % · ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' · split winding', ' · 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA']);
+    if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω · 300 A · 10 s']);
     rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']), h.mv.boards + ' × ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA']);
     rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV · uk ' + el.lv.uk + ' % · ' + el.txLabel, el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
     rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB · fault level', '主框架断路器 · 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA']);
@@ -45,7 +63,7 @@
 
   /* ================================================================ unit library */
   var U = {
-    grid: { name: ['PLN grid connection', 'PLN电网接入'], no: '01',
+    grid: { name: ['PLN grid connection', 'PLN电网接入'], no: '01', eq: function (c) { return c.R.el.hv.kv > 20 ? 'EL-24' : 'EL-01'; }, more: ['EL-24', 'EL-25', 'EL-26', 'EL-15'],
       func: ['Brings utility power from the PLN grid to the site through dedicated feeders or an on-site substation.', '通过专用馈线或场内变电站，将PLN电网电力引入场地。'],
       how: ['The connection voltage follows the maximum demand and the PLN system: up to ≈ 30 MVA on dedicated 20 kV (TM) feeders; up to ≈ 300 MVA at 150 kV (TT) with an on-site GIS substation and 150/20 kV transformers; above that an extra-high-voltage connection — 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi — with 500/150 or 275/150 kV interbus transformers feeding a 150 kV campus network. 220/230 kV is the equivalent level in other ASEAN grids, not a PLN voltage. Tier III/IV sites take N-1 circuits from two PLN substations so that one outage does not drop the site.',
         '接入电压由最大需量及所在PLN电网决定：约30 MVA以内采用20 kV（中压）专用馈线；约300 MVA以内采用150 kV（高压），自建GIS变电站及150/20 kV主变；更大时采用超高压接入——爪哇-巴厘为500 kV，苏门答腊、加里曼丹、苏拉威西为275 kV——经500/150或275/150 kV联络变压器向园区150 kV网络供电。220/230 kV为其他东盟电网的对应等级，非PLN电压。Tier III/IV站点按N-1配置来自两座PLN变电站的进线，避免单一故障导致全站失电。'],
@@ -56,10 +74,10 @@
         ['Weaker grids outside Java–Bali justify longer fuel autonomy and a battery energy storage system (BESS).', '爪哇-巴厘以外电网较弱地区，需更长燃油自持并配置电池储能系统（BESS）。']],
       extra: function (c) {
         var gr = c.R.L.grid;
-        return connTable(c) + '<div class="tc-g2"><div><h3>' + L.te(['PLN grid systems', 'PLN电网系统']) + '</h3>' + L.ptable(null, Object.keys(DB.idGrids).map(function (k) { var x = DB.idGrids[k], r = [L.te([x.en, x.zh]), L.te(relTxt(x.rel))]; r.cur = k === gr; return r; })) + '</div>' +
+        return connTable(c) + gimpTable(c) + '<div class="tc-g2"><div><h3>' + L.te(['PLN grid systems', 'PLN电网系统']) + '</h3>' + L.ptable(null, Object.keys(DB.idGrids).map(function (k) { var x = DB.idGrids[k], r = [L.te([x.en, x.zh]), L.te(relTxt(x.rel))]; r.cur = k === gr; return r; })) + '</div>' +
           '<div><h3>' + L.te(['PLN tariffs used by the assessment', '评估采用的PLN电价']) + '</h3>' + L.ptable([['Class', '类别'], 'LWBP Rp/kWh', ['24/7 blended', '24/7加权']], DB.idTariffs.map(function (x) { return [L.te([x.en, x.zh]), F(x.lwbp, 2), F(x.eff, 1)]; })) + '</div></div>';
       }, calc: 'mva' },
-    mvsg: { eq: 'EL-01', more: ['EL-15'],
+    mvsg: { eq: 'EL-01', more: ['EL-15', 'EL-24', 'EL-25', 'EL-26'],
       how: ['Each incoming feeder lands on a metal-enclosed, arc-resistant switchboard (IAC AFLR) with vacuum circuit breakers and protection relays. A bus coupler lets either feeder supply both halves of the board, outgoing breakers feed the transformers, and interlocks prevent unsafe switching.',
         '每路进线接入金属铠装、内部燃弧分级（IAC AFLR）的开关柜，配真空断路器及保护继电器。母联使任一路进线可带两段母线，出线断路器向变压器供电，联锁防止误操作。'],
       om: [['Thermographic scan of terminations under load every year.', '每年在带负荷状态下对接头进行红外测温。'], ['Test protection relays and breaker timing every 2–3 years.', '每2–3年测试保护继电器及断路器动作时间。'],
@@ -69,7 +87,7 @@
         : [h.circ + ' incoming 20 kV feeder(s) on a 24 kV board (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers', h.circ + '路20 kV进线接入24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']; },
       extra: function (c) { return chainTable(c); },
       calc: 'mva' },
-    tx: { eq: 'EL-02',
+    tx: { eq: 'EL-02', more: ['EL-25', 'EL-03'],
       how: ['Cast-resin dry-type transformers step 20 kV down to 400 V close to the load, without oil, so they can stand indoors next to the LV switchboards. They are counted with the Tier redundancy so that normal loading stays moderate and a failed unit can be carried by the others.',
         '环氧树脂浇注干式变压器将20 kV降至400 V，无油，可靠近负荷布置于室内低压配电柜旁。按Tier冗余配置台数，正常负载率适中，单台故障时其余变压器可承担负荷。'],
       key: [['N = ⌈kVA ÷ (unit kVA × ' + K.TX_LOAD + ')⌉ + redundancy', 'N = ⌈kVA ÷ (单台kVA × ' + K.TX_LOAD + ')⌉ + 冗余'], function (c) { var el = c.R.el; return F(el.demandKVA) + ' kVA ÷ (' + F(el.txSize) + ' × ' + K.TX_LOAD + ') → ' + el.txN + ' + ' + el.txR + ' (' + el.txLabel + ')'; }],
@@ -789,9 +807,23 @@
     liion: { title: ['Lithium-ion fire safety', '锂电池消防安全'], calc: false,
       body: ['Thermal runaway starts with electrolyte off-gassing minutes before smoke or flame. Detecting the off-gas lets the battery management system isolate the string and ventilation remove flammable gas. NFPA 855 sets spacing, room limits and deflagration control; UL 9540A tests show how far a fire propagates.',
         '热失控在冒烟或起火前数分钟以电解液逸出气体开始。探测逸出气体可使电池管理系统隔离电池组，并由通风排除可燃气体。NFPA 855规定间距、房间限制及爆燃控制；UL 9540A测试显示火势传播范围。'],
-      ex: function (c) { return ['This basis: ' + F(c.R.el.battKWh) + ' kWh UPS batteries (' + t(bat(c)) + ')' + (c.R.el.bess ? ' and ' + F(c.R.el.bess.mwh, 1) + ' MWh BESS.' : '.'), '本基准：UPS电池' + F(c.R.el.battKWh) + ' kWh（' + bat(c)[1] + '）' + (c.R.el.bess ? '及储能' + F(c.R.el.bess.mwh, 1) + ' MWh。' : '。')]; } }
+      ex: function (c) { return ['This basis: ' + F(c.R.el.battKWh) + ' kWh UPS batteries (' + t(bat(c)) + ')' + (c.R.el.bess ? ' and ' + F(c.R.el.bess.mwh, 1) + ' MWh BESS.' : '.'), '本基准：UPS电池' + F(c.R.el.battKWh) + ' kWh（' + bat(c)[1] + '）' + (c.R.el.bess ? '及储能' + F(c.R.el.bess.mwh, 1) + ' MWh。' : '。')]; } },
+    gimp: { title: ['PLN Grid Impact Study', 'PLN电网影响研究'],
+      body: ['Before PLN energises a large customer, the Grid Code (Permen ESDM 20/2020, Connection Code CC 5.1) requires connection studies: a feasibility (grid impact) study prepared by the consumer and a connection evaluation by PLN. They check steady-state power flow (N-0 / N-1), short circuit, frequency, transient and small-signal stability, power quality and dispatching, for peak and light load in wet and dry seasons, and the consumer presents the results to the PLN planner and system operator. A data center is a large power-electronic load: UPS rectifiers and drives inject harmonics, AI training swings tens of megawatts within seconds, and during a grid fault every UPS may transfer to battery at once — NERC reported ≈ 1,500 MW of data-center load dropping in one 2024 event.',
+        '大用户接入前，电网规范（能矿部长令2020年第20号，接入规范CC 5.1）要求开展接入研究：由用户编制可行性（电网影响）研究，由PLN进行接入评估。研究内容包括稳态潮流（N-0/N-1）、短路、频率、暂态及小信号稳定、电能质量及调度，覆盖高峰/低谷负荷及雨季/旱季，并由用户向PLN规划及调度部门汇报。数据中心是大型电力电子负荷：UPS整流器及驱动产生谐波，AI训练数秒内波动数十兆瓦，电网故障时所有UPS可能同时转入电池——NERC报告2024年一次事件中约1,500 MW数据中心负荷同时脱网。'],
+      formula: ['Ssc = √3 × U × Ik        Isc/IL = Ssc ÷ S(demand)\nΔV ≈ ΔP ÷ (PF × Ssc)      THDv ≈ TDD × S ÷ Ssc × h', 'Ssc = √3 × U × Ik        Isc/IL = Ssc ÷ S（需量）\nΔV ≈ ΔP ÷ (PF × Ssc)      THDv ≈ TDD × S ÷ Ssc × h'],
+      ex: function (c) { var gi = c.R.gimp; return ['This basis: ' + F(gi.ssc) + ' MVA at ' + E.kvName(gi.kv) + ' (Isc/IL ≈ ' + F(gi.scr) + '): harmonic limit ' + F(gi.tddLimit, 1) + ' % TDD, estimate ' + F(gi.tdd, 1) + ' %' + (gi.ahf ? ' with active filters' : '') + '; AI swing step ' + F(gi.dvAi, 2) + ' %; ' + gi.studies.length + ' studies, ≈ <b>' + gi.months + ' months</b>.',
+        '本基准：' + E.kvName(gi.kv) + '短路容量' + F(gi.ssc) + ' MVA（Isc/IL约' + F(gi.scr) + '）：谐波限值' + F(gi.tddLimit, 1) + '% TDD，估算' + F(gi.tdd, 1) + '%' + (gi.ahf ? '（含有源滤波）' : '') + '；AI波动电压阶跃' + F(gi.dvAi, 2) + '%；' + gi.studies.length + '项研究，约<b>' + gi.months + '个月</b>。']; },
+      table: function (c) {
+        var gi = c.R.gimp, lim = E.GRID_CODE.limits, proc = E.GRID_CODE.process, nerc = E.GRID_CODE.nerc;
+        return '<div><h3>' + L.te(['Grid Code limits at the connection point (Lampiran I, Java–Madura–Bali)', '接入点电网规范限值（附件一，爪哇-马都拉-巴厘）']) + '</h3>' + L.ptable([['Item', '项目'], ['Requirement', '要求']], lim.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div>' +
+          '<div class="tc-g2"><div><h3>' + L.te(['Studies for this design', '本设计所需研究']) + '</h3><ul class="tc-li">' + gi.studies.map(function (x) { return '<li>' + L.te(x) + '</li>'; }).join('') + '</ul></div>' +
+          '<div><h3>' + L.te(['Process (Grid Code CC 5)', '流程（电网规范CC 5）']) + '</h3>' + L.ptable(null, proc.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div></div>' +
+          '<div><h3>' + L.te(['Large data-center loads — lessons from NERC', '大型数据中心负荷——NERC经验']) + '</h3><ul class="tc-li">' + nerc.map(function (x) { return '<li>' + L.te(x) + '</li>'; }).join('') + '</ul></div>';
+      },
+      rel: [['grid', ['PLN grid connection', 'PLN电网接入']], ['mva', ['PLN demand', 'PLN需量']]] }
   };
   Object.keys(TH).forEach(function (k) { TH[k].id = k; });
 
-  g.TCX = { U: U, CALC: CALC, TH: TH, IV: IV, roman: roman, rp: rp, usd: usd, grid: grid, relTxt: relTxt, bat: bat };
+  g.TCX = { U: U, CALC: CALC, TH: TH, IV: IV, roman: roman, rp: rp, usd: usd, grid: grid, relTxt: relTxt, bat: bat, gimpTable: gimpTable };
 })(window);

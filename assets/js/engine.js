@@ -112,11 +112,39 @@
     return Math.min(liq, cap.itKW);
   }
   function airTechFor(cool, itMW, waterScarce) { return (cool === 'DLC' || cool === 'IMM') ? ((waterScarce || itMW < 5) ? 'ACCH' : 'WCCH') : cool; }
+  /* equipment-based cooling energy (per design-day-average conditions) — used as a factor on the calibrated MECH coefficients,
+     so the benchmark PUE stays unchanged at the default parameters while a change of chilled-water temperature, ΔT, server air ΔT
+     or tower approach moves the PUE, the maximum demand and every rating that follows it */
+  var COOLDEF = { chws: 14, chwDT: 8, airDT: 12, twAppr: 4 };
+  function coolParams(p) {
+    function v(k) { var x = num(p[k], 0); return x > 0 ? x : COOLDEF[k]; }
+    return { chws: clamp(v('chws'), 6, 26), chwDT: clamp(v('chwDT'), 3, 16), airDT: clamp(v('airDT'), 6, 25), twAppr: clamp(v('twAppr'), 2, 10) };
+  }
+  function coolModel(tech, c, L, loadKW, airKW) {
+    var wbA = L.wb - 3, dbA = L.db - 5, o = { chiller: 0, chwPump: 0, cwPump: 0, towerFan: 0, fans: 0, cop: 0, free: 0, cws: 0, tcond: 0 };
+    o.fans = airKW / (1.2 * 1.006 * c.airDT) * 400 / 0.65 / 1000;            /* fan walls / CRAH: airflow × 400 Pa ÷ 0.65 */
+    function tot() { o.total = o.chiller + o.chwPump + o.cwPump + o.towerFan + o.fans; return o; }
+    if (tech === 'DX') { var te = 273.15 + 6, tc = 273.15 + dbA + 15; o.cop = clamp(0.33 * te / (tc - te), 2, 5); o.chiller = loadKW / o.cop; return tot(); }
+    if (tech === 'IEC') { o.chiller = loadKW * 0.12 * (wbA > 22 ? 1.5 : 1); return tot(); }
+    var tev = 273.15 + c.chws - 1.5;
+    if (tech === 'ACCH') { o.tcond = dbA + 12; o.cop = clamp(0.38 * tev / Math.max(5, 273.15 + o.tcond - tev), 2, 7); }
+    else {
+      o.cws = wbA + c.twAppr; o.tcond = o.cws + 5.5 + 1.5; o.cop = clamp(0.5 * tev / Math.max(5, 273.15 + o.tcond - tev), 3, 12);
+      o.free = clamp((c.chws - 1.5 - (wbA + c.twAppr + 1.5) + 4) / 8, 0, 1);       /* water-side economiser hours (σ ≈ 2 K) */
+      o.cwPump = loadKW * K.REJ / (4.186 * 5.5) / 1000 * 200000 / 0.7 / 1000;
+      o.towerFan = loadKW * K.REJ * 0.0095 * (4 / c.twAppr);
+    }
+    o.chiller = loadKW / o.cop * (1 - 0.8 * o.free);
+    o.chwPump = loadKW / (4.186 * c.chwDT) / 1000 * 250000 / 0.7 / 1000;
+    return tot();
+  }
   function pueModel(cool, p, cap, L) {
     var sp = plat(p.stdPlat), hp = plat(p.hdPlat);
     var liquid = liquidSplit(cool, cap, sp, hp, num(p.liqSh, 0) / 100), air = cap.itKW - liquid;
     var airTech = airTechFor(cool, cap.itMW, p.waterScarce);
-    var mech = (air * mechCoef(airTech, L) + liquid * (cool === 'IMM' ? liqCoef('IMM', L) : (cool === 'DLC' ? liqCoef('DLC', L) : 0))) / cap.itKW;
+    var fAir = 1;
+    if (air > 0) { var mA = coolModel(airTech, coolParams(p), L, air * 1.08, air).total, mD = coolModel(airTech, COOLDEF, L, air * 1.08, air).total; fAir = mD > 0 ? mA / mD : 1; }
+    var mech = (air * mechCoef(airTech, L) * fAir + liquid * (cool === 'IMM' ? liqCoef('IMM', L) : (cool === 'DLC' ? liqCoef('DLC', L) : 0))) / cap.itKW;
     var elec = ELEC[clamp(Math.round(num(p.tier, 3)), 1, 4)] - (p.eco ? 0.025 : 0);
     var misc = cap.itMW >= 30 ? 0.010 : (cap.itMW >= 2 ? 0.015 : 0.02);
     /* overrides of the selected system's overheads (Project Technology Simulation) */
@@ -194,6 +222,33 @@
     return av[500] ? 500 : (av[275] ? 275 : 150);
   }
   function kvName(kv) { return kv === 230 ? '220/230 kV' : kv + ' kV'; }
+  /* assessment of a voltage level for the demand and the PLN system: std = standard, opt = possible / strategic (with conditions), no = not practical */
+  function connAssess(kv, mva, gid, av, hi) {
+    var V = kvLevel(kv), a = V.intl ? 0 : (av[kv] || 0), circ = Math.max(hi ? 2 : 1, ceil(mva / V.cap) + (hi ? 1 : 0));
+    function T(c, en, zh) { return { c: c, en: en, zh: zh }; }
+    if (V.intl) return T('no', '220/230 kV is the international level (Vietnam 220 kV; Philippines, Thailand, Singapore 230 kV), not a PLN voltage — in Indonesia use 150, 275 or 500 kV.', '220/230 kV为国际电压等级（越南220 kV；菲律宾、泰国、新加坡230 kV），非PLN电压——在印尼采用150、275或500 kV。');
+    if (!a) return T('no', kvName(kv) + ' is not available in this PLN system.', '本PLN电网无' + kvName(kv) + '电压等级。');
+    var pl = a === 3 ? [' Planned in RUPTL — confirm the in-service date with PLN.', '该电压在RUPTL中为规划——须与PLN确认投运时间。'] : (a === 2 ? [' Limited / legacy network — confirm the nearest substation and spare capacity.', '有限/存量网络——须确认最近变电站及可用容量。'] : ['', '']);
+    if (kv === 20) return mva <= 30 ? T('std', 'Standard up to 30 MVA (PLN TM, B-3 / I-3 tariff): ' + circ + ' dedicated 20 kV express feeders from PLN substations. A 20 kV distribution supply sees more outages and voltage dips than a 150 kV bay, so the generators start more often.', '30 MVA以内的标准方案（PLN中压，B-3/I-3电价）：由PLN变电站引出' + circ + '路20 kV专用馈线。20 kV配网的停电和电压暂降多于150 kV间隔，发电机启动更频繁。')
+      : T('no', 'Above the 30 MVA PLN TM limit — ' + circ + ' feeders would be needed; connect at 150 kV.', '超过PLN中压30 MVA限值——需' + circ + '路馈线；应接入150 kV。');
+    if (kv === 70) return mva <= 60 ? T('opt', 'Possible where a 70 kV network exists; PLN is not expanding 70 kV.' + pl[0], '如有70 kV网络可采用；PLN不再扩建70 kV。' + pl[1]) : T('no', 'Above the practical 70 kV range (≤ 60 MVA).', '超出70 kV适用范围（≤60 MVA）。');
+    if (kv === 150) {
+      if (mva < 30) return T('opt', 'Strategic option below 30 MVA, used by data-center campuses (e.g. STT GDC Jakarta: dedicated 150 kV substation from an 18 MW first building; Microsoft JKT02: 42 MVA at 150 kV): a 150 kV bay is more reliable than 20 kV feeders, leaves room for later phases and gives the I-4 TT tariff once ≥ 30,000 kVA is contracted (the minimum-bill rule is not binding at data-center load factors). Cost: GIS substation, ≈ 24 months of PLN works, ≈ 4,000 m² of land.', '30 MVA以下的战略方案，数据中心园区常用（如STT GDC雅加达园区：首栋18 MW即自建150 kV变电站；微软JKT02：150 kV、42 MVA）：150 kV间隔比20 kV馈线更可靠，便于后续分期，签约≥30,000 kVA即可适用I-4高压电价（数据中心负荷率高，最低电费规则不起作用）。代价：GIS变电站、PLN工程约24个月、用地约4,000 m²。');
+      if (mva <= 300) return T('std', 'Standard 30–300 MVA: dedicated GIS substation with 150/20 kV transformers, PLN I-4 TT tariff.' + pl[0], '30–300 MVA的标准方案：自建GIS变电站及150/20 kV主变，PLN I-4高压电价。' + pl[1]);
+      return T('opt', 'Above ≈ 300 MVA one 150 kV connection needs ' + circ + ' circuits — split the campus into several 150 kV substations fed from different PLN substations, or connect at EHV where available.' + pl[0], '约300 MVA以上单一150 kV接入需' + circ + '回线路——将园区拆分为由不同PLN变电站供电的多座150 kV变电站，或在具备条件时接入超高压。' + pl[1]);
+    }
+    if (kv === 275) return mva < 200 ? T('opt', 'Large for less than ≈ 200 MVA — only where PLN directs the connection to a 275 kV substation.' + pl[0], '约200 MVA以下偏大——仅在PLN指定接入275 kV变电站时采用。' + pl[1])
+      : (mva <= 900 ? T(a === 1 ? 'std' : 'opt', 'Standard 200–900 MVA in Sumatra, Kalimantan and Sulawesi: GIS with 275/150 kV interbus transformers and a 150 kV campus network.' + pl[0], '苏门答腊、加里曼丹、苏拉威西200–900 MVA的标准方案：GIS及275/150 kV联络变压器，园区150 kV网络。' + pl[1])
+        : T('opt', 'Above ≈ 900 MVA: several 275 kV connections, or 500 kV where available.' + pl[0], '约900 MVA以上：多回275 kV接入，或在具备条件时接入500 kV。' + pl[1]));
+    return mva < 300 ? T('no', 'A 500 kV GITET is not justified below ≈ 300 MVA — PLN supplies such loads at 150 kV.', '约300 MVA以下不宜建500 kV超高压变电站——PLN以150 kV供电。')
+      : T(a === 1 ? 'std' : 'opt', 'Standard from ≈ 300 MVA where a 500 kV line or GITET is near: 500 kV GIS (breaker-and-a-half) with 500/150 kV interbus transformers and a 150 kV campus network; the alternative is several 150 kV connections from different PLN substations.' + pl[0], '约300 MVA起、附近有500 kV线路或超高压变电站时的标准方案：500 kV GIS（一个半断路器）、500/150 kV联络变压器及园区150 kV网络；替代方案为由不同PLN变电站引出的多回150 kV接入。' + pl[1]);
+  }
+  /* HV/MV transformer ratings: PLN standard 30 / 60 MVA (SPLN T3.007-2:2016), customer substations up to ≈ 250 MVA;
+     above ≈ 140 MVA a double-secondary (split-winding) unit feeds two 20 kV boards (each ≤ 4,000 A). Typical impedance ≥ IEC 60076-5 minimum. */
+  var HT_STD = [20, 30, 45, 60, 80, 100, 120, 150, 200, 250];
+  function htUk(sz) { return sz <= 40 ? 10 : (sz <= 63 ? 12.5 : (sz <= 100 ? 13.5 : 15)); }
+  /* planning fault level at the connection point (network short-circuit power for power-quality and voltage-step checks); PLN gives the actual value on request (Grid Code CCA1 2) */
+  function pccIkRule(kv, gid) { return kv === 500 ? 40 : (kv === 275 ? 20 : (kv === 230 ? 25 : (kv === 150 ? (gid === 'JAMALI' ? 25 : 15) : 10))); }
   function connection(mva, p, L) {
     var gid = L.grid, av = KV_GRID[gid] || {}, rule = kvRule(mva, gid);
     var kv = [20, 70, 150, 230, 275, 500].indexOf(Math.round(num(p.hvKV, 0))) >= 0 ? Math.round(num(p.hvKV, 0)) : rule, V = kvLevel(kv), hi = p.tier >= 3;
@@ -201,29 +256,36 @@
     var scheme = kv === 20 ? (hi ? ['Single busbar in two sections with bus coupler (two incomers)', '单母线分段+母联（双进线）'] : ['Single busbar', '单母线'])
       : kv <= 150 ? (hi ? ['Double busbar with bus coupler', '双母线+母联'] : ['Single busbar with bus section', '单母线分段'])
       : kv === 500 ? ['Breaker-and-a-half (PLN 500 kV practice)', '一个半断路器接线（PLN 500 kV惯例）'] : (hi ? ['Breaker-and-a-half or double busbar', '一个半断路器或双母线'] : ['Double busbar', '双母线']);
+    /* equipment short-time rating (PLN practice) vs the network fault level at the connection point */
     var ik = (kv === 150 && gid === 'JAMALI' && mva > 150) ? 50 : (kv === 500 && gid === 'JAMALI' ? 63 : V.ik);
+    var pccRule = pccIkRule(kv, gid), pccIk = num(p.ikPCC, 0) > 0 ? num(p.ikPCC, 0) : pccRule, ssc = 1.732 * kv * pccIk;
+    if (pccIk > ik) ik = pick([25, 31.5, 40, 50, 63, 80], pccIk);                  /* switchgear short-time rating ≥ network fault level */
+    var sscMax = 1.732 * kv * ik;
     var I = mva * 1000 / (1.732 * kv), busMin = kv === 20 ? 630 : (kv <= 150 ? 2000 : (kv === 500 ? 4000 : 3150));
     var busA = Math.max(busMin, pick([630, 1250, 2000, 2500, 3150, 4000, 5000], I * 1.2));
     /* HV / EHV transformers: one standby per four duty units (Tier III), 2N (Tier IV), one standby (Tier II) */
     function red(n) { return p.tier === 4 ? n : (p.tier === 3 ? Math.max(1, ceil(n / 4)) : (p.tier === 2 ? 1 : 0)); }
-    var ibt = null, ht = null;
-    if (kv === 275 || kv === 500) { var im = kv === 500 ? 500 : 250, iN = ceil(mva / im); ibt = { mva: im, n: iN, r: red(iN), ratio: kv + '/150 kV' }; ibt.total = ibt.n + ibt.r; }
+    var ibt = null, ht = null, ssc150 = sscMax;
+    if (kv === 275 || kv === 500) {
+      var im = kv === 500 ? 500 : 250, iN = ceil(mva / im); ibt = { mva: im, n: iN, r: red(iN), ratio: kv + '/150 kV', uk: 14 }; ibt.total = ibt.n + ibt.r;
+      ssc150 = 1 / (1 / sscMax + (ibt.uk / 100) / (ibt.total * ibt.mva));
+    }
     if (kv > 20) {
       var lowHV = ibt ? 150 : kv;
-      var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : 100)));
-      var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm);
-      ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + '/20 kV', hv: lowHV, uk: hm <= 30 ? 10 : (hm <= 60 ? 12.5 : 14) };
+      var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : (mva <= 400 ? 100 : 150))));
+      var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm), split = hm > 140;
+      ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + '/20' + (split ? '/20' : '') + ' kV', hv: lowHV, uk: htUk(hm), split: split, onan: Math.round(hm * 0.7) };
       ht.total = ht.n + ht.r; ht.load = mva / (ht.total * hm) * 100; ht.loadOut = ht.total > 1 ? mva / ((ht.total - 1) * hm) * 100 : null;
     }
-    /* 20 kV distribution switchgear: one board per HV/MV transformer, sized for its full current and fault level */
-    var mvI = ht ? ht.mva * 1000 / (1.732 * 20) : mva * 1000 / (1.732 * 20);
-    var mvIk = ht ? Math.max(25, pick([25, 31.5, 40, 50], ht.mva / (1.732 * 20 * ht.uk / 100) * 1.1)) : (mva > 10 ? 25 : 20);
-    var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: mvIk, boards: ht ? ht.total : 1 };
+    /* 20 kV boards: one per HV/MV transformer (two per split-winding unit); fault level from the upstream short-circuit power and the transformer impedance (+5 % motor / UPS contribution) */
+    var sb = ht ? (ht.split ? ht.mva / 2 : ht.mva) : mva, boards = ht ? ht.total * (ht.split ? 2 : 1) : 1, mvI = sb * 1000 / (1.732 * 20);
+    var ik20 = ht ? sb / ((sb / ssc150 + ht.uk / 100) * 1.732 * 20) * 1.05 : 0;
+    var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: ht ? Math.max(25, pick([25, 31.5, 40, 50], ik20)) : (mva > 10 ? 25 : 20), ikCalc: ik20, boards: boards, ssc150: ssc150, sb: sb };
     mv.gis = mv.busA > 2500;
-    var fit = mva > V.hi ? 'over' : (mva < V.lo ? 'under' : 'ok');
+    var fit = mva > V.hi ? 'over' : (mva < V.lo ? 'under' : 'ok'), asm = connAssess(kv, mva, gid, av, hi);
     var opts = KV.map(function (o) {
       return { kv: o.kv, ur: o.ur, en: o.en, zh: o.zh, lo: o.lo, hi: o.hi, cap: o.cap, intl: !!o.intl, avail: o.intl ? 0 : (av[o.kv] || 0), fit: mva > o.hi ? 'over' : (mva < o.lo ? 'under' : 'ok'),
-               circ: hi ? Math.max(2, ceil(mva / o.cap) + 1) : ceil(mva / o.cap), rule: o.kv === rule, sel: o.kv === kv };
+               asm: connAssess(o.kv, mva, gid, av, hi), circ: hi ? Math.max(2, ceil(mva / o.cap) + 1) : ceil(mva / o.cap), rule: o.kv === rule, sel: o.kv === kv };
     });
     var lead = kv >= 275 || kv === 230 ? 36 : (kv >= 70 ? 24 : (mva > 2 ? 12 : 6));
     var cost = kv === 20 ? Math.max(0.3e6, 0.05e6 * mva) : (kv === 70 ? 3e6 + 0.09e6 * mva : (kv === 150 ? Math.max(6e6, 0.12e6 * mva) : (kv === 500 ? 35e6 + 0.07e6 * mva : 15e6 + 0.08e6 * mva)));
@@ -233,7 +295,55 @@
       : kv === 230 ? ['220/230 kV GIS substation (international practice, not a PLN voltage)', '220/230 kV GIS变电站（国际做法，非PLN电压等级）']
       : ['EHV ' + kv + ' kV (PLN TET) GIS substation with ' + kv + '/150 kV transformers', '超高压' + kv + ' kV（PLN超高压）GIS变电站，配' + kv + '/150 kV变压器'];
     return { kv: kv, rule: rule, name: kvName(kv), ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, ik: ik, busA: busA,
-             ibt: ibt, ht: ht, mv: mv, fit: fit, avail: V.intl ? 0 : (av[kv] || 0), opts: opts, lead: lead, cost: cost, volt: volt };
+             pccIk: pccIk, pccRule: pccRule, ssc: ssc, ibt: ibt, ht: ht, mv: mv, fit: fit, asm: asm, avail: V.intl ? 0 : (av[kv] || 0), opts: opts, lead: lead, cost: cost, volt: volt };
+  }
+
+  /* PLN grid impact (Grid Code Permen ESDM 20/2020, Lampiran I Jawa-Madura-Bali: CC 3 performance, CC 5.1 connection studies, Appendix 1) */
+  var TDD_TBL = { lo: [5, 8, 12, 15, 20], mid: [2.5, 4, 6, 7.5, 10], hi: [2.5, 4, 4, 4, 4] };
+  var THDV_LIM = { 20: [3, 5], 70: [3, 5], 150: [1.5, 2.5], 230: [1.5, 2.5], 275: [1, 1.5], 500: [1, 1.5] };
+  var CLEAR_MS = { 500: 90, 275: 100, 230: 100, 150: 120, 70: 150 };
+  var VRANGE = { 500: ['±5 %', '±5%'], 275: ['±5 %', '±5%'], 230: ['±5 %', '±5%'], 150: ['+5 % / −10 %', '+5%/−10%'], 70: ['+5 % / −10 %', '+5%/−10%'], 20: ['per PLN distribution code', '按PLN配电规范'] };
+  /* Grid Code requirements at the connection point, the connection process and lessons on large data-center loads — shown by the simulation and the knowledge documents */
+  var GRID_CODE = {
+    limits: [[['Frequency (50 Hz)', '频率（50 Hz）'], ['49.0–51.0 Hz continuous; 47.5–49.0 and 51.0–51.5 Hz ≥ 90 min; 51.5–52.0 Hz ≥ 15 min; 47.0–47.5 Hz ≥ 6 s', '49.0–51.0 Hz连续运行；47.5–49.0及51.0–51.5 Hz≥90 min；51.5–52.0 Hz≥15 min；47.0–47.5 Hz≥6 s']],
+      [['Voltage range', '电压范围'], ['500 / 275 kV ± 5 %; 150 / 66 kV + 5 % / − 10 % (maximum 550 / 300 / 170 / 72.5 kV)', '500/275 kV ±5%；150/66 kV +5%/−10%（最高550/300/170/72.5 kV）']],
+      [['Voltage THD (individual / total)', '电压THD（单次/总）'], ['66 kV 3.0 / 5.0 %; 150 kV 1.5 / 2.5 %; 500 kV 1.0 / 1.5 %', '66 kV 3.0/5.0%；150 kV 1.5/2.5%；500 kV 1.0/1.5%']],
+      [['Current TDD by Isc/IL (< 20 · 20–50 · 50–100 · 100–1,000 · > 1,000)', '电流TDD按Isc/IL（<20·20–50·50–100·100–1,000·>1,000）'], ['≤ 66 kV ' + TDD_TBL.lo.join(' · ') + ' %; 66–150 kV ' + TDD_TBL.mid.join(' · ') + ' %; above 150 kV 2.5 · 4.0 % (higher ratios taken as 20–50)', '≤66 kV ' + TDD_TBL.lo.join('·') + '%；66–150 kV ' + TDD_TBL.mid.join('·') + '%；150 kV以上2.5·4.0%（更高短路比按20–50取值）']],
+      [['Flicker · voltage steps · unbalance', '闪变·电压阶跃·不平衡'], ['Pst 0.8 / Plt 0.6 at 66–500 kV (1.0 / 0.8 below 66 kV); steps ≤ 2 % repetitive, ≤ 3 % infrequent, ≤ 5 % motor-start dips; negative sequence ≤ 1 % (2 % short peaks)', '66–500 kV Pst 0.8/Plt 0.6（66 kV以下1.0/0.8）；阶跃重复≤2%、偶发≤3%、电机启动暂降≤5%；负序≤1%（短时峰值2%）']],
+      [['Power factor', '功率因数'], ['0.9 lagging – 0.9 leading at the connection point (half-hourly)', '接入点滞后0.9至超前0.9（每半小时）']],
+      [['Fault clearing (main protection)', '故障切除（主保护）'], ['500 kV ≤ 90 ms; 275 kV ≤ 100 ms; 150 kV ≤ 120 ms; 66 kV ≤ 150 ms; 20 kV OCR incoming ≤ 1 s, feeders ≤ 0.7 s; resistance-earthed ground-fault relays ≤ 50 % of the resistor time rating', '500 kV≤90 ms；275 kV≤100 ms；150 kV≤120 ms；66 kV≤150 ms；20 kV进线过流≤1 s、馈线≤0.7 s；电阻接地系统接地继电器≤电阻时间额定的50%']],
+      [['Metering & telemetry', '计量与遥测'], ['power-quality meter at the connection point, AMR, disturbance recorder; WAMS / PMU for large connections; telecom back-up ≥ 8 h', '接入点电能质量表、AMR、故障录波；大型接入配WAMS/PMU；通信后备≥8 h']]],
+    process: [[['1 · Connection request', '1 · 接入申请'], ['to PLN (distribution or transmission unit): load and phases, single-line diagram, site plan, schedule — PLN replies within 30 days', '向PLN（配电或输电单位）提交：负荷及分期、单线图、总图、计划——PLN 30天内答复']],
+      [['2 · Grid impact study', '2 · 电网影响研究'], ['by the consumer (consultant) with PLN network data — ≈ 1–2 months at 20 kV, 3–6 months at 70–150 kV, 6–12 months at 275–500 kV', '由用户（咨询方）采用PLN电网数据编制——20 kV约1–2个月，70–150 kV约3–6个月，275–500 kV约6–12个月']],
+      [['3 · PLN evaluation', '3 · PLN评估'], ['presentation to the PLN planner and system operator; corrections until accepted', '向PLN规划及调度部门汇报；修改至通过']],
+      [['4 · Agreement & works', '4 · 协议与建设'], ['connection agreement (SPJBTL), substation and line works, protection settings, planning and operating data (CC 7)', '接入协议（SPJBTL）、变电站及线路工程、保护定值、规划及运行数据（CC 7）']],
+      [['5 · Energisation', '5 · 送电'], ['commissioning tests, SLO certificate, phased energisation and power-quality measurement', '调试试验、SLO证书、分期送电及电能质量测试']]],
+    nerc: [['NERC Incident Review (Jan 2025): ≈ 1,500 MW of voltage-sensitive data-center load transferred to UPS after a 230 kV line fault (July 2024)', 'NERC事件回顾（2025年1月）：一次230 kV线路故障后约1,500 MW电压敏感数据中心负荷转入UPS（2024年7月）'],
+      ['NERC Level 2 alert (Sep 2025) and Level 3 Essential Actions (May 2026) on large computational loads: ride-through settings, staged re-transfer, load models for studies', 'NERC二级警示（2025年9月）及三级必要措施（2026年5月）：大型计算负荷的穿越设定、分级回切、研究用负荷模型'],
+      ['ERCOT studies loads ≥ 75 MW as large loads; ride-through aligned with PRC-024 / PRC-029 and IEEE 2800 practice', 'ERCOT将≥75 MW负荷按大负荷研究；穿越要求参照PRC-024/PRC-029及IEEE 2800']]
+  };
+  function gridImpact(p, R) {
+    var el = R.el, hv = el.hv, cap = R.cap, kv = hv.kv, S = el.mva, ssc = hv.ssc, scr = ssc / Math.max(S, 0.01);
+    var row = scr < 20 ? 0 : (scr < 50 ? 1 : (scr < 100 ? 2 : (scr <= 1000 ? 3 : 4))), tbl = kv <= 66 ? TDD_TBL.lo : (kv <= 150 ? TDD_TBL.mid : TDD_TBL.hi);
+    var tddLimit = tbl[row], upsShare = clamp(el.upsLoad / Math.max(el.demandKW, 1), 0, 1), drvShare = 0.8 * Math.max(0, 1 - upsShare - 0.02);   /* ≈ 80 % of the non-UPS load on variable-speed drives */
+    var tddNo = upsShare * 3 + drvShare * 35, tddAhf = upsShare * 3 + drvShare * 5, ahfAuto = tddNo > tddLimit;
+    var ahf = (p.ahf === true || p.ahf === 'YES') ? true : ((p.ahf === false || p.ahf === 'NO') ? false : ahfAuto);
+    var tdd = ahf ? tddAhf : tddNo, thdLim = THDV_LIM[kv] || [1.5, 2.5], thdv = tdd * (S / ssc) * 5;
+    var aiKW = (R.hdP && R.hdP.cat === 'AI') ? cap.hdR * cap.hd : 0, swing = num(p.aiSwing, -1) >= 0 ? num(p.aiSwing, 0) : (aiKW > 0 ? 50 : 0);
+    var dvAi = 100 * (aiKW / 1000 * swing / 100 / K.PF) / ssc, lossMW = el.upsLoad / 1000, dvLoss = 100 * S / ssc;
+    var llc = lossMW < 75 ? 'std' : (lossMW < 300 ? 'large' : 'vlarge'), pfEst = ahf ? 0.97 : 0.95;
+    var studies = [
+      ['Steady-state power flow (N-0 / N-1): voltages within the Grid Code range, line and transformer loading', '稳态潮流（N-0/N-1）：电压在电网规范范围内，线路及变压器负载'],
+      ['Short circuit (IEC 60909): fault level at the connection point vs equipment ratings', '短路（IEC 60909）：接入点短路水平与设备额定值'],
+      ['Frequency, transient and small-signal stability with a dynamic model of the UPS / IT load', '频率、暂态及小信号稳定（含UPS/IT负荷动态模型）'],
+      ['Power quality: harmonics (THDv, TDD), flicker, unbalance, voltage steps', '电能质量：谐波（THDv、TDD）、闪变、不平衡、电压阶跃'],
+      ['Loading / dispatching: phased energisation, ramping, reserves', '负荷/调度：分期送电、爬坡、备用'],
+      ['Protection coordination with PLN (main and back-up, clearing time)', '与PLN的保护配合（主保护、后备保护、切除时间）']];
+    if (kv > 20) studies.push(['Insulation coordination (IEC 60071) and substation earthing (IEEE 80)', '绝缘配合（IEC 60071）及变电站接地（IEEE 80）']);
+    if (llc !== 'std' || aiKW > 0) studies.push(['Voltage ride-through and load-loss study (UPS input settings, staged re-transfer); EMT study of AI load oscillations', '电压穿越及失负荷研究（UPS输入设定、分级回切）；AI负荷振荡电磁暂态研究']);
+    return { kv: kv, ssc: ssc, pccIk: hv.pccIk, scr: scr, tddLimit: tddLimit, tddNo: tddNo, tddAhf: tddAhf, tdd: tdd, ahf: ahf, ahfAuto: ahfAuto, thdv: thdv, thdLim: thdLim,
+             aiKW: aiKW, swing: swing, dvAi: dvAi, lossMW: lossMW, dvLoss: dvLoss, llc: llc, pfEst: pfEst, pfReq: '0.9 lagging – 0.9 leading', q: S * Math.sin(Math.acos(pfEst)),
+             clearMs: CLEAR_MS[kv] || null, blk2: 0.02 * ssc, blk3: 0.03 * ssc, vrange: VRANGE[kv] || VRANGE[150], studies: studies, months: kv === 20 ? '1–2' : (kv <= 150 ? '3–6' : '6–12'), reply: 30 };
   }
 
   /* ============================================================ ASSESS */
@@ -245,7 +355,8 @@
     ['fuelH', 'upsMin', 'renewable', 'targetPUE', 'siteArea', 'gridMVA', 'price', 'markup', 'tariffIDR', 'fx', 'landPrice', 'waterPrice', 'capexOverride',
      'wacc', 'tax', 'rampYears', 'targetOcc', 'contingency', 'itCostKW', 'staffCost', 'kdb', 'exitMult', 'bessMW', 'bessH', 'rackW', 'rackD', 'rackU', 'phaseInterval', 'startYear',
      /* engineering overrides (0 = follow the design rule) */
-     'pkPUE', 'mdKVA', 'hvKV', 'htMVA', 'txKVA', 'txLoad', 'txUk', 'genKW', 'upsKW', 'tankM3', 'fuelQ', 'battAge', 'rackRow', 'chKW', 'chwDT', 'tesS', 'cduKW', 'bessSh']
+     'pkPUE', 'mdKVA', 'hvKV', 'htMVA', 'txKVA', 'txLoad', 'txUk', 'genKW', 'upsKW', 'tankM3', 'fuelQ', 'battAge', 'rackRow', 'chKW', 'chwDT', 'tesS', 'cduKW', 'bessSh',
+     'chws', 'airDT', 'twAppr', 'ikPCC']
       .forEach(function (k) { p[k] = num(p[k], 0); });
     if (!p.fx) p.fx = DB.idFx || 17900;
     if (!p.kdb) p.kdb = 60;
@@ -269,6 +380,12 @@
     var m = pueModel(cool, p, cap, L);
     var liquidKW = m.liquid, airKW = m.air, airTech = m.airTech;
     R.cool = { tech: cool, obj: coolObj, airTech: airTech, liquidKW: liquidKW, airKW: airKW, liquidShare: liquidKW / itKW };
+    /* UPS losses follow the module loading and the operating mode: a rating other than the rule changes the electrical losses, the PUE and the maximum demand */
+    var occF = clamp(num(p.targetOcc, 90), 10, 100) / 100, upsLoad0 = itKW + ((p.tier === 4 || avgDens >= 25) ? 0.06 * airKW : 0) + 0.025 * liquidKW;
+    var upsRule0 = upsLoad0 <= 250 ? 300 : (upsLoad0 <= 1000 ? 500 : (upsLoad0 <= 6000 ? 1200 : 1600));
+    function upsLossFrac(sz) { var n = ceil(upsLoad0 / (sz * K.UPS_LOAD)), x = clamp(upsLoad0 * occF / ((n + redundancy(p.tier, n, 'ups')) * sz), 0.05, 1); return (0.008 + 0.015 * x + 0.007 * x * x) / x; }
+    var dUps = p.upsKW > 0 ? (upsLossFrac(p.upsKW) - upsLossFrac(upsRule0)) * upsLoad0 / itKW * (p.eco ? 0.3 : 1) : 0;
+    if (dUps) { m.elec += dUps; m.pue += dUps; m.puePeak += dUps; }
     function pueAt(u) { u = clamp(u, 0.1, 1); return 1 + (m.mech + m.elec + m.misc) * (0.55 + 0.45 / u); }
     var puePk = p.pkPUE > 0 ? p.pkPUE : m.puePeak;
     R.eff = { pue: m.pue, puePeak: puePk, pueRule: m.puePeak, pue50: pueAt(0.5), mech: m.mech, elec: m.elec, misc: m.misc, wue: m.wue, pueAt: pueAt,
@@ -289,6 +406,11 @@
     /* LV side of one transformer: full-load current → main ACB (IEC 60947-2), fault level → switchboard rating (IEC 61439-2) */
     var txUk = p.txUk > 0 ? p.txUk : (txSize <= 630 ? 4 : (txSize <= 1250 ? 5 : (txSize <= 2500 ? 6 : 7))), lvI = txSize * 1000 / (1.732 * 400), lvIk = lvI / (txUk / 100) / 1000;
     var lv = { i: lvI, acb: pick([630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6300], lvI), ik: lvIk, icw: pick([50, 65, 80, 100], lvIk), uk: txUk };
+    /* cast-resin transformer losses (no-load ≈ 0.12 %, full-load ≈ 0.9 % of rating): another rating or loading limit changes the annual PUE */
+    function txLossKW(sz, ld) { var n = ceil(demandKVA / (sz * ld)), r = redundancy(p.tier, n, 'tx'); if (p.tier === 3 && n === 1) r = 1; var x = demandKVA * occF / ((n + r) * sz); return (n + r) * sz * (0.0012 + 0.009 * x * x); }
+    function txRuleAt(ld) { return demandKVA / ld <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], demandKVA / ld) : (demandKVA > 40000 ? 3150 : 2500); }
+    var dTx = (p.txKVA > 0 || p.txLoad > 0) ? (txLossKW(txSize, txLoad) - txLossKW(txRuleAt(K.TX_LOAD), K.TX_LOAD)) / itKW : 0;
+    if (dTx) { m.elec += dTx; m.pue += dTx; R.eff.pue = m.pue; R.eff.elec = m.elec; R.eff.pue50 = pueAt(0.5); R.eff.gbGrade = m.pue <= 1.2 ? 1 : (m.pue <= 1.3 ? 2 : (m.pue <= 1.5 ? 3 : 0)); }
     var genRule = demandKW <= 1500 ? pick([300, 500, 800, 1000, 1250, 1500], demandKW / K.GEN_LOAD) : (demandKW <= 12000 ? 2000 : (demandKW <= 60000 ? 2500 : 3000));
     var genSize = p.genKW > 0 ? p.genKW : genRule;
     var genN = ceil(demandKW / (genSize * K.GEN_LOAD)), genR = redundancy(p.tier, genN, 'gen');
@@ -361,7 +483,9 @@
       else term = { en: 'CRAH units (150 kW)', zh: '冷冻水精密空调（150 kW）', size: 150, id: 'ME-07' };
       var termLoad = airKW;
       if (hdR > 0 && hp.cool === 'RDHX' && cool !== 'DLC' && cool !== 'IMM') { M.rdhx = hdR; termLoad = airKW - hdR * hd * 0.6; }
-      term.n = ceil(Math.max(termLoad, 1) / term.size); term.r = redundancy(p.tier, term.n, 'term'); M.term = term;
+      /* terminal capacity scales with the server air ΔT (fixed airflow per unit) */
+      var dtF = clamp(coolParams(p).airDT / COOLDEF.airDT, 0.5, 1.6); term.cap = Math.round(term.size * dtF);
+      term.n = ceil(Math.max(termLoad, 1) / term.cap); term.r = redundancy(p.tier, term.n, 'term'); M.term = term;
     }
     if (liquidKW > 0) {
       var cduRule = liquidKW >= 3000 ? 1500 : 800, cduSize = p.cduKW > 0 ? p.cduKW : cduRule;
@@ -371,6 +495,7 @@
     }
     M.waterDay = itKW * (num(p.targetOcc, 90) / 100) * 24 * m.wue / 1000;
     M.waterStore = M.waterDay / 24 * Math.max(12, p.fuelH);
+    M.cp = coolParams(p); M.model = coolModel(airTech, M.cp, L, chwLoad || (airKW + greyHeat), airKW);
     R.me = M;
 
     /* ------------------------------------------------ space */
@@ -456,6 +581,7 @@
     opex.co2t = energyMWh * (1 - clamp(p.renewable, 0, 100) / 100) * (DB.idGridEF || 0.79);
     R.opex = opex;
 
+    R.gimp = gridImpact(p, R);
     R.sched = schedule(p, itMW, mva, cool, hv.lead);
     R.fin = finance(p, R, itKW, facility + bessCapex, utility, land, cont, itHW, pueAt, opex, tariff);
     R.reqs = requirements(p, R);
@@ -562,6 +688,9 @@
         '; ' + hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' transformers; ' + hv.mv.boards + ' × 24 kV switchboard(s) ' + fmt(hv.mv.busA) + ' A / ' + hv.mv.ik + ' kA. Substation scope and hand-over per the PLN connection agreement.',
         hv.name + ' GIS（Ur ' + hv.ur + ' kV，' + hv.ik + ' kA，' + fmt(hv.busA) + ' A，' + hv.scheme[1] + '）' + (hv.ibt ? '；' + hv.ibt.total + '台' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio + '联络变压器' : '') +
         '；' + hv.ht.total + '台' + hv.ht.mva + ' MVA ' + hv.ht.ratio + '主变压器；' + hv.mv.boards + '段24 kV开关柜' + fmt(hv.mv.busA) + ' A/' + hv.mv.ik + ' kA。变电站范围及移交按PLN接入协议。');
+    var gi = R.gimp;
+    if (gi) add('EL', 'PLN connection studies (Grid Code CC 5.1 feasibility / grid impact study, ≈ ' + gi.months + ' months; PLN reply ≤ 30 days): fault level at the connection point ≈ ' + fmt(gi.pccIk, 1) + ' kA (' + fmt(gi.ssc, 0) + ' MVA, Isc/IL ≈ ' + fmt(gi.scr, 0) + '); harmonic current ≤ ' + fmt(gi.tddLimit, 1) + ' % TDD, voltage THD ≤ ' + gi.thdLim[1] + ' %; power factor ' + gi.pfReq + '; voltage steps ≤ 2 % repetitive / 3 % infrequent; flicker Pst ≤ ' + (gi.kv >= 66 ? '0.8' : '1.0') + (gi.clearMs ? '; protection clearing ≤ ' + gi.clearMs + ' ms' : '') + '.',
+        'PLN接入研究（电网规范CC 5.1可行性/电网影响研究，约' + gi.months + '个月；PLN 30天内答复）：接入点短路电流约' + fmt(gi.pccIk, 1) + ' kA（' + fmt(gi.ssc, 0) + ' MVA，Isc/IL约' + fmt(gi.scr, 0) + '）；谐波电流TDD≤' + fmt(gi.tddLimit, 1) + '%，电压THD≤' + gi.thdLim[1] + '%；功率因数滞后0.9至超前0.9；电压阶跃重复≤2%、偶发≤3%；闪变Pst≤' + (gi.kv >= 66 ? '0.8' : '1.0') + (gi.clearMs ? '；保护切除≤' + gi.clearMs + ' ms' : '') + '。');
     add('EL', 'Generators: ' + el.genTotal + ' × ' + el.genSize + ' kWe (' + el.genLabel + '), continuous (COP/DCC) rating; on-site fuel ' + p.fuelH + ' h ≈ ' + fmt(el.fuelL / 1000, 0) + ' m³.',
         '发电机：' + el.genTotal + '台×' + el.genSize + ' kWe（' + el.genLabel + '），持续功率；现场储油' + p.fuelH + ' h，约' + fmt(el.fuelL / 1000, 0) + ' m³。');
     add('EL', 'UPS: ' + el.upsTotal + ' × ' + el.upsSize + ' kW (' + el.upsLabel + '), ' + p.upsMin + ' min with ' + (p.battery === 'LI' ? 'Li-ion (LFP)' : 'VRLA') + ' ≈ ' + fmt(el.battKWh, 0) + ' kWh.',
@@ -611,9 +740,16 @@
     if (p.battery === 'LI' || R.el.bess) add('M', 'Lithium-ion batteries / BESS introduce thermal-runaway fire risk.', '锂电池/储能存在热失控火灾风险。', 'LFP chemistry, UL 9540A-tested systems, off-gas detection and NFPA 855 separation.', '采用磷酸铁锂、UL 9540A测试系统、逸出气体探测及NFPA 855间距。');
     var hv = R.el.hv, gEn = R.grid ? R.grid.en : '', gZh = R.grid ? R.grid.zh : '';
     if (hv.kv > 20) add('M', 'The ' + hv.name + ' connection needs a dedicated GIS substation' + (hv.ibt ? ' with ' + hv.ibt.ratio + ' interbus transformers' : '') + ' and ≈ ' + hv.lead + ' months of PLN works.', hv.name + '接入需专用GIS变电站' + (hv.ibt ? '及' + hv.ibt.ratio + '联络变压器' : '') + '，PLN工程约需' + hv.lead + '个月。', 'Start the PLN application (SLO, PJBTL) at feasibility; consider phased energisation.', '可研阶段即启动PLN申请（SLO、供电协议）；考虑分期送电。');
-    if (hv.fit === 'over') add('H', 'Maximum demand ' + fmt(R.el.mva, 1) + ' MVA exceeds the practical range of a ' + hv.name + ' connection (≤ ' + fmt(hv.hi) + ' MVA): ' + hv.circ + ' circuits would be needed.', '最大需量' + fmt(R.el.mva, 1) + ' MVA超出' + hv.name + '接入的实际范围（≤' + fmt(hv.hi) + ' MVA）：需' + hv.circ + '回线路。', hv.rule !== hv.kv ? 'Use the recommended ' + kvName(hv.rule) + ' connection.' : 'Split the campus into several ' + hv.name + ' substations fed from different PLN substations, phase the build with PLN reinforcement (RUPTL) or add on-site generation.',
-        hv.rule !== hv.kv ? '采用建议的' + kvName(hv.rule) + '接入。' : '将园区拆分为由不同PLN变电站供电的多座' + hv.name + '变电站，结合PLN电网加强（RUPTL）分期建设，或增设现场发电。');
-    if (hv.fit === 'under') add('L', hv.name + ' is oversized for ' + fmt(R.el.mva, 1) + ' MVA (typical from ' + fmt(hv.lo) + ' MVA) — higher substation cost and lead time.', hv.name + '对' + fmt(R.el.mva, 1) + ' MVA而言偏大（通常' + fmt(hv.lo) + ' MVA起）——变电站投资及工期增加。', 'Use the recommended ' + kvName(hv.rule) + ' connection unless PLN requires otherwise.', '除PLN另有要求外，采用建议的' + kvName(hv.rule) + '接入。');
+    if (hv.asm.c === 'no' && !hv.intl && hv.avail) add('H', hv.name + ': ' + hv.asm.en, hv.name + '：' + hv.asm.zh, 'Use the recommended ' + kvName(hv.rule) + ' connection.', '采用建议的' + kvName(hv.rule) + '接入。');
+    else if (hv.asm.c === 'opt' && hv.kv !== hv.rule) add('L', hv.name + ' (instead of the rule ' + kvName(hv.rule) + '): ' + hv.asm.en, hv.name + '（规则值为' + kvName(hv.rule) + '）：' + hv.asm.zh, 'Confirm the choice with PLN in the connection evaluation request.', '在接入评估申请中与PLN确认该方案。');
+    else if (hv.asm.c === 'opt' && hv.circ > 3) add('M', hv.asm.en, hv.asm.zh, 'Plan several substations / connection points with PLN (RUPTL).', '与PLN（RUPTL）规划多座变电站/接入点。');
+    var gi = R.gimp;
+    if (gi) {
+      if (gi.tdd > gi.tddLimit) add('M', 'Estimated harmonic current distortion ' + fmt(gi.tdd, 1) + ' % TDD exceeds the Grid Code limit ' + fmt(gi.tddLimit, 1) + ' % at ' + hv.name + ' (Isc/IL ≈ ' + fmt(gi.scr, 0) + ').', '估算谐波电流畸变' + fmt(gi.tdd, 1) + '% TDD超出' + hv.name + '电网规范限值' + fmt(gi.tddLimit, 1) + '%（Isc/IL约' + fmt(gi.scr, 0) + '）。', 'Active harmonic filters on the drive loads (chillers, pumps, fans); confirm in the harmonic study.', '在驱动负荷（冷机、水泵、风机）上加装有源滤波器；以谐波研究确认。');
+      if (gi.dvAi > 2) add('H', 'AI load swings (' + fmt(gi.swing, 0) + ' % of ' + fmt(gi.aiKW / 1000, 1) + ' MW) give ≈ ' + fmt(gi.dvAi, 1) + ' % voltage steps — above the 2 % Grid Code limit for repeated steps.', 'AI负荷波动（' + fmt(gi.aiKW / 1000, 1) + ' MW的' + fmt(gi.swing, 0) + '%）造成约' + fmt(gi.dvAi, 1) + '%电压阶跃——超过电网规范2%的重复阶跃限值。', 'BESS / UPS power smoothing, GPU power capping, or a stronger connection point.', '储能/UPS功率平滑、GPU功率封顶或更强的接入点。');
+      if (gi.llc !== 'std') add(gi.llc === 'vlarge' ? 'H' : 'M', 'Voltage-sensitive load of ≈ ' + fmt(gi.lossMW, 0) + ' MW could transfer to UPS batteries during one grid fault (NERC 2025–2026 large-load alerts).', '约' + fmt(gi.lossMW, 0) + ' MW的电压敏感负荷可能在一次电网故障中同时转入UPS电池（NERC 2025–2026大负荷警示）。', 'Agree ride-through settings and staged re-transfer with PLN; include it in the grid impact study.', '与PLN约定穿越设定及分级回切；纳入电网影响研究。');
+      if (gi.scr < 20) add(gi.scr < 10 ? 'H' : 'M', 'Low short-circuit ratio at ' + hv.name + ' (Isc/IL ≈ ' + fmt(gi.scr, 0) + '): losing the whole load at once would shift the voltage by ≈ ' + fmt(gi.dvLoss, 1) + ' %, and the strictest harmonic limits apply.', hv.name + '短路比偏低（Isc/IL约' + fmt(gi.scr, 0) + '）：全部负荷同时失去将使电压变化约' + fmt(gi.dvLoss, 1) + '%，并适用最严格的谐波限值。', 'Connect at a higher voltage or to a stronger PLN substation; re-transfer the load in blocks ≤ ' + fmt(gi.blk3, 0) + ' MVA; dynamic studies in the grid impact study.', '提高接入电压或接入更强的PLN变电站；负荷分块回切（每块≤' + fmt(gi.blk3, 0) + ' MVA）；在电网影响研究中开展动态研究。');
+    }
     if (hv.intl) add('M', '220/230 kV is not a PLN transmission voltage (PLN uses 150, 275 and 500 kV).', '220/230 kV不是PLN输电电压等级（PLN采用150、275、500 kV）。', 'Applies to sites outside Indonesia; in Indonesia use 150, 275 or 500 kV.', '仅适用于印尼以外站点；印尼境内采用150、275或500 kV。');
     else if (!hv.avail) add('H', hv.name + ' is not available in the ' + gEn + '.', gZh + '无' + hv.name + '电压等级。', 'Use a voltage available in this PLN system (recommended ' + kvName(hv.rule) + ').', '采用该PLN电网现有电压等级（建议' + kvName(hv.rule) + '）。');
     else if (hv.avail === 3) add('M', hv.name + ' in the ' + gEn + ' is planned (RUPTL), not yet in service — timing risk.', gZh + '的' + hv.name + '为规划（RUPTL）尚未投运——存在时间风险。', 'Confirm the RUPTL schedule with PLN; phase the campus or connect early phases at a lower voltage.', '与PLN确认RUPTL进度；园区分期或早期以较低电压接入。');
@@ -639,6 +775,13 @@
     var hv = el.hv, mvB = hv.mv.boards;
     add('EL-01', mvB * (p.tier >= 3 ? 3 : 2) + el.txTotal + Math.max(1, ceil(el.txTotal * 0.2)) + (el.genV === 'MV' ? el.genTotal : 0), 'panels', '24 kV · ' + fmt(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA' + (hv.kv > 20 ? ' (from ' + hv.name + ' substation)' : ''),
       mvB + ' board(s): incomers + bus coupler, ' + el.txTotal + ' transformer feeders' + (el.genV === 'MV' ? ', ' + el.genTotal + ' generator incomers' : ''), mvB + '段：进线+母联，' + el.txTotal + '路变压器馈线' + (el.genV === 'MV' ? '，' + el.genTotal + '路发电机进线' : ''), '面');
+    if (hv.kv > 20) {
+      var bays = hv.circ + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (p.tier >= 3 ? 2 : 1);
+      add('EL-24', bays, 'bays', hv.ur + ' kV · ' + hv.ik + ' kA · ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + 150 kV) + ' : '') + hv.ht.total + ' transformer + coupler bays · ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及150 kV）+' : '') + hv.ht.total + '个主变间隔+母联 · ' + hv.scheme[1], '个间隔');
+      if (hv.ibt) add('EL-25', hv.ibt.total, 'no.', hv.ibt.mva + ' MVA ' + hv.ibt.ratio, 'Interbus transformers (single-phase banks)', '联络变压器（单相组）', '台');
+      add('EL-25', hv.ht.total, 'no.', hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %', (hv.ht.split ? 'Split-winding, ' : '') + 'ONAN ' + hv.ht.onan + ' / ONAF ' + hv.ht.mva + ' MVA', (hv.ht.split ? '分裂绕组，' : '') + 'ONAN ' + hv.ht.onan + '/ONAF ' + hv.ht.mva + ' MVA', '台');
+      add('EL-26', hv.ht.total, 'no.', '40 Ω · 300 A · 10 s', 'One per HV/MV transformer (20 kV neutral)', '每台主变一台（20 kV中性点）', '台');
+    }
     add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel + ' · uk ' + el.lv.uk + ' %');
     add('EL-03', el.txTotal, 'line-ups', fmt(el.lv.acb) + ' A · ' + el.lv.icw + ' kA', 'One per transformer', '每台变压器一组', '组');
     add('EL-04', el.genTotal, 'no.', el.genSize + ' kWe', el.genLabel + ', COP/DCC · ' + (el.genV === 'MV' ? '20 kV paralleled plant' : '400 V'), el.genLabel + '，持续功率 · ' + (el.genV === 'MV' ? '20 kV并机' : '400 V'), '台');
@@ -653,7 +796,7 @@
     if (el.rpdus) add('EL-14', el.rpdus, 'no.', el.rStd[0] + (el.rHd && el.rHd[2] && el.rHd[0] !== el.rStd[0] ? ' · HD: ' + el.rHd[0] : ''),
       fmt(c.stdR, 0) + ' standard racks × ' + rpN(el.rStd) + (el.rStd[2] ? '' : ' (power shelves)') + (c.hdR ? ' + ' + fmt(c.hdR, 0) + ' HD racks × ' + rpN(el.rHd) + (el.rHd && !el.rHd[2] ? ' (OEM power shelves fed by busway tap-offs)' : '') : '') + ' — A + B feeds',
       fmt(c.stdR, 0) + '个标准机柜 × ' + rpN(el.rStd) + (el.rStd[2] ? '' : '（电源架）') + (c.hdR ? ' + ' + fmt(c.hdR, 0) + '个高密度机柜 × ' + rpN(el.rHd) + (el.rHd && !el.rHd[2] ? '（OEM电源架，由母线插接箱供电）' : '') : '') + '——A+B双路', '条');
-    add('EL-17', Math.max(1, Math.round(el.txTotal / 2)), 'no.', '300 A', 'Per harmonic study');
+    if (R.gimp && R.gimp.ahf) add('EL-17', Math.max(1, Math.round(el.txTotal / 2)), 'no.', '300 A', 'TDD est. ' + fmt(R.gimp.tddNo, 1) + ' % without filters vs Grid Code limit ' + fmt(R.gimp.tddLimit, 1) + ' %', '无滤波估算TDD ' + fmt(R.gimp.tddNo, 1) + '%，电网规范限值' + fmt(R.gimp.tddLimit, 1) + '%');
     add('EL-18', 1, 'lot', '≤ 1 Ω', 'Mesh-BN + TMGB/TGB');
     add('EL-19', 1, 'lot', 'LPL I/II', 'SPD Type 1+2/2/3');
     add('EL-21', Math.round(c.itKW), 'kW', 'Rack + portable', 'Rental for L4/L5');
@@ -663,7 +806,7 @@
     if (me.ctN) add('ME-03', me.ctN + me.ctR, 'cells', fmt(me.rejKW / me.ctN, 0) + ' kW', redLabel(me.ctN, me.ctR));
     if (me.pumps) add('ME-04', me.pumps, 'no.', '', 'CHW' + (R.cool.airTech === 'WCCH' ? ' + CW' : ''));
     if (me.tesM3) add('ME-06', Math.max(1, ceil(me.tesM3 / 400)), 'tanks', fmt(me.tesM3, 0) + ' m³ total', '10 min');
-    if (me.term) add(me.term.id, me.term.n + me.term.r, 'no.', me.term.size + ' kW', redLabel(me.term.n, me.term.r));
+    if (me.term) add(me.term.id, me.term.n + me.term.r, 'no.', (me.term.cap || me.term.size) + ' kW', redLabel(me.term.n, me.term.r) + (me.term.cap && me.term.cap !== me.term.size ? ' · server ΔT ' + fmt(me.cp.airDT, 0) + ' K' : ''), redLabel(me.term.n, me.term.r) + (me.term.cap && me.term.cap !== me.term.size ? ' · 服务器温差' + fmt(me.cp.airDT, 0) + ' K' : ''));
     if (me.rdhx) add('ME-11', me.rdhx, 'no.', '≈ ' + fmt(c.hd, 0) + ' kW racks', 'Rear-door HX on high-density racks');
     if (me.iecN) add('ME-14', me.iecN + me.iecR, 'modules', '400 kW', redLabel(me.iecN, me.iecR));
     if (me.cduN) add('ME-12', me.cduN + me.cduR, 'no.', me.cduSize + ' kW', redLabel(me.cduN, me.cduR));
@@ -713,5 +856,6 @@
 
   g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, find: find, capacity: capacity, coolingMatrix: coolingMatrix,
                  loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
-                 KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection };
+                 KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection, connAssess: connAssess, HT_STD: HT_STD, htUk: htUk,
+                 COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS };
 })(typeof window !== 'undefined' ? window : globalThis);

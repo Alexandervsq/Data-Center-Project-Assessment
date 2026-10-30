@@ -133,7 +133,7 @@
     },
     panels: function (c) {
       var P = UNITS.map(function (u) { return L.unitPanel(u, c); });
-      ['pue', 'tier', 'dens', 'mva', 'space'].forEach(function (k, i) { P.push(L.theoryPanel(X.TH[k], 'T' + (i + 1), c)); });
+      ['pue', 'tier', 'dens', 'mva', 'gimp', 'space'].forEach(function (k, i) { P.push(L.theoryPanel(X.TH[k], 'T' + (i + 1), c)); });
       P.push(refsPanel(c)); P.push(L.faqPanel(card));
       return P;
     }

@@ -3,7 +3,7 @@
   'use strict';
   var TC = g.TC, L = TC.lib, X = g.TCX, DB = g.DCDB, E = g.DCEngine, K = E.K, F = L.F, t = L.t;
   var EXTRA = {
-    harm: { eq: 'EL-17', no: 'B',
+    harm: { eq: 'EL-17', no: 'B', calc: 'gimp', extra: function (c) { return X.gimpTable ? X.gimpTable(c) : ''; },
       how: ['Active harmonic filters inject opposite currents that cancel the harmonics of UPS rectifiers, drives and IT power supplies, and correct the power factor, so transformers and generators are not overloaded and PLN power-quality limits are met.', '有源滤波器注入反向电流，抵消UPS整流器、变频器及IT电源产生的谐波，并校正功率因数，避免变压器与发电机过载并满足PLN电能质量要求。'],
       om: [['Measure harmonics at commissioning and after major IT changes.', '调试时及IT大规模变更后测量谐波。'], ['Size filters from a harmonic study (IEEE 519 limits).', '依据谐波研究（IEEE 519限值）选型滤波器。'], ['Check filter fans and capacitors every year.', '每年检查滤波器风扇与电容。']] },
     ldb: { eq: 'EL-21', no: 'C',
@@ -32,7 +32,7 @@
     U('fuel', { id: 'fuelsys', no: 'A', rel: [['fuel', ['Fuel autonomy', '燃油自持']]] }),
     U('harm', { id: 'harm', no: 'B' }), U('ldb', { id: 'ldb', no: 'C' }), U('cable', { id: 'cable', no: 'D' })
   ];
-  var THEORY = [['tier', 'tier'], ['mva', 'mva'], ['batt', 'batt'], ['fuel', 'fuel'], ['bwyT', 'bwy'], ['bessT', 'bess']];
+  var THEORY = [['tier', 'tier'], ['mva', 'mva'], ['gimp', 'gimp'], ['batt', 'batt'], ['fuel', 'fuel'], ['bwyT', 'bwy'], ['bessT', 'bess']];
   var FAQ = [
     [['Why do data centers need both UPS and generators?', '为什么数据中心既需要UPS又需要发电机？'], ['The UPS bridges seconds to minutes with batteries and conditions the power; generators then run for hours or days on stored diesel. A BESS can shave peaks and buffer AI load swings but does not replace either.', 'UPS用电池桥接数秒至数分钟并调理电能；随后由发电机依靠储存的柴油运行数小时乃至数天。储能可削峰并缓冲AI负荷波动，但不能替代二者。']],
     [['Why is 5 minutes of battery enough?', '为什么5分钟电池后备就够了？'], ['Generators start and carry the load in ≈ 10–15 s. Five minutes leaves time for several restart attempts and manual intervention. VRLA batteries are usually sized for 10–15 minutes because their capacity is less certain at end of life.', '发电机约10–15 s启动并带载。5分钟可容纳数次重启尝试及人工干预。阀控铅酸电池寿命末期容量不确定性更大，通常按10–15分钟配置。']],

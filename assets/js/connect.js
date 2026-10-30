@@ -30,8 +30,9 @@
     m('P', 'md', ['Maximum demand', '最大需量'], F(el.mva, 1) + ' MVA · ' + F(el.demandKW) + ' kW');
     m('P', 'conn', ['PLN connection', 'PLN接入'], [hv.name + ' · ' + hv.circ + ' circuit(s)', hv.name + ' · ' + hv.circ + '回进线']);
     m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.ur + ' kV GIS · ' + hv.ik + ' kA · ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
+    m('P', 'pcc', ['Fault level at the connection point · Isc/IL', '接入点短路水平 · Isc/IL'], F(hv.pccIk, 1) + ' kA · ' + F(hv.ssc) + ' MVA · ' + F(R.gimp ? R.gimp.scr : 0));
     m('P', 'ibt', ['EHV/HV transformers', '超高压/高压联络变压器'], hv.ibt ? hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio : '–');
-    m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio : '–');
+    m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %' : '–');
     m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA');
     m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')');
     m('P', 'lv', ['LV main breaker · fault level', '低压主断路器 · 短路水平'], F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA');
@@ -40,6 +41,7 @@
     m('P', 'ups', ['UPS', 'UPS'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')');
     m('P', 'batt', ['Batteries', '蓄电池'], F(el.battKWh) + ' kWh · ' + p.upsMin + ' min · ' + (p.battery === 'LI' ? 'LFP' : 'VRLA'));
     m('P', 'bess', ['BESS', '储能'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : '–');
+    m('P', 'pq', ['Grid impact: harmonic TDD · AI voltage step', '电网影响：谐波TDD · AI电压阶跃'], R.gimp ? F(R.gimp.tdd, 1) + ' % / ' + F(R.gimp.tddLimit, 1) + ' % · ' + F(R.gimp.dvAi, 2) + ' %' + (R.gimp.ahf ? ' · AHF' : '') : '–');
     m('P', 'tar', ['PLN tariff', 'PLN电价'], 'Rp ' + F(p.tariffIDR, 1) + '/kWh · ' + (el.vclass === 'TT' ? 'I-4 TT' : 'TM'));
     m('W', 'it', ['IT load', 'IT负载'], F(c.itMW, 2) + ' MW');
     m('W', 'racks', ['Racks (standard + high-density)', '机柜（标准+高密度）'], F(c.racks) + ' (' + F(c.stdR) + ' + ' + F(c.hdR) + ')');
@@ -49,10 +51,11 @@
     m('W', 'ws', ['White space · halls', '白区 · 机房'], F(sp.ws) + ' m² · ' + sp.halls);
     m('C', 'pue', ['PUE annual / design day', 'PUE 年均/设计日'], F(R.eff.pue, 2) + ' / ' + F(R.eff.puePeak, 2));
     m('C', 'cool', ['Cooling system', '制冷系统'], [R.cool.obj.en, R.cool.obj.zh]);
+    m('C', 'cop', ['Chiller COP · free cooling', '冷机COP · 自然冷却'], me.model && me.model.cop ? F(me.model.cop, 2) + ' · ' + F(me.model.free * 100) + ' %' : '–');
     m('C', 'ch', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW · ' + F(me.chwLoad) + ' kW' : '–');
     m('C', 'ct', ['Cooling towers', '冷却塔'], me.ctN ? (me.ctN + me.ctR) + ' · ' + F(me.rejKW) + ' kW' : '–');
     m('C', 'tes', ['Thermal storage', '蓄冷'], me.tesM3 ? F(me.tesM3) + ' m³ · ' + F(me.tesS / 60) + ' min' : '–');
-    m('C', 'term', ['Air terminals', '末端空调'], me.term ? (me.term.n + me.term.r) + ' × ' + me.term.size + ' kW' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW' : '–')));
+    m('C', 'term', ['Air terminals', '末端空调'], me.term ? (me.term.n + me.term.r) + ' × ' + (me.term.cap || me.term.size) + ' kW' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW' : '–')));
     m('C', 'cdu', ['CDUs · dry coolers', 'CDU · 干冷器'], me.cduN ? (me.cduN + me.cduR) + ' × ' + F(me.cduSize) + ' kW · ' + (me.dcN + me.dcR) : '–');
     m('C', 'water', ['WUE · make-up water', 'WUE · 补水量'], F(R.eff.wue, 2) + ' L/kWh · ' + F(me.waterDay) + ' m³/d');
     m('F', 'gas', ['Gas zones · agent', '气体分区 · 灭火剂'], fs.gasZones ? fs.gasZones + ' · ' + F(fs.agentKg) + ' kg' : ['pre-action sprinklers', '预作用喷淋']);
@@ -67,7 +70,7 @@
     m('B', 'sch', ['Programme to ready-for-service', '至投产工期'], [R.sched.total + ' months', R.sched.total + '个月']);
     return M;
   }
-  /* design parameters editable from the Connected design panel: value now, rule value (AUTO), options or range */
+  /* design parameters (each one is editable in a calculator of the simulation and listed in the knowledge documents): value now, rule value (AUTO), options or range */
   var DG = { S: ['Site & load', '场地与负载'], W: ['IT & white space', 'IT与白区'], P: ['Power path', '供电路径'], C: ['Cooling', '制冷'], B: ['Building', '建筑'], $: ['Energy & commercial', '能源与商务'] };
   function kOpts(list, unit) { return list.map(function (v) { return [v, F(v) + ' ' + unit]; }); }
   function designParams(x) {
@@ -87,7 +90,8 @@
       { g: 'P', k: 'hvKV', l: ['PLN connection voltage', 'PLN接入电压'], o: kvO, v: hv.kv, r: hv.rule },
       { g: 'P', k: 'pkPUE', l: ['Design-day PUE (peak cooling)', '设计日PUE（峰值制冷）'], u: '', min: 1.03, max: 2.5, st: 0.01, v: +R.eff.puePeak.toFixed(2), r: +R.eff.pueRule.toFixed(2) },
       { g: 'P', k: 'mdKVA', l: ['Maximum demand', '最大需量'], u: 'kVA', min: 10, max: 5000000, st: 10, v: Math.round(el.demandKVA), r: Math.round(el.demandRule) },
-      { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts([20, 30, 60, 100, 150], 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
+      { g: 'P', k: 'ikPCC', l: ['Fault level at the connection point', '接入点短路电流'], u: 'kA', min: 5, max: 80, st: 0.5, v: hv.pccIk, r: hv.pccRule },
+      { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts(E.HT_STD, 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
       { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], 'kVA'), v: el.txSize, r: el.txRule },
       { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
       { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
@@ -100,9 +104,14 @@
       { g: 'P', k: 'bessOn', l: ['Battery energy storage (BESS)', '电池储能（BESS）'], o: yn, v: !!p.bessOn, r: pr.bessOn },
       { g: 'P', k: 'bessSh', l: ['BESS power share of IT', '储能功率占IT比例'], u: '%', min: 1, max: 60, st: 1, v: el.bess ? Math.round(el.bess.mw / c.itMW * 100) : 10, off: !p.bessOn },
       { g: 'P', k: 'bessH', l: ['BESS duration', '储能时长'], u: 'h', min: 0.5, max: 6, st: 0.5, v: p.bessH, r: pr.bessH, off: !p.bessOn },
+      { g: 'P', k: 'ahf', l: ['Active harmonic filters on drives', '驱动负荷有源滤波器'], o: yn, v: !!(R.gimp && R.gimp.ahf), r: R.gimp ? R.gimp.ahfAuto : null },
+      { g: 'P', k: 'aiSwing', l: ['AI load swing (share of AI load)', 'AI负荷波动（占AI负荷）'], u: '%', min: 0, max: 100, st: 5, v: R.gimp ? R.gimp.swing : 0, r: R.gimp && R.gimp.aiKW > 0 ? 50 : 0, off: !(R.gimp && R.gimp.aiKW > 0) },
       { g: 'C', k: 'cooling', l: ['Cooling system', '制冷系统'], o: DB.cooling.map(function (q) { return [q.id, [q.en, q.zh]]; }), v: p.cooling, r: pr.cooling },
       { g: 'C', k: 'chKW', l: ['Chiller size', '冷机单机容量'], o: kOpts([500, 1000, 1407, 2461, 3517], 'kW'), v: me.chSize || 1407, r: me.chRule, off: !me.chN },
       { g: 'C', k: 'chwDT', l: ['Chilled-water ΔT', '冷冻水温差'], u: 'K', min: 4, max: 14, st: 0.5, v: me.chwDT || K.CHW_DT, r: K.CHW_DT, off: !me.chN },
+      { g: 'C', k: 'chws', l: ['Chilled-water supply temperature', '冷冻水供水温度'], u: '°C', min: 6, max: 24, st: 0.5, v: me.cp ? me.cp.chws : E.COOLDEF.chws, r: E.COOLDEF.chws, off: !me.chN },
+      { g: 'C', k: 'airDT', l: ['Server air temperature rise', '服务器空气温升'], u: 'K', min: 6, max: 20, st: 1, v: me.cp ? me.cp.airDT : E.COOLDEF.airDT, r: E.COOLDEF.airDT },
+      { g: 'C', k: 'twAppr', l: ['Cooling-tower approach', '冷却塔逼近度'], u: 'K', min: 2, max: 8, st: 0.5, v: me.cp ? me.cp.twAppr : E.COOLDEF.twAppr, r: E.COOLDEF.twAppr, off: !me.ctN },
       { g: 'C', k: 'tesS', l: ['Thermal-storage ride-through', '蓄冷后备时间'], u: 's', min: 60, max: 1800, st: 30, v: me.tesS || 600, r: p.tier >= 4 ? 900 : (p.tier >= 3 ? 600 : 300), off: !me.chN },
       { g: 'C', k: 'cduKW', l: ['CDU capacity', 'CDU容量'], o: kOpts([400, 800, 1000, 1500, 2000, 2500], 'kW'), v: me.cduSize || 800, r: me.cduRule, off: !me.cduN },
       { g: 'C', k: 'liqSh', l: ['Share of high-density rack heat to liquid', '高密度机柜热量液冷占比'], u: '%', min: 50, max: 100, st: 1, v: Math.round((p.liqSh > 0 ? p.liqSh / 100 : (R.hdP.liq || 0.8)) * 100), r: Math.round((R.hdP.liq || 0.8) * 100), off: R.cool.tech !== 'DLC' || !c.hdR },
@@ -116,7 +125,7 @@
     ];
   }
 
-  /* what each design parameter drives — shown in the Connected design panel and listed in the knowledge documents */
+  /* what each design parameter drives — listed in the knowledge documents */
   var DRIVES = {
     loc: ['PLN system and available voltages, tariff, climate (PUE, WUE, cooling choice), seismic and flood design, land, water and staff costs', 'PLN电网及可用电压、电价、气候（PUE、WUE、制冷选择）、抗震及防洪设计、地价、水价及人工成本'],
     itMW: ['Racks, rows and white space; every power-chain rating (connection → transformers → switchgear → generators → UPS); cooling plant; fire zones, cameras, BMS points; building, site, CAPEX, OPEX and programme', '机柜、列数及白区；整个供电链额定值（接入→变压器→开关设备→发电机→UPS）；制冷站；消防分区、摄像机、BMS点位；建筑、用地、投资、运营成本及工期'],
@@ -130,13 +139,19 @@
     hvKV: ['Circuits, GIS rating and busbar scheme, interbus and HV/MV transformers, 20 kV switchgear, tariff class, connection cost, lead time, substation area', '进线回路、GIS额定及接线、联络及高/中压变压器、20 kV开关柜、电价类别、接入投资、工期、变电站用地'],
     pkPUE: ['Maximum demand → connection, transformers, generators, fuel', '最大需量→接入、变压器、发电机、燃油'],
     mdKVA: ['Connection voltage, transformers, switchgear, generators, fuel, tariff class', '接入电压、变压器、开关设备、发电机、燃油、电价类别'],
-    htMVA: ['Number of HV/MV transformers, 20 kV boards and their current and fault rating', '高/中压主变台数、20 kV开关柜段数及其电流与短路额定'],
-    txKVA: ['Number of MV/LV transformers, impedance, LV main breaker and fault level, LV line-ups, meters', '中/低压变压器台数、阻抗、低压主断路器及短路水平、低压配电柜组数、电表'],
+    htMVA: ['Number of HV/MV transformers, split winding, impedance, 20 kV boards and their current and fault rating, neutral earthing resistors', '高/中压主变台数、分裂绕组、阻抗、20 kV开关柜段数及其电流与短路额定、中性点接地电阻'],
+    ikPCC: ['GIS short-time rating, 20 kV fault level and board rating, short-circuit ratio, harmonic limits and voltage steps (grid impact)', 'GIS短时耐受电流、20 kV短路电流及开关柜额定、短路比、谐波限值及电压阶跃（电网影响）'],
+    ahf: ['Harmonic current at the connection point (Grid Code TDD), active filters in the BOQ', '接入点谐波电流（电网规范TDD）、清单中的有源滤波器'],
+    aiSwing: ['Voltage steps at the connection point, BESS / power-smoothing need, grid impact risks', '接入点电压阶跃、储能/功率平滑需求、电网影响风险'],
+    chws: ['Chiller COP and free-cooling hours → cooling energy → PUE, maximum demand and every power-chain rating', '冷机COP及自然冷却时数→制冷能耗→PUE、最大需量及整条供电链额定'],
+    airDT: ['Airflow, fan power and the number of fan walls / CRAH units → PUE and maximum demand', '风量、风机功率及风墙/精密空调台数→PUE及最大需量'],
+    twAppr: ['Condenser-water temperature → chiller COP and tower fan power → PUE and maximum demand', '冷却水温度→冷机COP及冷却塔风机功率→PUE及最大需量'],
+    txKVA: ['Number of MV/LV transformers, impedance, LV main breaker and fault level, LV line-ups, meters, transformer losses (annual PUE)', '中/低压变压器台数、阻抗、低压主断路器及短路水平、低压配电柜组数、电表、变压器损耗（年均PUE）'],
     txLoad: ['Number of MV/LV transformers', '中/低压变压器台数'],
     genKW: ['Number of generators, paralleling, yard area', '发电机台数、并机、场地面积'],
     genV: ['20 kV generator incomers or 400 V ATS, MV switchgear panels', '20 kV发电机进线或400 V ATS、中压开关柜面数'],
     fuelH: ['Fuel volume, tanks, refuelling, water storage', '燃油量、储罐、补油、储水'],
-    upsKW: ['Number of UPS systems, battery energy, meters', 'UPS台数、电池能量、电表'],
+    upsKW: ['Number of UPS systems, module loading and losses (PUE, maximum demand), battery energy, meters', 'UPS台数、模块负载率及损耗（PUE、最大需量）、电池能量、电表'],
     battery: ['UPS autonomy rule, battery room criteria (NFPA 855 / IEC 62485-2), electrical room area', 'UPS后备时间规则、电池室要求（NFPA 855/IEC 62485-2）、电气房间面积'],
     upsMin: ['Battery energy', '电池能量'],
     eco: ['Electrical losses → PUE → demand and energy cost', '电气损耗→PUE→需量及电费'],
