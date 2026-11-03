@@ -299,17 +299,18 @@
       f: OLD.cdu.f },
     gimp: { i: [['ik', ['Fault level at the connection point', '接入点短路电流'], 'kA', 5, 80, .5, function (c) { return c.R.el.hv.pccIk; }],
       ['ahf', ['Active harmonic filters on drives', '驱动负荷有源滤波器'], '', 0, 2, 1, function (c) { return c.p.ahf === true ? 1 : (c.p.ahf === false ? 0 : 2); }, [[2, ['By the harmonic estimate (rule)', '按谐波估算（规则）']], [1, ['Yes', '是']], [0, ['No', '否']]]],
-      ['sw', ['AI load swing (share of AI load)', 'AI负荷波动（占AI负荷）'], '%', 0, 100, 5, function (c) { return c.R.gimp ? c.R.gimp.swing : 0; }]],
+      ['sw', ['AI load swing (share of AI load)', 'AI负荷波动（占AI负荷）'], '%', 0, 100, 5, function (c) { return c.R.gimp ? c.R.gimp.swing : 0; }],
+      ['vt', ['Drive front end (current distortion)', '变频驱动整流方式（电流畸变）'], '%', 5, 35, 1, function (c) { return c.R.gimp ? c.R.gimp.vt : 35; }, g.DCConnect.VFD_O]],
       a: { ik: { b: B.ik, f: function (v, c) { return c.R.el.hv.pccRule; } } },
-      b: { ik: { k: 'ikPCC' }, ahf: { k: 'ahf', map: [[2, null], [1, true], [0, false]] }, sw: { k: 'aiSwing' } },
+      b: { ik: { k: 'ikPCC' }, ahf: { k: 'ahf', map: [[2, null], [1, true], [0, false]] }, sw: { k: 'aiSwing' }, vt: { k: 'vfdThd' } },
       f: function (v, c) {
         var el = c.R.el, hv = el.hv, S = el.mva, kv = hv.kv, hv2 = Object.assign({}, hv, { pccIk: v.ik, ssc: 1.732 * kv * v.ik });
-        var gi = E.gridImpact({ ahf: [false, true, undefined][Math.round(v.ahf)], aiSwing: v.sw }, Object.assign({}, c.R, { el: Object.assign({}, el, { hv: hv2 }) }));
+        var gi = E.gridImpact({ ahf: [false, true, undefined][Math.round(v.ahf)], aiSwing: v.sw, vfdThd: v.vt }, Object.assign({}, c.R, { el: Object.assign({}, el, { hv: hv2 }) }));
         function ok(b) { return b ? ' ✓' : ' ✗'; }
         return [[['Short-circuit power at the connection point', '接入点短路容量'], '√3 × ' + kv + ' kV × ' + F(v.ik, 1) + ' kA', F(gi.ssc) + ' MVA'],
           [['Short-circuit ratio Isc/IL', '短路比Isc/IL'], F(gi.ssc) + ' ÷ ' + F(S, 1) + ' MVA', F(gi.scr) + (gi.scr < 20 ? ' — low' : '')],
           [['Harmonic current limit (Grid Code, ' + E.kvName(kv) + ')', '谐波电流限值（电网规范，' + E.kvName(kv) + '）'], ['TDD table by Isc/IL and voltage', '按Isc/IL及电压查TDD表'], '≤ ' + F(gi.tddLimit, 1) + ' % TDD'],
-          [['Estimated harmonic current', '估算谐波电流'], ['UPS active front end ≈ 3 %, drives ' + (gi.ahf ? 'with active filters ≈ 5 %' : 'without filters ≈ 35 %'), 'UPS有源整流约3%，驱动负荷' + (gi.ahf ? '加有源滤波约5%' : '无滤波约35%')], F(gi.tdd, 1) + ' %' + ok(gi.tdd <= gi.tddLimit)],
+          [['Estimated harmonic current', '估算谐波电流'], ['UPS ' + F(gi.upsShare * 100) + ' % of demand × 3 % + drives ' + F(gi.drvShare * 100) + ' % × ' + (gi.ahf ? F(Math.min(gi.vt, 5)) + ' % (active filters)' : F(gi.vt) + ' %'), 'UPS占需量' + F(gi.upsShare * 100) + '% × 3% + 变频驱动' + F(gi.drvShare * 100) + '% × ' + (gi.ahf ? F(Math.min(gi.vt, 5)) + '%（有源滤波）' : F(gi.vt) + '%')], F(gi.tdd, 1) + ' %' + ok(gi.tdd <= gi.tddLimit)],
           [['Voltage distortion THDv', '电压畸变THDv'], F(gi.tdd, 1) + ' % × ' + F(S, 1) + ' ÷ ' + F(gi.ssc) + ' × 5', F(gi.thdv, 2) + ' % / ' + gi.thdLim[1] + ' %' + ok(gi.thdv <= gi.thdLim[1])],
           [['Voltage step from the AI load swing', 'AI负荷波动引起的电压阶跃'], F(gi.aiKW / 1000, 1) + ' MW × ' + F(gi.swing) + ' % ÷ (' + K.PF + ' × ' + F(gi.ssc) + ' MVA)', F(gi.dvAi, 2) + ' % / 2 %' + ok(gi.dvAi <= 2)],
           [['Loss of the whole load (UPS to battery in a grid fault)', '全部负荷失去（电网故障时UPS转电池）'], F(S, 1) + ' ÷ ' + F(gi.ssc) + ' MVA', [F(gi.dvLoss, 1) + ' % · re-transfer in blocks ≤ ' + F(gi.blk3) + ' MVA (3 %)', F(gi.dvLoss, 1) + '% · 分块回切每块≤' + F(gi.blk3) + ' MVA（3%）']],

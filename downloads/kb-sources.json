@@ -1,10 +1,10 @@
 {
-    "rev":  5,
-    "date":  "2026-10-30",
-    "slides":  82,
-    "pages":  161,
-    "built":  "2026-10-30 13:27",
-    "hash":  "ab1fe69c65a6c8cbc83487f3fec4bffca3e96e09b98f4a1104f991f3510e3f8c",
+    "rev":  6,
+    "date":  "2026-11-03",
+    "slides":  83,
+    "pages":  162,
+    "built":  "2026-11-03 10:42",
+    "hash":  "ea00890f461750ef9fa72ddc7888e2bf992135eaebadefa815aa2d83124ba66e",
     "files":  [
                   "connect.js",
                   "engine.js",

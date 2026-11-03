@@ -540,7 +540,7 @@
   function freePanel(id, no, title, sub, body, group) { return article(id, group || 'x', title, mdHead(no, title, sub) + '<div class="tc-mb">' + body + '</div>'); }
   function ptable(head, rows) {
     return '<div class="tc-tbl"><table class="tc-t">' + (head ? '<thead><tr>' + head.map(function (h) { return '<th>' + te(h) + '</th>'; }).join('') + '</tr></thead>' : '') + '<tbody>' +
-      rows.map(function (r) { return '<tr' + (r.cur ? ' class="cur"' : '') + '>' + r.map(function (c, i) { return '<td' + (i === r.length - 1 && r.length > 1 ? ' class="v"' : '') + '>' + t(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+      rows.map(function (r) { var cl = [r.cur ? 'cur' : '', r.upd ? 'upd' : '', r.del ? 'del' : ''].join(' ').trim(); return '<tr' + (cl ? ' class="' + cl + '"' : '') + '>' + r.map(function (c, i) { return '<td' + (i === r.length - 1 && r.length > 1 ? ' class="v"' : '') + '>' + t(c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   }
   function calcBox(key) { return '<section class="tc-calc" data-c="' + key + '"><div class="ct"><h3>' + te(UI.calc) + '</h3><span>' + te(UI.calcHint) + '</span></div><div class="tc-cg"><div class="tc-cin"></div><ol class="tc-steps"></ol></div></section>'; }
   function related(items) {
@@ -565,7 +565,8 @@
     if (u.how) right += '<div><h3>' + te(UI.how) + '</h3><p>' + t(u.how) + '</p></div>';
     if (u.key) right += '<div class="tc-key"><span class="f">' + t(u.key[0]) + '</span><span class="e">' + t(typeof u.key[1] === 'function' ? u.key[1](ctx) : u.key[1]) + '</span></div>';
     if (u.basis) {
-      var b = u.basis(ctx), b0 = b && ctx.c0 ? u.basis(ctx.c0) : null, bc = !!b0 && t(b0) !== t(b);
+      var b = u.basis(ctx), b0 = null; if (b && ctx.c0) try { b0 = u.basis(ctx.c0); } catch (x) { b0 = null; }
+      var bc = !!b0 && t(b0) !== t(b);
       if (b) right += '<div class="tc-basisbox' + (bc ? ' upd' : '') + '"><b>' + te(UI.forBasis) + ' (' + e(ctx.name) + '):</b> ' + t(b) + (bc ? '<span class="was"><b>' + te(UI.before) + (lang() === 'zh' ? '：' : ':') + '</b> ' + t(b0) + '</span>' : '') + '</div>';
     }
     right += '</div>';
@@ -593,7 +594,7 @@
     var body = '<div class="tc-hero"><div style="display:grid;gap:14px"><p class="tc-lead">' + t(th.body) + '</p>';
     if (th.formula) body += '<div class="tc-formula">' + t(th.formula) + '</div>';
     if (th.ex) {
-      var ex = typeof th.ex === 'function' ? th.ex(ctx) : th.ex, ex0 = typeof th.ex === 'function' && ctx.c0 ? th.ex(ctx.c0) : null;
+      var ex = typeof th.ex === 'function' ? th.ex(ctx) : th.ex, ex0 = null; if (typeof th.ex === 'function' && ctx.c0) try { ex0 = th.ex(ctx.c0); } catch (x) { ex0 = null; }
       body += '<p>' + t(ex) + '</p>' + (ex0 && t(ex0) !== t(ex) ? '<p class="tc-wasp"><b>' + te(UI.before) + (lang() === 'zh' ? '：' : ':') + '</b> ' + t(ex0) + '</p>' : '');
     }
     body += '</div>' + (th.visual ? '<div class="tc-ill">' + th.visual(ctx) + '</div>' : '<div></div>') + '</div>';
@@ -766,7 +767,11 @@
     var card = cardById(ST.card || CARDS[0].id); ST.card = card.id; CUR_CARD = card;
     CTX = buildCtx(card);
     DIFF = PREV_X ? diffM(metrics(PREV_X), metrics(CTX.x)) : null; PREV_X = null;
-    var stage0 = CTX.c0 ? card.stage(CTX.c0, LIB) : null, stage = card.stage(CTX, LIB);
+    var stage0 = null; if (CTX.c0) try { stage0 = card.stage(CTX.c0, LIB); } catch (x) { stage0 = null; }
+    var stage = card.stage(CTX, LIB);
+    /* a card whose technology the selected design does not use can add it to that design (card.fallFix → one design change) */
+    FALLFIX = null;
+    if (CTX.fell && card.fallFix) try { FALLFIX = card.fallFix(resolveWith(JSON.stringify(basisInput(card, CTX.key).input), ST.chg[CTX.key] || {})); } catch (x) { FALLFIX = null; }
     PANELS = card.panels(CTX, LIB);
     var textAll = stage.replace(/<[^>]+>/g, ' ') + ' ' + PANELS.map(function (p) { return p.html.replace(/<[^>]+>/g, ' '); }).join(' ');
     PANELS.push(basisPanel(card, CTX, LAST_SRC === 'basis' || LAST_SRC === '*' ? DIFF : null)); PANELS.push(glossPanel(card, textAll));
@@ -775,6 +780,7 @@
     }).join('') + '</div>';
     var nCh = Object.keys(CTX.chg || {}).length;
     var bar = '<div class="tc-bar"><span>' + te(UI.basis) + ':</span>' + basisSelect(card) + (CTX.fell ? '<span style="color:#B0302A">' + te(card.fallNote || ['The selected design does not use this technology; the card shows its benchmark.', '所选设计未采用该技术；卡片显示其基准设计。']) + '</span>' : '') +
+      (FALLFIX ? '<button type="button" class="tc-btn tc-fix" data-fallfix title="' + te(['Adds this change to the selected design: every card and panel follows', '将此修改加入所选设计：所有卡片及面板随之联动']) + '">' + LINK_SVG + te(FALLFIX.label) + '</button>' : '') +
       (nCh ? '<button type="button" class="tc-btn tc-rsall" data-resetall>↺ ' + te(UI.resetAll) + ' <b>' + nCh + '</b></button><button type="button" class="tc-chgk" data-tco="basis"><i></i>' + te(UI.chgKey) + '</button>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
     if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
@@ -790,7 +796,13 @@
     fit(); motion();
     if (ST.open) openPanel(ST.open, true); else syncHash();
   }
-  var DEFS_ADDED = false;
+  var DEFS_ADDED = false, FALLFIX = null;
+  function applyFallFix() {
+    if (!FALLFIX || !CTX) return;
+    var key = CTX.key, c = ST.chg[key] || (ST.chg[key] = {});
+    Object.keys(FALLFIX.chg).forEach(function (k) { c[k] = FALLFIX.chg[k]; });
+    PREV_X = null; LAST_SRC = null; save(); render();
+  }
 
   function fit() {
     if (!VIEW) return;
@@ -927,7 +939,8 @@
       }
       /* the same calculator on the design basis (without the reader's design changes): linked and design-derived inputs take the
          basis values, what-if values stay, local AUTO inputs follow their rule — the difference is what the changes adjusted */
-      function baseOf(v) {
+      function baseOf(v) { try { return baseVals(v); } catch (e) { return null; } }
+      function baseVals(v) {
         if (!c0) return null;
         var b = {};
         C.i.forEach(function (p) { var k = p[0]; b[k] = gk[k] || !man[k] ? dflt0(p) : v[k]; });
@@ -1044,6 +1057,7 @@
       if (tg.closest('[data-rot]')) { ST.userRot = (ST.userRot === 'on' || (ST.userRot === null && TOUCH && vhGtVw())) ? 'off' : 'on'; fit(); return; }
       var eqb = tg.closest('[data-eqlink]'); if (eqb) { var id = eqb.getAttribute('data-eqlink'); closePanel(); if (ST.focus) setFocus(false); if (g.DCApp && g.DCApp.openEquipment) g.DCApp.openEquipment(id); return; }
       if (tg.closest('[data-goassess]')) { closePanel(); if (ST.focus) setFocus(false); if (g.DCApp) g.DCApp.show('assess'); return; }
+      if (tg.closest('[data-fallfix]')) { applyFallFix(); return; }
       if (tg.closest('[data-resetall]')) { resetAll(); return; }
       var gr = tg.closest('[data-gr]'); if (gr) { ev.preventDefault(); commit(gr.getAttribute('data-gr'), null, 'basis'); return; }
       var op = tg.closest('[data-tco]'); if (op) { ev.preventDefault(); openPanel(op.getAttribute('data-tco')); return; }

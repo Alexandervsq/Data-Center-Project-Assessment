@@ -16,15 +16,34 @@
   function bat(c) { return c.p.battery === 'LI' ? ['Li-ion (LFP)', '锂电（磷酸铁锂）'] : ['VRLA lead-acid', '阀控铅酸']; }
   function W2(en, zh) { return [en, zh]; }
 
+  /* knowledge tables compared with the design basis (c.c0, the basis without the reader's changes): a changed cell shows the basis value
+     struck through and its row turns amber, a row the changes add is tagged new, a row they remove stays struck through */
+  function vsBasis(rows, rows0) {
+    if (!rows0) return rows;
+    function key(r) { return r.key !== undefined ? r.key : r[0]; }
+    var out = rows.map(function (r) {
+      var b = rows0.filter(function (q) { return key(q) === key(r); })[0], n = r.slice(); n.cur = r.cur;
+      if (!b) { n.upd = true; n[0] = r[0] + ' <span class="tc-tag2 nw">' + L.te(['new', '新增']) + '</span>'; return n; }
+      r.forEach(function (cl, i) { if (i && b[i] !== undefined && cl !== b[i]) { n[i] = cl + '<s class="tc-was">' + b[i] + '</s>'; n.upd = true; } });
+      if (b.cur && !r.cur) { n[0] = n[0] + ' <span class="tc-tag2 nw">' + L.te(['design basis', '设计基准']) + '</span>'; n.upd = true; }
+      return n;
+    });
+    rows0.forEach(function (b) { if (!rows.some(function (r) { return key(r) === key(b); })) { var d = b.slice(); d.del = true; out.push(d); } });
+    return out;
+  }
+  function rows0Of(fn, c) { if (!c.c0) return null; try { return fn(c.c0); } catch (x) { return null; } }
   /* PLN connection options for the demand of the design (engine connection solution) and the resulting power chain */
   var AVT = { 0: ['not in this PLN system', '本电网无'], 1: ['in service', '已投运'], 2: ['limited / legacy', '有限/存量'], 3: ['planned (RUPTL)', '规划中（RUPTL）'] };
-  function connTable(c) {
-    var hv = c.R.el.hv, gr = DB.idGrids[c.R.L.grid] || {};
-    var rows = hv.opts.map(function (o) {
+  function connRows(c) {
+    return c.R.el.hv.opts.map(function (o) {
       var st = o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail], fit = o.asm.c === 'std' ? ['✓ standard', '✓ 标准方案'] : (o.asm.c === 'opt' ? ['△ possible / strategic', '△ 可行/战略方案'] : ['✗ not practical', '✗ 不可行']);
       var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
-      r.cur = o.sel; return r;
+      r.cur = o.sel; r.key = o.kv; return r;
     });
+  }
+  function connTable(c) {
+    var hv = c.R.el.hv, gr = DB.idGrids[c.R.L.grid] || {};
+    var rows = vsBasis(connRows(c), rows0Of(connRows, c));
     return '<div><h3>' + L.te(['Connection options for ' + F(c.R.el.mva, 1) + ' MVA — ' + gr.en, gr.zh + ' — ' + F(c.R.el.mva, 1) + ' MVA的接入方案']) + '</h3>' +
       L.ptable([['Voltage', '电压'], ['Switchgear', '开关设备'], ['Typical range', '典型范围'], ['Circuits', '回路'], ['In this grid', '本电网'], ['Assessment', '评估']], rows) +
       '<div class="tc-basisbox"><b>' + L.te(['Selected: ' + hv.name, '所选：' + hv.name]) + ' — ' + L.te(hv.asm.c === 'std' ? ['standard solution', '标准方案'] : (hv.asm.c === 'opt' ? ['possible with conditions', '有条件可行'] : ['not practical', '不可行'])) + '.</b> ' + L.te([hv.asm.en, hv.asm.zh]) + '</div>' +
@@ -32,20 +51,28 @@
   }
   /* PLN grid impact indicators of this design (Grid Code Permen ESDM 20/2020 limits; engine R.gimp) */
   var LLCT = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load (75–300 MW)', '大负荷（75–300 MW）'], vlarge: ['very large load (> 300 MW)', '超大负荷（>300 MW）'] };
-  function gimpTable(c) {
-    var gi = c.R.gimp; if (!gi) return '';
+  function gimpRows(c) {
+    var gi = c.R.gimp; if (!gi) return [];
     function ok(b) { return b ? ' ✓' : ' ✗'; }
-    var rows = [[L.te(['Short-circuit power · Isc/IL', '短路容量 · Isc/IL']), F(gi.ssc) + ' MVA · ' + F(gi.scr), L.te(gi.scr < 20 ? ['low ratio: strictest limits', '短路比低：限值最严'] : ['adequate', '满足'])],
-      [L.te(['Harmonic current TDD (estimate / limit)', '谐波电流TDD（估算/限值）']), F(gi.tdd, 1) + ' % / ' + F(gi.tddLimit, 1) + ' %' + ok(gi.tdd <= gi.tddLimit), L.te(gi.ahf ? ['active harmonic filters on drives', '驱动负荷配有源滤波器'] : ['no filters needed by estimate', '估算无需滤波器'])],
+    return [[L.te(['Short-circuit power · Isc/IL', '短路容量 · Isc/IL']), F(gi.ssc) + ' MVA · ' + F(gi.scr), L.te(gi.scr < 20 ? ['low ratio: strictest limits', '短路比低：限值最严'] : ['adequate', '满足'])],
+      [L.te(['Harmonic current TDD (estimate / limit)', '谐波电流TDD（估算/限值）']), F(gi.tdd, 1) + ' % / ' + F(gi.tddLimit, 1) + ' %' + ok(gi.tdd <= gi.tddLimit), L.te(gi.ahf ? ['active harmonic filters on drives (drives ' + F(gi.vt) + ' % without)', '驱动负荷配有源滤波器（无滤波时驱动' + F(gi.vt) + '%）'] : ['no filters needed by estimate (drives ' + F(gi.vt) + ' %)', '估算无需滤波器（驱动' + F(gi.vt) + '%）'])],
       [L.te(['Voltage distortion THDv (estimate / limit)', '电压畸变THDv（估算/限值）']), F(gi.thdv, 2) + ' % / ' + gi.thdLim[1] + ' %' + ok(gi.thdv <= gi.thdLim[1]), L.te(['individual harmonic ≤ ' + gi.thdLim[0] + ' %', '单次谐波≤' + gi.thdLim[0] + '%'])],
       [L.te(['Voltage step from AI load swing', 'AI负荷波动电压阶跃']), F(gi.dvAi, 2) + ' %' + ok(gi.dvAi <= 2), L.te(['≤ 2 % repetitive, ≤ 3 % infrequent; flicker Pst ≤ ' + (gi.kv >= 66 ? '0.8' : '1.0'), '重复≤2%、偶发≤3%；闪变Pst≤' + (gi.kv >= 66 ? '0.8' : '1.0')])],
       [L.te(['Loss of the whole load', '全部负荷失去']), F(gi.dvLoss, 1) + ' %', L.te(['re-transfer in blocks ≤ ' + F(gi.blk3) + ' MVA; ' + LLCT[gi.llc][0], '分块回切每块≤' + F(gi.blk3) + ' MVA；' + LLCT[gi.llc][1]])],
       [L.te(['Power factor · voltage range', '功率因数 · 电压范围']), '≈ ' + F(gi.pfEst, 2), L.te(['0.9 lagging – 0.9 leading · ' + gi.vrange[0], '滞后0.9至超前0.9 · ' + gi.vrange[1]])],
       [L.te(['Fault clearing · studies', '故障切除 · 研究']), gi.clearMs ? '≤ ' + gi.clearMs + ' ms' : '20 kV OCR', L.te([gi.studies.length + ' studies, ≈ ' + gi.months + ' months', gi.studies.length + '项研究，约' + gi.months + '个月'])]];
+  }
+  function gimpTable(c) {
+    if (!c.R.gimp) return '';
+    var rows = vsBasis(gimpRows(c), rows0Of(gimpRows, c));
     return '<div><h3>' + L.te(['PLN Grid Impact Study — indicators of this design', 'PLN电网影响研究——本设计指标']) + '</h3>' + L.ptable([['Check', '校核项'], ['This design', '本设计'], ['Grid Code / note', '电网规范/说明']], rows) +
       '<div class="tc-rel" style="margin-top:10px"><button type="button" data-tco="gimp">' + L.te(['Grid Impact Study: limits, studies and process', '电网影响研究：限值、研究与流程']) + ' →</button></div></div>';
   }
   function chainTable(c) {
+    var rows = vsBasis(chainRows(c), rows0Of(chainRows, c));
+    return '<div><h3>' + L.te(['Power chain of this design — every rating follows the demand', '本设计供电链——各额定值随需量联动']) + '</h3>' + L.ptable([['Stage', '环节'], ['Arrangement', '配置'], ['Rating', '额定']], rows) + '</div>';
+  }
+  function chainRows(c) {
     var el = c.R.el, h = el.hv, rows = [];
     rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' · ' + h.circ + ' circuit(s)', h.name + ' · ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
     if (h.gis) rows.push([L.te(['HV substation (GIS, IEC 62271-203)', '高压变电站（GIS，IEC 62271-203）']), L.te(h.scheme), h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
@@ -58,7 +85,7 @@
     rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB · fault level', '主框架断路器 · 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA']);
     rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V sets with ATS', '400 V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
     rows.push([L.te(['UPS · batteries', 'UPS · 蓄电池']), el.upsLabel + ' · ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW · ' + F(el.battKWh) + ' kWh']);
-    return '<div><h3>' + L.te(['Power chain of this design — every rating follows the demand', '本设计供电链——各额定值随需量联动']) + '</h3>' + L.ptable([['Stage', '环节'], ['Arrangement', '配置'], ['Rating', '额定']], rows) + '</div>';
+    return rows;
   }
 
   /* ================================================================ unit library */

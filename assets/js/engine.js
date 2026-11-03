@@ -326,7 +326,9 @@
     var el = R.el, hv = el.hv, cap = R.cap, kv = hv.kv, S = el.mva, ssc = hv.ssc, scr = ssc / Math.max(S, 0.01);
     var row = scr < 20 ? 0 : (scr < 50 ? 1 : (scr < 100 ? 2 : (scr <= 1000 ? 3 : 4))), tbl = kv <= 66 ? TDD_TBL.lo : (kv <= 150 ? TDD_TBL.mid : TDD_TBL.hi);
     var tddLimit = tbl[row], upsShare = clamp(el.upsLoad / Math.max(el.demandKW, 1), 0, 1), drvShare = 0.8 * Math.max(0, 1 - upsShare - 0.02);   /* ≈ 80 % of the non-UPS load on variable-speed drives */
-    var tddNo = upsShare * 3 + drvShare * 35, tddAhf = upsShare * 3 + drvShare * 5, ahfAuto = tddNo > tddLimit;
+    /* drive current distortion by front end: 6-pulse with DC choke ≈ 35 %, 18-pulse ≈ 10 %, active front end ≈ 5 %; active filters bring a drive group to ≈ 5 % */
+    var vt = num(p.vfdThd, 0) > 0 ? clamp(num(p.vfdThd, 0), 3, 80) : 35;
+    var tddNo = upsShare * 3 + drvShare * vt, tddAhf = upsShare * 3 + drvShare * Math.min(vt, 5), ahfAuto = tddNo > tddLimit;
     var ahf = (p.ahf === true || p.ahf === 'YES') ? true : ((p.ahf === false || p.ahf === 'NO') ? false : ahfAuto);
     var tdd = ahf ? tddAhf : tddNo, thdLim = THDV_LIM[kv] || [1.5, 2.5], thdv = tdd * (S / ssc) * 5;
     var aiKW = (R.hdP && R.hdP.cat === 'AI') ? cap.hdR * cap.hd : 0, swing = num(p.aiSwing, -1) >= 0 ? num(p.aiSwing, 0) : (aiKW > 0 ? 50 : 0);
@@ -341,7 +343,7 @@
       ['Protection coordination with PLN (main and back-up, clearing time)', '与PLN的保护配合（主保护、后备保护、切除时间）']];
     if (kv > 20) studies.push(['Insulation coordination (IEC 60071) and substation earthing (IEEE 80)', '绝缘配合（IEC 60071）及变电站接地（IEEE 80）']);
     if (llc !== 'std' || aiKW > 0) studies.push(['Voltage ride-through and load-loss study (UPS input settings, staged re-transfer); EMT study of AI load oscillations', '电压穿越及失负荷研究（UPS输入设定、分级回切）；AI负荷振荡电磁暂态研究']);
-    return { kv: kv, ssc: ssc, pccIk: hv.pccIk, scr: scr, tddLimit: tddLimit, tddNo: tddNo, tddAhf: tddAhf, tdd: tdd, ahf: ahf, ahfAuto: ahfAuto, thdv: thdv, thdLim: thdLim,
+    return { kv: kv, ssc: ssc, pccIk: hv.pccIk, scr: scr, tddLimit: tddLimit, tddNo: tddNo, tddAhf: tddAhf, tdd: tdd, ahf: ahf, ahfAuto: ahfAuto, vt: vt, drvShare: drvShare, upsShare: upsShare, thdv: thdv, thdLim: thdLim,
              aiKW: aiKW, swing: swing, dvAi: dvAi, lossMW: lossMW, dvLoss: dvLoss, llc: llc, pfEst: pfEst, pfReq: '0.9 lagging – 0.9 leading', q: S * Math.sin(Math.acos(pfEst)),
              clearMs: CLEAR_MS[kv] || null, blk2: 0.02 * ssc, blk3: 0.03 * ssc, vrange: VRANGE[kv] || VRANGE[150], studies: studies, months: kv === 20 ? '1–2' : (kv <= 150 ? '3–6' : '6–12'), reply: 30 };
   }

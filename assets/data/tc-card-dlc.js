@@ -129,7 +129,14 @@
     id: 'DLC', abbr: 'DLC', title: ['Direct Liquid Cooling', '冷板式液冷'], short: ['Direct Liquid Cooling', '冷板液冷'], icon: 'drop',
     blurb: ['AI racks, cold plates, CDUs, warm-water heat rejection', 'AI机柜、冷板、CDU、温水散热'], badge: ['AI cooling', 'AI制冷'], basis: 'A08', units: UNITS, faq: FAQ,
     calc: Object.assign({}, X.CALC, { flowT: X.CALC.flow, cduT: X.CALC.cdu, floorT: X.CALC.floor, bessT: X.CALC.bess }),
-    basisOk: function (x) { return x.R.cool.liquidKW > 0; }, fallNote: ['The selected design has no liquid cooling; the card shows benchmark A08 (AI factory, Batam).', '所选设计无液冷；卡片显示基准A08（巴淡AI工厂）。'],
+    basisOk: function (x) { return x.R.cool.liquidKW > 0; },
+    /* the selected design has no liquid cooling: put its high-density racks on the nearest liquid-cooled platform (the proposal then selects direct liquid cooling) */
+    fallFix: function (x) {
+      var hp = x.R.hdP, best = DB.platforms.filter(function (q) { return q.cool === 'DLC' && !q.provisional; }).sort(function (a, b) { return Math.abs(a.kw - hp.kw) - Math.abs(b.kw - hp.kw); })[0];
+      if (!best) return null;
+      var chg = { hdPlat: best.id }; if (!(x.p.hdShare > 0)) chg.hdShare = 10;
+      return { chg: chg, label: ['Make the selected design liquid-cooled: high-density racks on ' + best.en.split(' (')[0] + ' (' + best.kw + ' kW)', '将所选设计改为液冷：高密度机柜采用' + best.zh.split('（')[0] + '（' + best.kw + ' kW）'] };
+    }, fallNote: ['The selected design has no liquid cooling; the card shows benchmark A08 (AI factory, Batam).', '所选设计无液冷；卡片显示基准A08（巴淡AI工厂）。'],
     gloss: [['TCS / FWS', '技术冷却环路/设施水系统', 'Technology cooling system (rack side) / facility water system (plant side), per ASHRAE.', 'ASHRAE定义的技术冷却环路（机柜侧）/设施水系统（机房侧）。'], ['QD', '快插接头', 'Quick disconnect coupling (dripless).', '无滴漏快插接头。'], ['PG25', '25%丙二醇', 'Water with 25 % propylene glycol.', '含25%丙二醇的水溶液。'], ['NVLink', 'NVLink', 'NVIDIA high-speed GPU interconnect.', 'NVIDIA高速GPU互连。']],
     sources: [['ASHRAE TC 9.9 liquid cooling guidelines (W classes)', 'ASHRAE TC 9.9液冷指南（W等级）'], ['OCP Advanced Cooling Solutions — cold plate requirements', 'OCP先进冷却方案——冷板要求'], ['NVIDIA / HPE GB300 NVL72 documentation (platform data in the knowledge base)', 'NVIDIA/HPE GB300 NVL72资料（知识库平台数据）'], ['Assessment engine liquid model (LIQ coefficients, CDU and dry-cooler sizing)', '评估引擎液冷模型（LIQ系数、CDU及干冷器选型）']],
     stage: function (c) {
