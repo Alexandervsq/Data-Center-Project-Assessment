@@ -204,12 +204,13 @@
     { kv: 20, ur: 24, cap: 10, lo: 0, hi: 30, ik: 25, cls: 'TM', en: '20 kV (PLN TM)', zh: '20 kV（PLN中压）' },
     { kv: 70, ur: 72.5, cap: 60, lo: 10, hi: 60, ik: 31.5, cls: 'TT', en: '70 kV (PLN TT)', zh: '70 kV（PLN高压）' },
     { kv: 150, ur: 170, cap: 200, lo: 30, hi: 300, ik: 40, cls: 'TT', en: '150 kV (PLN TT)', zh: '150 kV（PLN高压）' },
-    { kv: 230, ur: 245, cap: 400, lo: 100, hi: 600, ik: 50, cls: 'TT', intl: true, en: '220 / 230 kV (international)', zh: '220/230 kV（国际）' },
+    { kv: 230, ur: 245, cap: 400, lo: 100, hi: 600, ik: 50, cls: 'TT', intl: true, en: '220 / 230 kV (international · private grids)', zh: '220/230 kV（国际·私营电网）' },
     { kv: 275, ur: 300, cap: 600, lo: 200, hi: 900, ik: 40, cls: 'TET', en: '275 kV (PLN TET)', zh: '275 kV（PLN超高压）' },
     { kv: 500, ur: 550, cap: 1800, lo: 500, hi: 3000, ik: 50, cls: 'TET', en: '500 kV (PLN TET)', zh: '500 kV（PLN超高压）' }
   ];
-  /* transmission voltages by PLN system (planning view — confirm with PLN / RUPTL): 1 in service, 2 limited or legacy, 3 planned */
-  var KV_GRID = { JAMALI: { 20: 1, 70: 2, 150: 1, 500: 1 }, SUM: { 20: 1, 70: 2, 150: 1, 275: 1, 500: 3 }, BTM: { 20: 1, 150: 1 },
+  /* transmission voltages by PLN system (planning view — confirm with PLN / RUPTL): 1 in service, 2 limited or legacy, 3 planned,
+     4 private (non-PLN) grid — e.g. the 230 kV grid of PT Batamindo Investment Cakrawala in Batam (grid impact study Jan 2026, Stage-1 COD 2027) */
+  var KV_GRID = { JAMALI: { 20: 1, 70: 2, 150: 1, 500: 1 }, SUM: { 20: 1, 70: 2, 150: 1, 275: 1, 500: 3 }, BTM: { 20: 1, 150: 1, 230: 4 },
                   KAL: { 20: 1, 70: 2, 150: 1, 275: 2 }, SULSEL: { 20: 1, 70: 2, 150: 1, 275: 1 }, SULUT: { 20: 1, 70: 1, 150: 1 },
                   NUSA: { 20: 1, 70: 2, 150: 2 }, MAL: { 20: 1, 70: 2, 150: 2 } };
   function kvLevel(kv) { for (var i = 0; i < KV.length; i++) if (KV[i].kv === kv) return KV[i]; return KV[2]; }
@@ -224,9 +225,10 @@
   function kvName(kv) { return kv === 230 ? '220/230 kV' : kv + ' kV'; }
   /* assessment of a voltage level for the demand and the PLN system: std = standard, opt = possible / strategic (with conditions), no = not practical */
   function connAssess(kv, mva, gid, av, hi) {
-    var V = kvLevel(kv), a = V.intl ? 0 : (av[kv] || 0), circ = Math.max(hi ? 2 : 1, ceil(mva / V.cap) + (hi ? 1 : 0));
+    var V = kvLevel(kv), a = av[kv] || 0, circ = Math.max(hi ? 2 : 1, ceil(mva / V.cap) + (hi ? 1 : 0));
     function T(c, en, zh) { return { c: c, en: en, zh: zh }; }
-    if (V.intl) return T('no', '220/230 kV is the international level (Vietnam 220 kV; Philippines, Thailand, Singapore 230 kV), not a PLN voltage — in Indonesia use 150, 275 or 500 kV.', '220/230 kV为国际电压等级（越南220 kV；菲律宾、泰国、新加坡230 kV），非PLN电压——在印尼采用150、275或500 kV。');
+    if (kv === 230 && a === 4) return T('opt', 'Private 230 kV grid of PT Batamindo Investment Cakrawala (BIC), Batam: Setokok CFPP 3 × 350 MW, Batamindo and Setokok industrial-park substations with breaker-and-a-half GIS (4,000 A, 50 kA 3 s) and 230/20 kV transformers of 120–220 MVA (grid impact study Jan 2026, Stage-1 COD 2027). Supply, tariff and reliability are agreed with BIC, not PLN; on this isolated 3 × 350 MW system a unit trip needs load shedding.', '巴淡PT Batamindo Investment Cakrawala（BIC）私营230 kV电网：Setokok燃煤电厂3×350 MW，Batamindo及Setokok工业园变电站采用一个半断路器GIS（4,000 A，50 kA 3 s）及120–220 MVA 230/20 kV主变（2026年1月电网影响研究，一期2027年投运）。供电、电价及可靠性与BIC而非PLN约定；该3×350 MW孤立电网在机组跳闸时需切负荷。');
+    if (V.intl) return T('no', '220/230 kV is not a PLN voltage (PLN: 70, 150, 275, 500 kV); it is the level of neighbouring grids (Vietnam 220 kV; Philippines, Thailand, Singapore 230 kV) and of private industrial-park grids in Indonesia (e.g. BIC 230 kV, Batam) — on the PLN grid use 150, 275 or 500 kV.', '220/230 kV为国际电压等级（越南220 kV；菲律宾、泰国、新加坡230 kV），非PLN电压——在印尼采用150、275或500 kV。');
     if (!a) return T('no', kvName(kv) + ' is not available in this PLN system.', '本PLN电网无' + kvName(kv) + '电压等级。');
     var pl = a === 3 ? [' Planned in RUPTL — confirm the in-service date with PLN.', '该电压在RUPTL中为规划——须与PLN确认投运时间。'] : (a === 2 ? [' Limited / legacy network — confirm the nearest substation and spare capacity.', '有限/存量网络——须确认最近变电站及可用容量。'] : ['', '']);
     if (kv === 20) return mva <= 30 ? T('std', 'Standard up to 30 MVA (PLN TM, B-3 / I-3 tariff): ' + circ + ' dedicated 20 kV express feeders from PLN substations. A 20 kV distribution supply sees more outages and voltage dips than a 150 kV bay, so the generators start more often.', '30 MVA以内的标准方案（PLN中压，B-3/I-3电价）：由PLN变电站引出' + circ + '路20 kV专用馈线。20 kV配网的停电和电压暂降多于150 kV间隔，发电机启动更频繁。')
@@ -243,12 +245,22 @@
     return mva < 300 ? T('no', 'A 500 kV GITET is not justified below ≈ 300 MVA — PLN supplies such loads at 150 kV.', '约300 MVA以下不宜建500 kV超高压变电站——PLN以150 kV供电。')
       : T(a === 1 ? 'std' : 'opt', 'Standard from ≈ 300 MVA where a 500 kV line or GITET is near: 500 kV GIS (breaker-and-a-half) with 500/150 kV interbus transformers and a 150 kV campus network; the alternative is several 150 kV connections from different PLN substations.' + pl[0], '约300 MVA起、附近有500 kV线路或超高压变电站时的标准方案：500 kV GIS（一个半断路器）、500/150 kV联络变压器及园区150 kV网络；替代方案为由不同PLN变电站引出的多回150 kV接入。' + pl[1]);
   }
-  /* HV/MV transformer ratings: PLN standard 30 / 60 MVA (SPLN T3.007-2:2016), customer substations up to ≈ 250 MVA;
-     above ≈ 140 MVA a double-secondary (split-winding) unit feeds two 20 kV boards (each ≤ 4,000 A). Typical impedance ≥ IEC 60076-5 minimum. */
+  /* HV/MV transformer ratings: PLN standard 30 / 60 MVA (SPLN T3.007-2:2016); customer substations up to ≈ 250 MVA — data centers CGK-01/02 at Deltamas
+     3 × 150 MVA 150/20 kV (grid impact study Aug 2026), BIC Batam 2 × 120 and 4 × 220 MVA 230/20 kV (Jan 2026). Impedance ≥ IEC 60076-5 minimum and, for large
+     units, high enough to keep the 20 kV fault level within the switchgear rating: 120 MVA 14.5 %, 150 MVA 20–24 %, 220 MVA 19.8 % in those projects.
+     Two-winding units; above ≈ 100 MVA the 20 kV side feeds a board in two sections (each ≤ 2,500 A). */
   var HT_STD = [20, 30, 45, 60, 80, 100, 120, 150, 200, 250];
-  function htUk(sz) { return sz <= 40 ? 10 : (sz <= 63 ? 12.5 : (sz <= 100 ? 13.5 : 15)); }
+  /* design impedance of one project = max(typical value for the rating — SPLN 30 MVA 10 %, 60 MVA 12.5 %, IEC 60076-5 minimum 12.5 % above 63 MVA —,
+     impedance that keeps the 20 kV fault level ≤ 90 % of the 20 kV switchgear rating with the actual upstream short-circuit power);
+     25 kA boards (PLN standard) first, 31.5 / 40 kA boards when 25 kA would need more than ≈ 24 % */
+  function htUk(sz, sscUp) {
+    var base = sz <= 40 ? 10 : (sz <= 63 ? 12.5 : (sz <= 100 ? 12.5 : 13)), up = sscUp > 0 ? sz / sscUp : 0, uk = base;
+    for (var i = 0, RT = [25, 31.5, 40]; i < RT.length; i++) { var req = (sz * 1.05 / (0.9 * RT[i] * 1.732 * 20) - up) * 100; if (req <= 24) { uk = Math.max(base, Math.ceil(req * 2) / 2); break; } }
+    return uk;
+  }
   /* planning fault level at the connection point (network short-circuit power for power-quality and voltage-step checks); PLN gives the actual value on request (Grid Code CCA1 2) */
-  function pccIkRule(kv, gid) { return kv === 500 ? 40 : (kv === 275 ? 20 : (kv === 230 ? 25 : (kv === 150 ? (gid === 'JAMALI' ? 25 : 15) : 10))); }
+  /* three-phase planning values; single-phase faults near solidly earthed substations are ≈ 1.3–1.4 × higher (Deltamas data center 150 kV: 26.5 kA three-phase, 34.1 kA single-phase) */
+  function pccIkRule(kv, gid) { return kv === 500 ? 40 : (kv === 275 ? 20 : (kv === 230 ? (gid === 'BTM' ? 12 : 25) : (kv === 150 ? (gid === 'JAMALI' ? 25 : 15) : 10))); }
   function connection(mva, p, L) {
     var gid = L.grid, av = KV_GRID[gid] || {}, rule = kvRule(mva, gid);
     var kv = [20, 70, 150, 230, 275, 500].indexOf(Math.round(num(p.hvKV, 0))) >= 0 ? Math.round(num(p.hvKV, 0)) : rule, V = kvLevel(kv), hi = p.tier >= 3;
@@ -257,9 +269,11 @@
       : kv <= 150 ? (hi ? ['Double busbar with bus coupler', '双母线+母联'] : ['Single busbar with bus section', '单母线分段'])
       : kv === 500 ? ['Breaker-and-a-half (PLN 500 kV practice)', '一个半断路器接线（PLN 500 kV惯例）'] : (hi ? ['Breaker-and-a-half or double busbar', '一个半断路器或双母线'] : ['Double busbar', '双母线']);
     /* equipment short-time rating (PLN practice) vs the network fault level at the connection point */
-    var ik = (kv === 150 && gid === 'JAMALI' && mva > 150) ? 50 : (kv === 500 && gid === 'JAMALI' ? 63 : V.ik);
-    var pccRule = pccIkRule(kv, gid), pccIk = num(p.ikPCC, 0) > 0 ? num(p.ikPCC, 0) : pccRule, ssc = 1.732 * kv * pccIk;
-    if (pccIk > ik) ik = pick([25, 31.5, 40, 50, 63, 80], pccIk);                  /* switchgear short-time rating ≥ network fault level */
+    /* switchgear short-time rating ≥ 1.25 × the larger of the three- and single-phase planning fault levels (growth over the asset life) and not below the
+       PLN minimum of the level (150 / 275 kV 40 kA, 230 / 500 kV 50 kA); single-phase ≈ 1.3 × three-phase at ≤ 230 kV near solidly earthed transformers
+       (Deltamas data center 150 kV: 26.5 / 34.1 kA), ≈ 1.1 × at 275 / 500 kV — e.g. Java–Bali 150 kV → 50 kA as installed at Deltamas, 500 kV → 63 kA */
+    var pccRule = pccIkRule(kv, gid), pccIk = num(p.ikPCC, 0) > 0 ? num(p.ikPCC, 0) : pccRule, ssc = 1.732 * kv * pccIk, pccIk1 = Math.round(pccIk * (kv >= 275 ? 11 : 13)) / 10;
+    var ik = Math.max(V.ik, pick([25, 31.5, 40, 50, 63, 80], 1.25 * Math.max(pccIk, pccIk1)));
     var sscMax = 1.732 * kv * ik;
     var I = mva * 1000 / (1.732 * kv), busMin = kv === 20 ? 630 : (kv <= 150 ? 2000 : (kv === 500 ? 4000 : 3150));
     var busA = Math.max(busMin, pick([630, 1250, 2000, 2500, 3150, 4000, 5000], I * 1.2));
@@ -273,18 +287,21 @@
     if (kv > 20) {
       var lowHV = ibt ? 150 : kv;
       var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : (mva <= 400 ? 100 : 150))));
-      var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm), split = hm > 140;
-      ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + '/20' + (split ? '/20' : '') + ' kV', hv: lowHV, uk: htUk(hm), split: split, onan: Math.round(hm * 0.7) };
+      var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm), sec = hm > 100 ? 2 : 1;
+      ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + '/20 kV', hv: lowHV, uk: htUk(hm, ssc150), sec: sec, split: false, onan: Math.round(hm * 0.7) };
+      /* RUPTL 2025–2034 loading criteria: normal ≤ 80 %, any one unit out ≤ 100 % (N-1) — add units until both hold */
+      while (p.tier >= 3 && (mva / ((hN + ht.r) * hm) > 0.8 || (hN + ht.r > 1 && mva / ((hN + ht.r - 1) * hm) > 1))) ht.r++;
       ht.total = ht.n + ht.r; ht.load = mva / (ht.total * hm) * 100; ht.loadOut = ht.total > 1 ? mva / ((ht.total - 1) * hm) * 100 : null;
     }
     /* 20 kV boards: one per HV/MV transformer (two per split-winding unit); fault level from the upstream short-circuit power and the transformer impedance (+5 % motor / UPS contribution) */
-    var sb = ht ? (ht.split ? ht.mva / 2 : ht.mva) : mva, boards = ht ? ht.total * (ht.split ? 2 : 1) : 1, mvI = sb * 1000 / (1.732 * 20);
-    var ik20 = ht ? sb / ((sb / ssc150 + ht.uk / 100) * 1.732 * 20) * 1.05 : 0;
+    /* 20 kV boards: one per HV/MV transformer, in two sections above ≈ 100 MVA; the fault level of the whole transformer (+5 % motor / UPS contribution) applies to both sections */
+    var sb = ht ? ht.mva / ht.sec : mva, boards = ht ? ht.total * ht.sec : 1, mvI = sb * 1000 / (1.732 * 20);
+    var ik20 = ht ? ht.mva / ((ht.mva / ssc150 + ht.uk / 100) * 1.732 * 20) * 1.05 : 0;
     var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: ht ? Math.max(25, pick([25, 31.5, 40, 50], ik20)) : (mva > 10 ? 25 : 20), ikCalc: ik20, boards: boards, ssc150: ssc150, sb: sb };
     mv.gis = mv.busA > 2500;
     var fit = mva > V.hi ? 'over' : (mva < V.lo ? 'under' : 'ok'), asm = connAssess(kv, mva, gid, av, hi);
     var opts = KV.map(function (o) {
-      return { kv: o.kv, ur: o.ur, en: o.en, zh: o.zh, lo: o.lo, hi: o.hi, cap: o.cap, intl: !!o.intl, avail: o.intl ? 0 : (av[o.kv] || 0), fit: mva > o.hi ? 'over' : (mva < o.lo ? 'under' : 'ok'),
+      return { kv: o.kv, ur: o.ur, en: o.en, zh: o.zh, lo: o.lo, hi: o.hi, cap: o.cap, intl: !!o.intl, avail: av[o.kv] || 0, fit: mva > o.hi ? 'over' : (mva < o.lo ? 'under' : 'ok'),
                asm: connAssess(o.kv, mva, gid, av, hi), circ: hi ? Math.max(2, ceil(mva / o.cap) + 1) : ceil(mva / o.cap), rule: o.kv === rule, sel: o.kv === kv };
     });
     var lead = kv >= 275 || kv === 230 ? 36 : (kv >= 70 ? 24 : (mva > 2 ? 12 : 6));
@@ -292,23 +309,25 @@
     var volt = kv === 20 ? (mva <= 2 ? ['LV/MV service (≤ 20 kV, PLN TM)', '低压/中压供电（≤20 kV，PLN中压）'] : ['MV 20 kV (PLN TM), ' + circ + ' dedicated feeders', '中压20 kV（PLN中压），' + circ + '路专用馈线'])
       : kv === 70 ? ['HV 70 kV (PLN TT) with on-site GIS substation', '高压70 kV（PLN高压），自建GIS变电站']
       : kv === 150 ? ['HV 150 kV (PLN TT) with on-site GIS substation', '高压150 kV（PLN高压），自建GIS变电站']
-      : kv === 230 ? ['220/230 kV GIS substation (international practice, not a PLN voltage)', '220/230 kV GIS变电站（国际做法，非PLN电压等级）']
+      : kv === 230 ? (av[230] === 4 ? ['230 kV private grid (BIC, Batam) with on-site GIS substation — not PLN', '230 kV私营电网（BIC，巴淡），自建GIS变电站——非PLN'] : ['220/230 kV GIS substation (international practice, not a PLN voltage)', '220/230 kV GIS变电站（国际做法，非PLN电压等级）'])
       : ['EHV ' + kv + ' kV (PLN TET) GIS substation with ' + kv + '/150 kV transformers', '超高压' + kv + ' kV（PLN超高压）GIS变电站，配' + kv + '/150 kV变压器'];
-    return { kv: kv, rule: rule, name: kvName(kv), ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, ik: ik, busA: busA,
-             pccIk: pccIk, pccRule: pccRule, ssc: ssc, ibt: ibt, ht: ht, mv: mv, fit: fit, asm: asm, avail: V.intl ? 0 : (av[kv] || 0), opts: opts, lead: lead, cost: cost, volt: volt };
+    return { kv: kv, rule: rule, name: kvName(kv), gisName: kvName(kv) + ' GIS (Ur ' + V.ur + ' kV)', ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, ik: ik, busA: busA,
+             pccIk: pccIk, pccIk1: pccIk1, pccRule: pccRule, ssc: ssc, ibt: ibt, ht: ht, mv: mv, fit: fit, asm: asm, avail: av[kv] || 0, opts: opts, lead: lead, cost: cost, volt: volt };
   }
 
   /* PLN grid impact (Grid Code Permen ESDM 20/2020, Lampiran I Jawa-Madura-Bali: CC 3 performance, CC 5.1 connection studies, Appendix 1) */
-  var TDD_TBL = { lo: [5, 8, 12, 15, 20], mid: [2.5, 4, 6, 7.5, 10], hi: [2.5, 4, 4, 4, 4] };
+  /* Grid Code Table 5 (JAMALI): Vn ≤ 66 kV and 66 < Vn ≤ 150 kV as listed; Vn ≥ 150 kV defines only Isc/IL < 20 (2.5 %) and 20–50 (4.0 %) —
+     above 50 the stricter IEEE 519-2022 value for > 161 kV (3.75 %) is used */
+  var TDD_TBL = { lo: [5, 8, 12, 15, 20], mid: [2.5, 4, 6, 7.5, 10], hi: [2.5, 4, 3.75, 3.75, 3.75] };
   var THDV_LIM = { 20: [3, 5], 70: [3, 5], 150: [1.5, 2.5], 230: [1.5, 2.5], 275: [1, 1.5], 500: [1, 1.5] };
   var CLEAR_MS = { 500: 90, 275: 100, 230: 100, 150: 120, 70: 150 };
   var VRANGE = { 500: ['±5 %', '±5%'], 275: ['±5 %', '±5%'], 230: ['±5 %', '±5%'], 150: ['+5 % / −10 %', '+5%/−10%'], 70: ['+5 % / −10 %', '+5%/−10%'], 20: ['per PLN distribution code', '按PLN配电规范'] };
   /* Grid Code requirements at the connection point, the connection process and lessons on large data-center loads — shown by the simulation and the knowledge documents */
   var GRID_CODE = {
     limits: [[['Frequency (50 Hz)', '频率（50 Hz）'], ['49.0–51.0 Hz continuous; 47.5–49.0 and 51.0–51.5 Hz ≥ 90 min; 51.5–52.0 Hz ≥ 15 min; 47.0–47.5 Hz ≥ 6 s', '49.0–51.0 Hz连续运行；47.5–49.0及51.0–51.5 Hz≥90 min；51.5–52.0 Hz≥15 min；47.0–47.5 Hz≥6 s']],
-      [['Voltage range', '电压范围'], ['500 / 275 kV ± 5 %; 150 / 66 kV + 5 % / − 10 % (maximum 550 / 300 / 170 / 72.5 kV)', '500/275 kV ±5%；150/66 kV +5%/−10%（最高550/300/170/72.5 kV）']],
+      [['Voltage range · maximum voltage (Grid Code Table 3)', '电压范围·最高电压（电网规范表3）'], ['500 / 275 kV ± 5 %; 150 / 66 kV + 5 % / − 10 %; maximum 550 / 300 / 170 / 72.5 kV — the rated voltage (Ur) of the switchgear, hence "150 kV GIS, Ur 170 kV"', '500/275 kV ±5%；150/66 kV +5%/−10%；最高550/300/170/72.5 kV——即开关设备额定电压（Ur），故称“150 kV GIS，Ur 170 kV”']],
       [['Voltage THD (individual / total)', '电压THD（单次/总）'], ['66 kV 3.0 / 5.0 %; 150 kV 1.5 / 2.5 %; 500 kV 1.0 / 1.5 %', '66 kV 3.0/5.0%；150 kV 1.5/2.5%；500 kV 1.0/1.5%']],
-      [['Current TDD by Isc/IL (< 20 · 20–50 · 50–100 · 100–1,000 · > 1,000)', '电流TDD按Isc/IL（<20·20–50·50–100·100–1,000·>1,000）'], ['≤ 66 kV ' + TDD_TBL.lo.join(' · ') + ' %; 66–150 kV ' + TDD_TBL.mid.join(' · ') + ' %; above 150 kV 2.5 · 4.0 % (higher ratios taken as 20–50)', '≤66 kV ' + TDD_TBL.lo.join('·') + '%；66–150 kV ' + TDD_TBL.mid.join('·') + '%；150 kV以上2.5·4.0%（更高短路比按20–50取值）']],
+      [['Current TDD by Isc/IL (< 20 · 20–50 · 50–100 · 100–1,000 · > 1,000)', '电流TDD按Isc/IL（<20·20–50·50–100·100–1,000·>1,000）'], ['≤ 66 kV ' + TDD_TBL.lo.join(' · ') + ' %; 66–150 kV ' + TDD_TBL.mid.join(' · ') + ' %; ≥ 150 kV 2.5 · 4.0 % (Grid Code lists only Isc/IL < 50; above that IEEE 519-2022 > 161 kV: 3.75 %)', '≤66 kV ' + TDD_TBL.lo.join('·') + '%；66–150 kV ' + TDD_TBL.mid.join('·') + '%；≥150 kV 2.5·4.0%（电网规范仅列Isc/IL<50；以上按IEEE 519-2022 >161 kV：3.75%）']],
       [['Flicker · voltage steps · unbalance', '闪变·电压阶跃·不平衡'], ['Pst 0.8 / Plt 0.6 at 66–500 kV (1.0 / 0.8 below 66 kV); steps ≤ 2 % repetitive, ≤ 3 % infrequent, ≤ 5 % motor-start dips; negative sequence ≤ 1 % (2 % short peaks)', '66–500 kV Pst 0.8/Plt 0.6（66 kV以下1.0/0.8）；阶跃重复≤2%、偶发≤3%、电机启动暂降≤5%；负序≤1%（短时峰值2%）']],
       [['Power factor', '功率因数'], ['0.9 lagging – 0.9 leading at the connection point (half-hourly)', '接入点滞后0.9至超前0.9（每半小时）']],
       [['Fault clearing (main protection)', '故障切除（主保护）'], ['500 kV ≤ 90 ms; 275 kV ≤ 100 ms; 150 kV ≤ 120 ms; 66 kV ≤ 150 ms; 20 kV OCR incoming ≤ 1 s, feeders ≤ 0.7 s; resistance-earthed ground-fault relays ≤ 50 % of the resistor time rating', '500 kV≤90 ms；275 kV≤100 ms；150 kV≤120 ms；66 kV≤150 ms；20 kV进线过流≤1 s、馈线≤0.7 s；电阻接地系统接地继电器≤电阻时间额定的50%']],
@@ -322,6 +341,25 @@
       ['NERC Level 2 alert (Sep 2025) and Level 3 Essential Actions (May 2026) on large computational loads: ride-through settings, staged re-transfer, load models for studies', 'NERC二级警示（2025年9月）及三级必要措施（2026年5月）：大型计算负荷的穿越设定、分级回切、研究用负荷模型'],
       ['ERCOT studies loads ≥ 75 MW as large loads; ride-through aligned with PRC-024 / PRC-029 and IEEE 2800 practice', 'ERCOT将≥75 MW负荷按大负荷研究；穿越要求参照PRC-024/PRC-029及IEEE 2800']]
   };
+  /* reference grid impact studies reviewed for the knowledge base (CCEPC project files): parameters used as calibration, not as a design basis */
+  var REF_STUDIES = [
+    { id: 'MADANI', t: ['Data centers CGK-01 / CGK-02, Deltamas (West Java, JAMALI) — draft grid impact study, 12 Aug 2026', '数据中心CGK-01/CGK-02，德尔塔马斯（西爪哇，JAMALI）——电网影响研究草稿，2026年8月12日'], rows: [
+      [['Connection', '接入'], ['Dedicated 150 kV underground cables, two circuits each, to PLN 150 kV substations Deltamas (CGK-01) and Margakarya (CGK-02); Cu 1,000 mm² N2XCAS2Y 787 A (1,200 mm² 773 A at river crossings), 0.161 Ω/km, 0.231 µF/km', '专用150 kV电缆，各两回，接入PLN 150 kV德尔塔马斯（CGK-01）及Margakarya（CGK-02）变电站；铜芯1,000 mm² N2XCAS2Y 787 A（过河段1,200 mm² 773 A），0.161 Ω/km，0.231 µF/km']],
+      [['Demand', '需量'], ['CGK-01 51.0 MW (2026) → 156.6 MW (2027) = 111.8 MW IT + 44.7 MW general; CGK-02 126.3 MW = 90.2 MW IT + 36.1 MW general', 'CGK-01 51.0 MW（2026）→156.6 MW（2027）=IT 111.8 MW+一般负荷44.7 MW；CGK-02 126.3 MW=IT 90.2 MW+一般负荷36.1 MW']],
+      [['HV/MV transformers', '主变'], ['3 × 150 MVA 150/20 kV per data center, uk 24 %, YNd11, OLTC 17 positions (± 8 × 1.25 %); loaded 37–42 % in 2027', '每个数据中心3×150 MVA 150/20 kV，uk 24%，YNd11，有载调压17档（±8×1.25%）；2027年负载率37–42%']],
+      [['Switchgear', '开关设备'], ['150 kV: Um 170 kV, solidly earthed, BIL 750 kV (switchgear) / 650 kV (transformers), 1-min 325 / 275 kV, 40–50 kA 1 s — installed 50 kA; 20 kV: one bus per transformer, 31.5 kA', '150 kV：Um 170 kV，直接接地，雷电冲击750 kV（开关）/650 kV（变压器），1分钟工频325/275 kV，40–50 kA 1 s——实装50 kA；20 kV：每台主变一段母线，31.5 kA']],
+      [['Fault levels', '短路水平'], ['150 kV CGK-01 24.1 → 26.5 kA three-phase, 25.8 → 34.1 kA single-phase; CGK-02 12.1 / 16.8 kA; 20 kV 17.6–19.7 kA three-phase, 2.6 kA single-phase (earth fault limited)', '150 kV CGK-01三相24.1→26.5 kA、单相25.8→34.1 kA；CGK-02 12.1/16.8 kA；20 kV三相17.6–19.7 kA，单相2.6 kA（接地故障受限）']],
+      [['Criteria', '准则'], ['JAMALI Grid Code, SPLN T6.001:2013 voltage, RUPTL 2025–2034 static N-1 and transformer loading 70–80 %, IEC 60909, 150 kV fault clearing ≤ 120 ms', 'JAMALI电网规范、SPLN T6.001:2013电压、RUPTL 2025–2034静态N-1及主变负载率70–80%、IEC 60909、150 kV故障切除≤120 ms']],
+      [['Harmonics', '谐波'], ['IT load modelled as 12-pulse sources (DIgSILENT library): current distortion exceeds the limits (voltage too in 2027) → verify with actual UPS / IT data, add filters if still exceeded; AFE / IGBT UPS < 5 % THDi, 6-pulse 25–35 %', 'IT负荷按12脉波谐波源建模（DIgSILENT库）：电流畸变超限（2027年电压亦超）→须以实际UPS/IT数据复核，仍超限则加装滤波器；有源前端/IGBT UPS THDi<5%，6脉波25–35%']],
+      [['Protection', '保护'], ['150 kV cables: main line current differential (87L), remote back-up distance (21), local back-up OCR / GFR; communication failure blocks 87L and enables distance (no LCD trip)', '150 kV电缆：主保护线路差动（87L），远后备距离（21），近后备过流/接地；通信故障时闭锁差动并投入距离保护（不误跳）']],
+      [['Load characteristics', '负荷特性'], ['Load factor 85–99 %, displacement PF 0.99–1.00 (true PF 0.98–0.99), supply ± 5 %, voltage unbalance < 1 %, current unbalance < 5 %; JAMALI 2026 peak ≈ 35,440 MW, stiffness 1,377.6 MW/Hz', '负荷率85–99%，位移功率因数0.99–1.00（真功率因数0.98–0.99），电压±5%，电压不平衡<1%，电流不平衡<5%；JAMALI 2026年峰荷约35,440 MW，刚度1,377.6 MW/Hz']]] },
+    { id: 'BIC', t: ['BIC 230 kV private grid, Batam (Batamindo / Setokok industrial parks) — final grid impact study, 22 Jan 2026', 'BIC 230 kV私营电网，巴淡（Batamindo/Setokok工业园）——电网影响研究终稿，2026年1月22日'], rows: [
+      [['System', '系统'], ['Setokok CFPP 3 × 350 MW, PV 160 MWac, BESS 50 MW / 50 MWh; loads 70 MW Batamindo IP + 3 × 200 MW Setokok IP; isolated (not PLN)', 'Setokok燃煤电厂3×350 MW、光伏160 MWac、储能50 MW/50 MWh；负荷Batamindo工业园70 MW+Setokok工业园3×200 MW；孤网（非PLN）']],
+      [['230 kV switchgear', '230 kV开关设备'], ['Breaker-and-a-half GIS 4,000 A, 50 kA 3 s; Um 245 kV; BIL 900 kV; transformer SIL 745 kV; 1-min 425 kV', '一个半断路器GIS 4,000 A，50 kA 3 s；Um 245 kV；雷电冲击900 kV；变压器操作冲击745 kV；1分钟工频425 kV']],
+      [['230/20 kV transformers', '230/20 kV主变'], ['Batamindo IP 2 × 120 MVA YNynd1, 14.5 %, 20 kV NGR 14 Ω; Setokok IP 4 × 220 MVA YNd11, 19.8 % (three loaded 96 % → run the standby unit)', 'Batamindo工业园2×120 MVA YNynd1，14.5%，20 kV中性点电阻14 Ω；Setokok工业园4×220 MVA YNd11，19.8%（三台负载96%→投运备用机组）']],
+      [['Criteria', '准则'], ['Double circuits ≤ 50 % each (N-1), transformers ≤ 80 % (RUPTL 2025–2034); voltage ± 5 % (Sumatra Grid Code); load PF 0.9 lagging – 0.9 leading; IEEE 519-2022; flicker Pst / Plt LV 1.0 / 0.8, MV 0.9 / 0.7, HV-EHV 0.8 / 0.6', '双回线每回≤50%（N-1），主变≤80%（RUPTL 2025–2034）；电压±5%（苏门答腊电网规范）；负荷功率因数滞后0.9至超前0.9；IEEE 519-2022；闪变Pst/Plt低压1.0/0.8、中压0.9/0.7、高压-超高压0.8/0.6']],
+      [['Results', '结果'], ['Maximum fault 11.2 kA three-phase / 14.7 kA single-phase (≈ 21.4 kA at Stage 2); clearing ≤ 100 ms, CFCT 600 ms; loss of two units or of the double circuit to Setokok IP collapses the grid; load steps limited to ≈ 54 MW by unit ramp (3 %/min)', '最大短路三相11.2 kA/单相14.7 kA（二期约21.4 kA）；切除≤100 ms，临界切除时间600 ms；失去两台机组或至Setokok工业园双回线将导致电网崩溃；负荷阶跃受机组爬坡（3%/min）限制约54 MW']]] }
+  ];
   function gridImpact(p, R) {
     var el = R.el, hv = el.hv, cap = R.cap, kv = hv.kv, S = el.mva, ssc = hv.ssc, scr = ssc / Math.max(S, 0.01);
     var row = scr < 20 ? 0 : (scr < 50 ? 1 : (scr < 100 ? 2 : (scr <= 1000 ? 3 : 4))), tbl = kv <= 66 ? TDD_TBL.lo : (kv <= 150 ? TDD_TBL.mid : TDD_TBL.hi);
@@ -404,7 +442,13 @@
     var txLoad = p.txLoad > 0 ? p.txLoad / 100 : K.TX_LOAD;
     var txRule = demandKVA / txLoad <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], demandKVA / txLoad) : (demandKVA > 40000 ? 3150 : 2500);
     var txSize = p.txKVA > 0 ? p.txKVA : txRule;
-    var txN = ceil(demandKVA / (txSize * txLoad)), txR = redundancy(p.tier, txN, 'tx'); if (p.tier === 3 && txN === 1) txR = 1;
+    /* MV/LV redundancy architecture: N1 = one standby per group of six (block redundant), DR = distributed redundant "3-make-2" (any two of three carry the group,
+       e.g. Schneider Electric reference design RD101: six 2.5 MVA units per 9.36 MW data hall), 2N = A/B pairs (each side carries the whole block) */
+    var txArch = ['N1', 'DR', '2N'].indexOf(p.txArch) >= 0 ? p.txArch : (p.tier >= 4 ? '2N' : 'N1');
+    function txCount(sz, ld, arch) { var n = ceil(demandKVA / (sz * ld)), r; if (arch === '2N') r = n; else if (arch === 'DR') r = ceil(n / 2) * 3 - n; else { r = p.tier >= 3 ? Math.max(1, ceil(n / 6)) : 0; } return { n: n, r: r, t: n + r }; }
+    var txc = txCount(txSize, txLoad, txArch), txN = txc.n, txR = txc.r;
+    var txAlt = [2500, 3150, 4000].map(function (sz) { return { kva: sz, N1: txCount(sz, txLoad, 'N1').t, DR: txCount(sz, txLoad, 'DR').t, '2N': txCount(sz, txLoad, '2N').t }; });
+    var itKVA = (itKW + mechUPS) * (1 + K.UPS_LOSS) / K.PF, txIT = Math.min(txN, ceil(itKVA / (txSize * txLoad)));
     /* LV side of one transformer: full-load current → main ACB (IEC 60947-2), fault level → switchboard rating (IEC 61439-2) */
     var txUk = p.txUk > 0 ? p.txUk : (txSize <= 630 ? 4 : (txSize <= 1250 ? 5 : (txSize <= 2500 ? 6 : 7))), lvI = txSize * 1000 / (1.732 * 400), lvIk = lvI / (txUk / 100) / 1000;
     var lv = { i: lvI, acb: pick([630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6300], lvI), ik: lvIk, icw: pick([50, 65, 80, 100], lvIk), uk: txUk };
@@ -454,12 +498,14 @@
       var bmw = p.bessSh > 0 ? Math.max(0.05, itMW * p.bessSh / 100) : p.bessMW, mwh = bmw * Math.max(0.25, p.bessH);
       bess = { mw: bmw, mwh: mwh, h: p.bessH, containers: ceil(mwh / K.BESS_MWH_BOX), area: ceil(mwh / K.BESS_MWH_BOX) * 40, capex: mwh * 1000 * BESS_USD_KWH };
     }
-    R.el = { upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
+    /* MV generator plant paralleled with the utility (closed-transition transfer): its fault contribution (X"d ≈ 0.15) adds to the 20 kV boards */
+    if (genV === 'MV') { var gpb = ceil((genN + genR) / Math.max(1, hv.mv.boards)), ikGen = gpb * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); hv.mv.ikGen = ikGen; var ikT = hv.mv.ikCalc + ikGen; if (ikT > hv.mv.ik) hv.mv.ik = pick([25, 31.5, 40, 50, 63], ikT); }
+    R.el = { txArch: txArch, txAlt: txAlt, txIT: txIT, itKVA: itKVA, upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
              txSize: txSize, txRule: txRule, txLoad: txLoad, txN: txN, txR: txR, txTotal: txN + txR, lv: lv, genSize: genSize, genRule: genRule, genN: genN, genR: genR, genTotal: genN + genR, genV: genV,
              fuelQ: fuelQ, fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tankRule: tankRule, tanks: tanks, upsSize: upsSize, upsRule: upsRule, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
              battAge: battAge, battKWh: battKWh, rows: rows, rackRow: rackRow, rowStd: nStd, rowHd: nHd, rowsStd: rowsStd, rowsHd: rowsHd, useBusway: useBusway, bwA: bwA, bwHdA: bwHdA, busways: busways,
              pdus: pdus, rpdus: rpdus, rStd: rStd, rHd: rHd,
-             feedsPerRack: feedsPerRack, txLabel: redLabel(txN, txR), genLabel: redLabel(genN, genR), upsLabel: redLabel(upsN, upsR),
+             feedsPerRack: feedsPerRack, txLabel: txArch === 'DR' ? 'DR 3-make-2' : redLabel(txN, txR), genLabel: redLabel(genN, genR), upsLabel: redLabel(upsN, upsR),
              gridOK: !(p.gridMVA > 0 && p.gridMVA < mva), bess: bess };
 
     /* ------------------------------------------------ mechanical */
@@ -752,7 +798,8 @@
       if (gi.llc !== 'std') add(gi.llc === 'vlarge' ? 'H' : 'M', 'Voltage-sensitive load of ≈ ' + fmt(gi.lossMW, 0) + ' MW could transfer to UPS batteries during one grid fault (NERC 2025–2026 large-load alerts).', '约' + fmt(gi.lossMW, 0) + ' MW的电压敏感负荷可能在一次电网故障中同时转入UPS电池（NERC 2025–2026大负荷警示）。', 'Agree ride-through settings and staged re-transfer with PLN; include it in the grid impact study.', '与PLN约定穿越设定及分级回切；纳入电网影响研究。');
       if (gi.scr < 20) add(gi.scr < 10 ? 'H' : 'M', 'Low short-circuit ratio at ' + hv.name + ' (Isc/IL ≈ ' + fmt(gi.scr, 0) + '): losing the whole load at once would shift the voltage by ≈ ' + fmt(gi.dvLoss, 1) + ' %, and the strictest harmonic limits apply.', hv.name + '短路比偏低（Isc/IL约' + fmt(gi.scr, 0) + '）：全部负荷同时失去将使电压变化约' + fmt(gi.dvLoss, 1) + '%，并适用最严格的谐波限值。', 'Connect at a higher voltage or to a stronger PLN substation; re-transfer the load in blocks ≤ ' + fmt(gi.blk3, 0) + ' MVA; dynamic studies in the grid impact study.', '提高接入电压或接入更强的PLN变电站；负荷分块回切（每块≤' + fmt(gi.blk3, 0) + ' MVA）；在电网影响研究中开展动态研究。');
     }
-    if (hv.intl) add('M', '220/230 kV is not a PLN transmission voltage (PLN uses 150, 275 and 500 kV).', '220/230 kV不是PLN输电电压等级（PLN采用150、275、500 kV）。', 'Applies to sites outside Indonesia; in Indonesia use 150, 275 or 500 kV.', '仅适用于印尼以外站点；印尼境内采用150、275或500 kV。');
+    if (hv.intl && hv.avail === 4) add('M', 'Connection to the private BIC 230 kV grid (not PLN): supply contract, tariff and reliability are set by the grid owner; the isolated 3 × 350 MW system needs load shedding for a unit trip and its loss of two units can collapse the grid (BIC grid impact study, Jan 2026).', '接入私营BIC 230 kV电网（非PLN）：供电合同、电价及可靠性由电网业主确定；该3×350 MW孤立电网机组跳闸需切负荷，两台机组失去可能导致电网崩溃（BIC电网影响研究，2026年1月）。', 'Agree supply security (reserve, load shedding, ride-through) with BIC; keep generator autonomy and BESS as for a weak grid.', '与BIC约定供电保障（备用、切负荷、穿越）；按弱电网配置发电机自持及储能。');
+    else if (hv.intl) add('M', '220/230 kV is not a PLN transmission voltage (PLN uses 150, 275 and 500 kV).', '220/230 kV不是PLN输电电压等级（PLN采用150、275、500 kV）。', 'Applies to sites outside Indonesia; in Indonesia use 150, 275 or 500 kV.', '仅适用于印尼以外站点；印尼境内采用150、275或500 kV。');
     else if (!hv.avail) add('H', hv.name + ' is not available in the ' + gEn + '.', gZh + '无' + hv.name + '电压等级。', 'Use a voltage available in this PLN system (recommended ' + kvName(hv.rule) + ').', '采用该PLN电网现有电压等级（建议' + kvName(hv.rule) + '）。');
     else if (hv.avail === 3) add('M', hv.name + ' in the ' + gEn + ' is planned (RUPTL), not yet in service — timing risk.', gZh + '的' + hv.name + '为规划（RUPTL）尚未投运——存在时间风险。', 'Confirm the RUPTL schedule with PLN; phase the campus or connect early phases at a lower voltage.', '与PLN确认RUPTL进度；园区分期或早期以较低电压接入。');
     else if (hv.avail === 2) add('L', hv.name + ' is limited / legacy in the ' + gEn + '.', gZh + '的' + hv.name + '为有限/存量网络。', 'Confirm available capacity and the nearest substation with PLN.', '与PLN确认可用容量及最近变电站。');
@@ -779,7 +826,7 @@
       mvB + ' board(s): incomers + bus coupler, ' + el.txTotal + ' transformer feeders' + (el.genV === 'MV' ? ', ' + el.genTotal + ' generator incomers' : ''), mvB + '段：进线+母联，' + el.txTotal + '路变压器馈线' + (el.genV === 'MV' ? '，' + el.genTotal + '路发电机进线' : ''), '面');
     if (hv.kv > 20) {
       var bays = hv.circ + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (p.tier >= 3 ? 2 : 1);
-      add('EL-24', bays, 'bays', hv.ur + ' kV · ' + hv.ik + ' kA · ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + 150 kV) + ' : '') + hv.ht.total + ' transformer + coupler bays · ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及150 kV）+' : '') + hv.ht.total + '个主变间隔+母联 · ' + hv.scheme[1], '个间隔');
+      add('EL-24', bays, 'bays', hv.name + ' (Ur ' + hv.ur + ' kV) · ' + hv.ik + ' kA · ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + 150 kV) + ' : '') + hv.ht.total + ' transformer + coupler bays · ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及150 kV）+' : '') + hv.ht.total + '个主变间隔+母联 · ' + hv.scheme[1], '个间隔');
       if (hv.ibt) add('EL-25', hv.ibt.total, 'no.', hv.ibt.mva + ' MVA ' + hv.ibt.ratio, 'Interbus transformers (single-phase banks)', '联络变压器（单相组）', '台');
       add('EL-25', hv.ht.total, 'no.', hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %', (hv.ht.split ? 'Split-winding, ' : '') + 'ONAN ' + hv.ht.onan + ' / ONAF ' + hv.ht.mva + ' MVA', (hv.ht.split ? '分裂绕组，' : '') + 'ONAN ' + hv.ht.onan + '/ONAF ' + hv.ht.mva + ' MVA', '台');
       add('EL-26', hv.ht.total, 'no.', '40 Ω · 300 A · 10 s', 'One per HV/MV transformer (20 kV neutral)', '每台主变一台（20 kV中性点）', '台');
@@ -859,5 +906,5 @@
   g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, find: find, capacity: capacity, coolingMatrix: coolingMatrix,
                  loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
                  KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection, connAssess: connAssess, HT_STD: HT_STD, htUk: htUk,
-                 COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS };
+                 COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, REF_STUDIES: REF_STUDIES, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS };
 })(typeof window !== 'undefined' ? window : globalThis);

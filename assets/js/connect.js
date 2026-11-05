@@ -29,7 +29,7 @@
     function m(g, id, l, v) { M.push({ g: g, id: id, l: l, v: v }); }
     m('P', 'md', ['Maximum demand', '最大需量'], F(el.mva, 1) + ' MVA · ' + F(el.demandKW) + ' kW');
     m('P', 'conn', ['PLN connection', 'PLN接入'], [hv.name + ' · ' + hv.circ + ' circuit(s)', hv.name + ' · ' + hv.circ + '回进线']);
-    m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.ur + ' kV GIS · ' + hv.ik + ' kA · ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
+    m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.name + ' GIS (Ur ' + hv.ur + ' kV) · ' + hv.ik + ' kA · ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
     m('P', 'pcc', ['Fault level at the connection point · Isc/IL', '接入点短路水平 · Isc/IL'], F(hv.pccIk, 1) + ' kA · ' + F(hv.ssc) + ' MVA · ' + F(R.gimp ? R.gimp.scr : 0));
     m('P', 'ibt', ['EHV/HV transformers', '超高压/高压联络变压器'], hv.ibt ? hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio : '–');
     m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %' : '–');
@@ -93,7 +93,8 @@
       { g: 'P', k: 'mdKVA', l: ['Maximum demand', '最大需量'], u: 'kVA', min: 10, max: 5000000, st: 10, v: Math.round(el.demandKVA), r: Math.round(el.demandRule) },
       { g: 'P', k: 'ikPCC', l: ['Fault level at the connection point', '接入点短路电流'], u: 'kA', min: 5, max: 80, st: 0.5, v: hv.pccIk, r: hv.pccRule },
       { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts(E.HT_STD, 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
-      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], 'kVA'), v: el.txSize, r: el.txRule },
+      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000], 'kVA'), v: el.txSize, r: el.txRule },
+      { g: 'P', k: 'txArch', l: ['MV/LV redundancy architecture', '中/低压变压器冗余架构'], o: [['N1', ['N+1 per group of six (block redundant)', '每6台加1台备用（块冗余）']], ['DR', ['Distributed redundant 3-make-2', '分布式冗余（3用2）']], ['2N', ['2N (A / B)', '2N（A/B）']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
       { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
       { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
       { g: 'P', k: 'genV', l: ['Generator voltage', '发电机电压'], o: [['LV', ['400 V sets with ATS', '400 V机组+ATS']], ['MV', ['20 kV paralleled plant', '20 kV并机电站']]], v: el.genV, r: el.demandKW > 6000 ? 'MV' : 'LV' },
@@ -151,6 +152,7 @@
     twAppr: ['Condenser-water temperature → chiller COP and tower fan power → PUE and maximum demand', '冷却水温度→冷机COP及冷却塔风机功率→PUE及最大需量'],
     txKVA: ['Number of MV/LV transformers, impedance, LV main breaker and fault level, LV line-ups, meters, transformer losses (annual PUE)', '中/低压变压器台数、阻抗、低压主断路器及短路水平、低压配电柜组数、电表、变压器损耗（年均PUE）'],
     txLoad: ['Number of MV/LV transformers', '中/低压变压器台数'],
+    txArch: ['Number of MV/LV transformers and LV line-ups, their normal and failure loading, transformer losses, LV room and yard area', '中/低压变压器及低压配电柜组数、正常及故障负载率、变压器损耗、低压配电室及场地面积'],
     genKW: ['Number of generators, paralleling, yard area', '发电机台数、并机、场地面积'],
     genV: ['20 kV generator incomers or 400 V ATS, MV switchgear panels', '20 kV发电机进线或400 V ATS、中压开关柜面数'],
     fuelH: ['Fuel volume, tanks, refuelling, water storage', '燃油量、储罐、补油、储水'],

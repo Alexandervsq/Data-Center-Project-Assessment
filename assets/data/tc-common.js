@@ -33,11 +33,11 @@
   }
   function rows0Of(fn, c) { if (!c.c0) return null; try { return fn(c.c0); } catch (x) { return null; } }
   /* PLN connection options for the demand of the design (engine connection solution) and the resulting power chain */
-  var AVT = { 0: ['not in this PLN system', '本电网无'], 1: ['in service', '已投运'], 2: ['limited / legacy', '有限/存量'], 3: ['planned (RUPTL)', '规划中（RUPTL）'] };
+  var AVT = { 0: ['not in this PLN system', '本电网无'], 1: ['in service', '已投运'], 2: ['limited / legacy', '有限/存量'], 3: ['planned (RUPTL)', '规划中（RUPTL）'], 4: ['private grid (not PLN)', '私营电网（非PLN）'] };
   function connRows(c) {
     return c.R.el.hv.opts.map(function (o) {
-      var st = o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail], fit = o.asm.c === 'std' ? ['✓ standard', '✓ 标准方案'] : (o.asm.c === 'opt' ? ['△ possible / strategic', '△ 可行/战略方案'] : ['✗ not practical', '✗ 不可行']);
-      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
+      var st = o.avail === 4 ? ['private grid (not PLN)', '私营电网（非PLN）'] : (o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail]), fit = o.asm.c === 'std' ? ['✓ standard', '✓ 标准方案'] : (o.asm.c === 'opt' ? ['△ possible / strategic', '△ 可行/战略方案'] : ['✗ not practical', '✗ 不可行']);
+      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS · Ur ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
       r.cur = o.sel; r.key = o.kv; return r;
     });
   }
@@ -75,13 +75,13 @@
   function chainRows(c) {
     var el = c.R.el, h = el.hv, rows = [];
     rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' · ' + h.circ + ' circuit(s)', h.name + ' · ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
-    if (h.gis) rows.push([L.te(['HV substation (GIS, IEC 62271-203)', '高压变电站（GIS，IEC 62271-203）']), L.te(h.scheme), h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
+    if (h.gis) rows.push([L.te(['HV substation: ' + h.name + ' GIS (IEC 62271-203)', '高压变电站：' + h.name + ' GIS（IEC 62271-203）']), L.te(h.scheme), 'Ur ' + h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
     if (h.ibt) rows.push([L.te(['EHV/HV interbus transformers', '超高压/高压联络变压器']), h.ibt.ratio, h.ibt.total + ' × ' + h.ibt.mva + ' MVA']);
     rows.push([L.te(['Fault level at the connection point', '接入点短路水平']), L.te(['planning value, PLN confirms', '规划值，以PLN确认为准']), F(h.pccIk, 1) + ' kA · ' + F(h.ssc) + ' MVA']);
     if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' · uk ' + h.ht.uk + ' % · ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' · split winding', ' · 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA']);
     if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω · 300 A · 10 s']);
-    rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']), h.mv.boards + ' × ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA']);
-    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV · uk ' + el.lv.uk + ' % · ' + el.txLabel, el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
+    rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']) + ' · ' + L.te(['fault ' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? ' incl. generators' : ''), '短路' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? '（含发电机）' : '')]), h.mv.boards + ' × ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA']);
+    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV · uk ' + el.lv.uk + ' % · ' + el.txLabel + L.te([' · ≈ ' + el.txIT + ' duty units for the UPS-fed IT', ' · 约' + el.txIT + '台工作变压器供UPS-IT']), el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
     rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB · fault level', '主框架断路器 · 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA']);
     rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V sets with ATS', '400 V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
     rows.push([L.te(['UPS · batteries', 'UPS · 蓄电池']), el.upsLabel + ' · ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW · ' + F(el.battKWh) + ' kWh']);
@@ -109,8 +109,8 @@
         '每路进线接入金属铠装、内部燃弧分级（IAC AFLR）的开关柜，配真空断路器及保护继电器。母联使任一路进线可带两段母线，出线断路器向变压器供电，联锁防止误操作。'],
       om: [['Thermographic scan of terminations under load every year.', '每年在带负荷状态下对接头进行红外测温。'], ['Test protection relays and breaker timing every 2–3 years.', '每2–3年测试保护继电器及断路器动作时间。'],
         ['Arc-flash study and labels before energisation; switching only under a written method of procedure (MOP).', '送电前完成弧闪分析并张贴标识；倒闸操作必须依据书面操作程序（MOP）。']],
-      basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers',
-        h.name + ' GIS（' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']
+      basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (Ur ' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers',
+        h.name + ' GIS（Ur ' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']
         : [h.circ + ' incoming 20 kV feeder(s) on a 24 kV board (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + el.txTotal + ' transformers', h.circ + '路20 kV进线接入24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']; },
       extra: function (c) { return chainTable(c); },
       calc: 'mva' },
@@ -846,7 +846,9 @@
         return '<div><h3>' + L.te(['Grid Code limits at the connection point (Lampiran I, Java–Madura–Bali)', '接入点电网规范限值（附件一，爪哇-马都拉-巴厘）']) + '</h3>' + L.ptable([['Item', '项目'], ['Requirement', '要求']], lim.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div>' +
           '<div class="tc-g2"><div><h3>' + L.te(['Studies for this design', '本设计所需研究']) + '</h3><ul class="tc-li">' + gi.studies.map(function (x) { return '<li>' + L.te(x) + '</li>'; }).join('') + '</ul></div>' +
           '<div><h3>' + L.te(['Process (Grid Code CC 5)', '流程（电网规范CC 5）']) + '</h3>' + L.ptable(null, proc.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div></div>' +
-          '<div><h3>' + L.te(['Large data-center loads — lessons from NERC', '大型数据中心负荷——NERC经验']) + '</h3><ul class="tc-li">' + nerc.map(function (x) { return '<li>' + L.te(x) + '</li>'; }).join('') + '</ul></div>';
+          '<div><h3>' + L.te(['Large data-center loads — lessons from NERC', '大型数据中心负荷——NERC经验']) + '</h3><ul class="tc-li">' + nerc.map(function (x) { return '<li>' + L.te(x) + '</li>'; }).join('') + '</ul></div>' +
+          E.REF_STUDIES.map(function (st) { return '<div><h3>' + L.te(['Reference study — ', '参考研究——']) + L.te(st.t) + '</h3>' + L.ptable(null, st.rows.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div>'; }).join('') +
+          '<p class="tc-src">' + L.te(['Reference studies calibrate the rules (fault levels, transformer impedance, loading criteria, harmonic practice); every value of this design is computed from its own demand, connection and fault level.', '参考研究用于校准规则（短路水平、主变阻抗、负载率准则、谐波做法）；本设计的每个数值均由其自身需量、接入方式及短路水平计算得出。']) + '</p>';
       },
       rel: [['grid', ['PLN grid connection', 'PLN电网接入']], ['mva', ['PLN demand', 'PLN需量']]] }
   };

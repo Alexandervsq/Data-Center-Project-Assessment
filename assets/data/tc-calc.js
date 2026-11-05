@@ -44,6 +44,7 @@
       '接入规则：≤30 MVA接入20 kV（PLN中压），≤300 MVA接入150 kV（高压）；更大时爪哇-巴厘接入500 kV，苏门答腊、加里曼丹、苏拉威西接入275 kV（≤900 MVA），否则采用多座150 kV变电站。220/230 kV为国际等级，非PLN电压。'],
     hm: ['IEC 60076 / SPLN T3.007-2:2016 power transformers: PLN standard 150/20 kV units are 30 and 60 MVA (ONAN/ONAF); customer substations use 30 MVA up to ≈ 25 MVA of demand, 60 MVA up to 150 MVA, 100 MVA up to 400 MVA and 150 MVA split-winding units above (two 20 kV boards per unit); 70/20 kV 20–30 MVA; manufacturers build 20–250 MVA. One standby per four duty units (Tier III), 2N (Tier IV).',
       'IEC 60076/SPLN T3.007-2:2016电力变压器：PLN标准150/20 kV主变为30及60 MVA（ONAN/ONAF）；用户变电站需量约25 MVA以内用30 MVA，150 MVA以内用60 MVA，400 MVA以内用100 MVA，更大时用150 MVA分裂绕组变压器（每台带两段20 kV母线）；70/20 kV为20–30 MVA；制造商可供20–250 MVA。每4台工作配1台备用（Tier III），Tier IV为2N。'],
+    arch: ['MV/LV redundancy: Tier III N+1 per group of six (block redundant, the leanest); distributed redundant 3-make-2 (any two of three carry the group — e.g. Schneider Electric RD101: six 2.5 MVA units per 9.36 MW hall); 2N (A / B, Tier IV). 4,000 kVA units at 400 V need 6,300 A ACBs and 100 kA switchboards.', '中/低压冗余：Tier III每6台加1台备用（块冗余，最省）；分布式冗余3用2（每组3台任意2台可承担——如施耐德RD101每个9.36 MW机房6台2.5 MVA）；2N（A/B，Tier IV）。400 V下4,000 kVA需6,300 A框架断路器及100 kA配电柜。'],
     ik: ['Planning fault level at the connection point (Grid Code: PLN states the actual value on request): 500 kV ≈ 40 kA, 275 kV ≈ 20 kA, 150 kV ≈ 25 kA in Java–Bali and ≈ 15 kA elsewhere, 20 kV ≈ 10 kA. The switchgear short-time rating must be at least this value.',
       '接入点规划短路电流（电网规范：实际值由PLN应要求提供）：500 kV约40 kA，275 kV约20 kA，150 kV爪哇-巴厘约25 kA、其他地区约15 kA，20 kV约10 kA。开关设备短时耐受电流不得低于该值。'],
     gs: ['Generator rule: up to 1.5 MW of demand one set size to the load (300–1,500 kWe); up to 12 MW 2,000 kWe sets; up to 60 MW 2,500 kWe; above 3,000 kWe (data-center continuous rating, ISO 8528-1).',
@@ -134,12 +135,12 @@
           [['Selected connection: ' + h.name, '所选接入：' + h.name], [h.asm.en, h.asm.zh], asmTxt(h)],
           [['Incoming circuits' + (t >= 3 ? ' (N-1)' : ''), '进线回路' + (t >= 3 ? '（N-1）' : '')], '⌈' + F(mva, 1) + ' ÷ ' + F(h.capC) + ' MVA⌉' + (t >= 3 ? ' + 1' : ''), [h.circ + ' circuit(s) from ' + (t >= 3 ? '2 PLN substations' : '1 PLN substation'), h.circ + '回，来自' + (t >= 3 ? '2座PLN变电站' : '1座PLN变电站')]],
           [['Fault level at the connection point', '接入点短路水平'], '√3 × ' + h.kv + ' kV × ' + F(h.pccIk, 1) + ' kA', F(h.ssc) + ' MVA · Isc/IL ≈ ' + F(h.ssc / Math.max(mva, 0.01))]];
-        if (h.gis) steps.push([['HV switchgear (IEC 62271-203)', '高压开关设备（IEC 62271-203）'], [h.scheme[0] + ' · Ik ≥ ' + F(h.pccIk, 1) + ' kA · load ' + F(mva * 1000 / (1.732 * h.kv)) + ' A', h.scheme[1] + ' · Ik ≥ ' + F(h.pccIk, 1) + ' kA · 负荷电流' + F(mva * 1000 / (1.732 * h.kv)) + ' A'], 'GIS ' + h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
+        if (h.gis) steps.push([['HV switchgear: ' + h.name + ' GIS, rated Ur ' + h.ur + ' kV (IEC 62271-203, Grid Code Table 3)', '高压开关设备：' + h.name + ' GIS，额定电压Ur ' + h.ur + ' kV（IEC 62271-203，电网规范表3）'], [h.scheme[0] + ' · 1.25 × max(' + F(h.pccIk, 1) + ' / ' + F(h.pccIk1, 1) + ' kA three- / single-phase) · load ' + F(mva * 1000 / (1.732 * h.kv)) + ' A', h.scheme[1] + ' · Ik ≥ ' + F(h.pccIk, 1) + ' kA · 负荷电流' + F(mva * 1000 / (1.732 * h.kv)) + ' A'], h.ik + ' kA · ' + F(h.busA) + ' A']);
         if (h.ibt) steps.push([['EHV/HV interbus transformers', '超高压/高压联络变压器'], '⌈' + F(mva, 1) + ' ÷ ' + h.ibt.mva + '⌉ + ' + h.ibt.r + ' · uk ≈ ' + h.ibt.uk + ' %', h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio]);
         if (h.ht) {
-          steps.push([['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）'], ['⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' · uk ' + h.ht.uk + ' % (IEC 60076-5)' + (h.ht.split ? ' · split winding' : ''), '⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' · uk ' + h.ht.uk + '%（IEC 60076-5）' + (h.ht.split ? ' · 分裂绕组' : '')],
+          steps.push([['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）'], ['⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' (normal ≤ 80 %, one out ≤ 100 %) · uk ' + h.ht.uk + ' % = max(typical, 20 kV fault ≤ 90 % of the board rating)', '⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + '（正常≤80%，一台退出≤100%）· uk ' + h.ht.uk + '% = max（典型值，20 kV短路≤开关柜额定的90%）'],
             h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' · ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + (h.ht.loadOut ? ' · ' + F(h.ht.loadOut) + ' % one out' : '')]);
-          steps.push([['20 kV fault level (IEC 60909)', '20 kV短路电流（IEC 60909）'], F(h.mv.sb) + ' MVA ÷ ((' + F(h.mv.sb) + ' ÷ ' + F(h.mv.ssc150) + ' + ' + F(h.ht.uk, 1) + ' %) × √3 × 20 kV) × 1.05', F(h.mv.ikCalc, 1) + ' kA → ' + h.mv.ik + ' kA']);
+          steps.push([['20 kV fault level (IEC 60909)', '20 kV短路电流（IEC 60909）'], F(h.ht.mva) + ' MVA ÷ ((' + F(h.ht.mva) + ' ÷ ' + F(h.mv.ssc150) + ' + ' + F(h.ht.uk, 1) + ' %) × √3 × 20 kV) × 1.05' + (c.R.el.hv.mv.ikGen ? ' + MV generators ' + F(c.R.el.hv.mv.ikGen, 1) + ' kA (closed transition)' : ''), F(h.mv.ikCalc + (c.R.el.hv.mv.ikGen || 0), 1) + ' kA → ' + (c.R.el.hv.mv.ik || h.mv.ik) + ' kA']);
         }
         steps.push([['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）'], F(h.mv.sb) + ' MVA ÷ (√3 × 20 kV) = ' + F(h.mv.i) + ' A', h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.mv.gis ? ' · GIS' : '')]);
         steps.push([['MV/LV transformers (Tier ' + roman(t) + ')', '中/低压变压器（Tier ' + roman(t) + '）'], '⌈' + F(kva) + ' ÷ (' + F(size) + ' × ' + F(ld, 2) + ')⌉ + ' + r, F(n + r) + ' × ' + F(size) + ' kVA']);
@@ -148,23 +149,32 @@
       } },
     tx: { i: [['kva', ['Maximum demand', '最大需量'], 'kVA', 10, 1000000, 10, function (c) { return Math.round(c.R.el.demandKVA); }], tierIn(),
       ['ld', ['Loading limit', '负载率上限'], '%', 50, 100, 1, function (c) { return Math.round(c.R.el.txLoad * 100); }],
-      ['size', ['Transformer rating', '变压器容量'], 'kVA', 100, 3150, 5, function (c) { return c.R.el.txSize; }],
-      ['uk', ['Impedance uk', '短路阻抗uk'], '%', 4, 8, .5, function (c) { return c.R.el.lv.uk; }]],
-      a: { size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } } },
-      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, uk: { k: 'txUk' } },
+      ['size', ['Transformer rating', '变压器容量'], 'kVA', 100, 4000, 5, function (c) { return c.R.el.txSize; }],
+      ['uk', ['Impedance uk', '短路阻抗uk'], '%', 4, 8, .5, function (c) { return c.R.el.lv.uk; }],
+      ['arch', ['Redundancy architecture', '冗余架构'], '', 1, 3, 1, function (c) { return ({ N1: 1, DR: 2, '2N': 3 })[c.R.el.txArch] || 1; }, [[1, ['N+1 per group of six (block redundant)', '每6台加1台备用（块冗余）']], [2, ['Distributed redundant 3-make-2', '分布式冗余（3用2）']], [3, ['2N (A / B)', '2N（A/B）']]]]],
+      a: { size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
+        arch: { b: B.arch, f: function (v) { return T(v) >= 4 ? 3 : 1; } } },
+      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] } },
       f: function (v, c) {
-        var t = T(v), n = Math.ceil(v.kva / (v.size * v.ld / 100)), r = E.redundancy(t, n, 'tx'); if (t === 3 && n === 1) r = 1;
-        var tot = n + r, iFL = v.size * 1000 / (1.732 * 400), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik);
-        var fail = tot > 1 ? v.kva / ((tot - 1) * v.size) * 100 : null, h = conn(v.kva / 1000, t, chg(c, 'hvKV'), chg(c, 'htMVA'), c);
+        var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1';
+        function count(sz, ar) { var n = Math.ceil(v.kva / (sz * v.ld / 100)), r = ar === '2N' ? n : (ar === 'DR' ? Math.ceil(n / 2) * 3 - n : (t >= 3 ? Math.max(1, Math.ceil(n / 6)) : 0)); return { n: n, r: r, t: n + r }; }
+        var k = count(v.size, arch), n = k.n, r = k.r, tot = k.t, iFL = v.size * 1000 / (1.732 * 400), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik);
+        var fail = arch === '2N' ? v.kva / (n * v.size) * 100 : (arch === 'DR' ? v.kva / tot * 1.5 / v.size * 100 : (tot > 1 ? v.kva / ((tot - 1) * v.size) * 100 : null));
+        var h = conn(v.kva / 1000, t, chg(c, 'hvKV'), chg(c, 'htMVA'), c), el = c.R.el, itShare = Math.min(1, el.itKVA / Math.max(1, el.demandKVA));
+        var AL = { N1: ['N+1 per six', '每6台+1'], DR: ['3-make-2', '3用2'], '2N': ['2N', '2N'] };
+        function alt(sz) { return F(sz) + ' kVA: ' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + ' (' + AL[a][0] + ')'; }).join(' · '); }
+        function altZh(sz) { return F(sz) + ' kVA：' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + '（' + AL[a][1] + '）'; }).join(' · '); }
         return [[['Duty transformers', '工作变压器'], '⌈' + F(v.kva) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
-          [['Redundancy (Tier ' + roman(t) + ')', '冗余（Tier ' + roman(t) + '）'], E.redLabel(n, r), '+' + F(r)],
+          [['Redundancy: ' + AL[arch][0] + ' (Tier ' + roman(t) + ')', '冗余：' + AL[arch][1] + '（Tier ' + roman(t) + '）'], arch === 'DR' ? ['groups of three, any two carry the group', '每组3台，任意2台可承担全组'] : (arch === '2N' ? ['A and B side each carry the whole block', 'A、B侧各自承担整个模块'] : E.redLabel(n, r)), '+' + F(r)],
           [['Installed', '安装台数'], F(n) + ' + ' + F(r), F(tot) + ' × ' + F(v.size) + ' kVA'],
+          [['Of which for the UPS-fed IT load', '其中供UPS-IT负荷'], [F(itShare * 100) + ' % of the demand (IT + UPS losses)', '需量的' + F(itShare * 100) + '%（IT+UPS损耗）'], [F(Math.round(n * itShare)) + ' duty units; the rest feed cooling and building', F(Math.round(n * itShare)) + '台工作变压器；其余供制冷及建筑']],
           [['Normal loading per unit', '正常时单台负载率'], F(v.kva) + ' ÷ (' + F(tot) + ' × ' + F(v.size) + ')', F(v.kva / (tot * v.size) * 100) + ' %'],
-          [['Loading with one unit out', '一台退出时负载率'], fail === null ? '–' : F(v.kva) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')', fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
-          [['LV full-load current → main ACB', '低压满载电流→主框架断路器'], F(v.size) + ' kVA ÷ (√3 × 400 V) → IEC 60947-2', F(iFL) + ' A → ' + F(acb) + ' A'],
+          [['Loading after one failure', '一台故障后负载率'], arch === 'DR' ? ['group load ÷ two remaining units', '组负荷 ÷ 剩余2台'] : (arch === '2N' ? ['other side carries the block', '另一侧承担整个模块'] : (fail === null ? '–' : F(v.kva) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')')), fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
+          [['LV full-load current → main ACB', '低压满载电流→主框架断路器'], F(v.size) + ' kVA ÷ (√3 × 400 V) → IEC 60947-2', F(iFL) + ' A → ' + F(acb) + ' A' + (iFL > 5000 ? ' (6,300 A frame)' : '')],
           [['LV fault level → switchboard rating', '低压短路电流→配电柜额定'], F(iFL) + ' A ÷ ' + F(v.uk, 1) + ' % → IEC 61439-2', F(ik, 1) + ' kA → ' + icw + ' kA'],
+          [['Same demand, other ratings and architectures', '同一需量的其他容量及架构'], [alt(2500) + ' | ' + alt(3150), altZh(2500) + ' | ' + altZh(3150)], [alt(4000), altZh(4000)]],
           [['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' · ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio : ''), asmTxt(h)],
-          [['MV switchgear', '中压开关设备'], [F(tot) + ' TX feeders + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot) + '路变压器馈线 + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.ur + ' kV GIS' : '')]];
+          [['MV switchgear', '中压开关设备'], [F(tot) + ' TX feeders + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot) + '路变压器馈线 + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.name + ' GIS (Ur ' + h.ur + ' kV)' : '')]];
       } },
     fuel: { i: [['d', ['Maximum demand', '最大需量'], 'kW', 50, 1000000, 10, function (c) { return Math.round(c.R.el.demandKW); }], tierIn(),
       ['h', ['Fuel autonomy', '燃油自持'], 'h', 4, 120, 1, function (c) { return c.p.fuelH; }],

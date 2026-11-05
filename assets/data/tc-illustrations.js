@@ -57,7 +57,7 @@
       s += L.pipe('M154 104H418', 'mv', 6) + L.pipe('M154 212H418', 'mv', 6);
       s += txb(286, 124, tt ? ['Line A · ' + el.hv.name, 'A线 · ' + el.hv.name] : ['Feeder A · 20 kV', 'A路馈线 · 20 kV'], 'middle', C.amD) + txb(286, 232, tt ? ['Line B · ' + el.hv.name, 'B线 · ' + el.hv.name] : ['Feeder B · 20 kV', 'B路馈线 · 20 kV'], 'middle', C.amD);
       s += L.switchgear(420, 80, 3, 96, 150) + txb(468, 70, tt ? ['On-site substation', '场内变电站'] : ['Site MV switchgear', '场地中压开关柜'], 'middle');
-      return svg(s + foot([el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + ' circuit(s)' + (el.hv.gis ? ' · GIS ' + el.hv.ur + ' kV' : ''), el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + '回进线' + (el.hv.gis ? ' · GIS ' + el.hv.ur + ' kV' : '')]));
+      return svg(s + foot([el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + ' circuit(s)' + (el.hv.gis ? ' · GIS Ur ' + el.hv.ur + ' kV' : ''), el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + '回进线' + (el.hv.gis ? ' · GIS Ur ' + el.hv.ur + ' kV' : '')]));
     },
     mvsg: function (c) {
       var s = ttl(['MV switchboard — single-line view', '中压开关柜——单线图']);
