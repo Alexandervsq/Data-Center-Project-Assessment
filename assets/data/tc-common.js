@@ -106,7 +106,7 @@
         return connTable(c) + gimpTable(c) + '<div class="tc-g2"><div><h3>' + L.te(['PLN grid systems', 'PLN电网系统']) + '</h3>' + L.ptable(null, Object.keys(DB.idGrids).map(function (k) { var x = DB.idGrids[k], r = [L.te([x.en, x.zh]), L.te(relTxt(x.rel))]; r.cur = k === gr; return r; })) + '</div>' +
           '<div><h3>' + L.te(['PLN tariffs used by the assessment', '评估采用的PLN电价']) + '</h3>' + L.ptable([['Class', '类别'], 'LWBP Rp/kWh', ['24/7 blended', '24/7加权']], DB.idTariffs.map(function (x) { return [L.te([x.en, x.zh]), F(x.lwbp, 2), F(x.eff, 1)]; })) + '</div></div>';
       }, calc: 'mva' },
-    mvsg: { eq: 'EL-01', more: ['EL-15', 'EL-24', 'EL-25', 'EL-26'],
+    mvsg: { eq: 'EL-01', more: ['EL-15', 'EL-24', 'EL-25', 'EL-26', 'EL-27', 'EL-28'],
       how: ['Each incoming feeder lands on a metal-enclosed, arc-resistant switchboard (IAC AFLR) with vacuum circuit breakers and protection relays. A bus coupler lets either feeder supply both halves of the board, outgoing breakers feed the transformers, and interlocks prevent unsafe switching.',
         '每路进线接入金属铠装、内部燃弧分级（IAC AFLR）的开关柜，配真空断路器及保护继电器。母联使任一路进线可带两段母线，出线断路器向变压器供电，联锁防止误操作。'],
       om: [['Thermographic scan of terminations under load every year.', '每年在带负荷状态下对接头进行红外测温。'], ['Test protection relays and breaker timing every 2–3 years.', '每2–3年测试保护继电器及断路器动作时间。'],

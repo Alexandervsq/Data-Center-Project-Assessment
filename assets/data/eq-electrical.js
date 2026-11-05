@@ -76,10 +76,11 @@
     s: [
       ['Vector group: YNyn0 + delta stabilising winding (PLN substations — the 20 kV neutral takes the resistor) or YNd11 with a 20 kV earthing (zig-zag) transformer and resistor (customer substations, e.g. Deltamas data-center 150 MVA units, BIC 220 MVA); HV neutral solidly earthed.', '联结组别：YNyn0+三角形稳定绕组（PLN变电站——20 kV中性点接电阻）或YNd11配20 kV接地（曲折）变压器及电阻（用户变电站，如德尔塔马斯数据中心150 MVA、BIC 220 MVA）；高压中性点直接接地。'],
       ['Short-circuit impedance ≥ the typical / IEC 60076-5 minimum value (30 MVA 10 %, 60 MVA 12.5 %, above 63 MVA ≥ 12.5 %) and high enough that the 20 kV fault level (upstream short-circuit power, + generator contribution when paralleled) stays within the 20 kV switchgear rating — large units 14.5–24 % (BIC 120 MVA 14.5 %, 220 MVA 19.8 %; Deltamas 150 MVA 24 % → 20 kV 19.7 kA on 31.5 kA boards); above ≈ 100 MVA the 20 kV board runs in two sections.', '短路阻抗不低于典型值/IEC 60076-5最小值（30 MVA 10%，60 MVA 12.5%，63 MVA以上≥12.5%），并足以使20 kV短路水平（上游短路容量，并联时加发电机贡献）不超过20 kV开关柜额定——大容量主变为14.5–24%（BIC 120 MVA 14.5%、220 MVA 19.8%；德尔塔马斯150 MVA 24%→20 kV 19.7 kA，31.5 kA开关柜）；约100 MVA以上20 kV母线分两段。'],
-      ['On-load tap changer on the HV winding (typically ± 10 %) with automatic voltage control; Grid Code voltage range at 150 kV is + 5 % / − 10 %.', 'HV绕组有载调压（通常±10%）并自动调压；电网规范150 kV电压范围为+5%/−10%。'],
+      ['On-load tap changer on the HV winding, 17 positions ± 8 × 1.25 % (PLN specification, SPLN T3.007), with automatic voltage control; Grid Code voltage range at 150 kV is + 5 % / − 10 %.', 'HV绕组有载调压，17档±8×1.25%（PLN技术规范，SPLN T3.007），自动调压；电网规范150 kV电压范围为+5%/−10%。'],
+      ['PLN specification: rated at 30 °C ambient with top-oil / winding temperature rise ≤ 50 / 55 K and hot spot ≤ 98 °C at the continuous maximum rating (IEC 60076-2 / -7); capacity limited only by core and windings (not by the tap changer or bushings); 2 s short-circuit withstand on every tap (IEC 60076-5); tertiary stabilising winding in single-phase banks (one corner earthed); noise measured on every unit (IEC 60076-10); C5 very-high-durability coating (ISO 12944).', 'PLN技术规范：按环境温度30 °C定额，顶层油/绕组温升≤50/55 K，连续最大容量下热点≤98 °C（IEC 60076-2/-7）；容量仅受铁芯及绕组限制（不受分接开关或套管限制）；各分接2 s短路耐受（IEC 60076-5）；单相组设稳定绕组（一角接地）；每台测噪声（IEC 60076-10）；C5高耐久涂层（ISO 12944）。'],
       ['Cooling ONAN / ONAF (ONAN ≈ 70 % of the ONAF rating); loading per IEC 60076-7; with one unit out the others carry the maximum demand (N+1 for Tier III, 2N for Tier IV).', '冷却方式ONAN/ONAF（ONAN约为ONAF容量的70%）；负载按IEC 60076-7；任一台退出时其余变压器承担最大需量（Tier III为N+1，Tier IV为2N）。'],
-      ['Protection and monitoring: differential (87T), restricted earth fault (64REF), Buchholz, pressure relief, oil and winding temperature, tap-changer protective relay; on-line dissolved-gas monitor for units ≥ 60 MVA.', '保护与监测：差动（87T）、限制性接地（64REF）、瓦斯、压力释放、油温及绕组温度、有载开关保护继电器；60 MVA及以上配在线油色谱监测。'],
-      ['Losses capitalised in the bid evaluation; oil containment and fire walls between units per IEC 61936-1; transport weight and dimensions checked against road and port limits (single-phase units at 500 kV).', '投标评审中对损耗进行资本化；按IEC 61936-1设集油设施及变压器间防火墙；运输重量及尺寸须核对道路及港口限值（500 kV采用单相变压器）。']
+      ['Protection and monitoring: differential (87T), restricted earth fault (64REF), over-fluxing, Buchholz, pressure relief, oil and winding temperature, tap-changer protective relay (EL-27); on-line monitoring per SPLN T3.013-1:2024 — fibre-optic winding temperature (unmanned substations), oil temperature top / bottom and moisture, bushing dielectric current (tan δ), OLTC position, operations, motor current and vibration, fan / pump status; dissolved-gas sensors (H2, C2H2, CO) on new EHV units and for units ≥ 60 MVA.', '保护与监测：差动（87T）、限制性接地（64REF）、过励磁、瓦斯、压力释放、油温及绕组温度、有载开关保护继电器（EL-27）；在线监测按SPLN T3.013-1:2024——光纤绕组测温（无人值守站）、上/下层油温及微水、套管介质电流（tan δ）、有载开关档位/动作次数/电机电流及振动、风扇/油泵状态；新建超高压主变及60 MVA及以上配溶解气体传感器（H2、C2H2、CO）。'],
+      ['Losses capitalised in the bid evaluation (SPLN T3.007: no-load, load at the nominal and extreme taps, fans — Rp/kW); price reduced above the guarantee and the unit rejected at FAT above + 10 % total or + 15 % component losses; fire prevention per SPLN T4.001:2021; oil containment and fire walls between units per IEC 61936-1; transport weight and dimensions checked against road and port limits (single-phase units at 500 kV).', '投标评审中对损耗进行资本化（SPLN T3.007：空载、额定及两端分接负载损耗、风扇——Rp/kW）；超过保证值扣减价格，总损耗超+10%或分项超+15%工厂验收拒收；防火按SPLN T4.001:2021；按IEC 61936-1设集油设施及变压器间防火墙；运输重量及尺寸须核对道路及港口限值（500 kV采用单相变压器）。']
     ],
     tpg: [
       {g: ['General', '一般']},
@@ -91,25 +92,26 @@
       ['Rated power ONAF / ONAN', '额定容量 ONAF/ONAN', 'MVA', 'Per design: 30 / 60 / 100 / 150 (ONAN ≈ 70 %)'],
       ['Rated voltages HV / LV', '额定电压 高压/低压', 'kV', '150 / 20 (230 / 20 on private grids)'],
       ['Highest voltage for equipment Um, HV / LV', '设备最高电压 高压/低压', 'kV', '170 / 24'],
-      ['Tapping range (on-load)', '调压范围（有载）', '%', '± 10 (e.g. 17 positions, ± 8 × 1.25 %)'],
+      ['Tapping range (on-load)', '调压范围（有载）', '%', '± 10 = 17 positions, ± 8 × 1.25 % (PLN)'],
       ['Vector group', '联结组别', '-', 'YNyn0 + d (PLN) or YNd11 + 20 kV earthing transformer'],
       ['Short-circuit impedance at principal tap', '主分接短路阻抗', '%', 'max(10 / 12.5 typical, value limiting the 20 kV fault) — 14.5–24 for 120–250 MVA'],
       ['Insulation level HV (150 kV, Um 170 kV): lightning impulse / power frequency', '高压绝缘水平（150 kV，Um 170 kV）：雷电冲击/工频', 'kV', '650 / 275 (750 / 325 where specified)'],
       ['Insulation level LV: lightning impulse / power frequency', '低压绝缘水平：雷电冲击/工频', 'kV', '125 / 50'],
       ['Short-circuit withstand duration (thermal)', '短路耐受时间（热稳定）', 's', '2'],
-      ['Temperature rise top oil / average winding', '顶层油/绕组平均温升', 'K', '60 / 65'],
+      ['Temperature rise top oil / average winding', '顶层油/绕组平均温升', 'K', '50 / 55 at 30 °C ambient (PLN; IEC default 60 / 65); hot spot ≤ 98 °C'],
       ['No-load loss / load loss at rated power', '空载损耗/额定负载损耗', 'kW', BID],
+      ['Loss tolerance before rejection at FAT', '工厂验收拒收前损耗容差', '%', '+ 10 total · + 15 component (SPLN T3.007)'],
       ['Sound power level (ONAF)', '声功率级（ONAF）', 'dB(A)', BID],
       {g: ['Construction & accessories', '结构及附件']},
       ['Insulating liquid', '绝缘液体', '-', 'Mineral oil (IEC 60296) or natural ester (IEC 62770)'],
       ['Bushings', '套管', '-', 'IEC 60137; HV OIP / RIP, LV bushings or cable box'],
       ['On-load tap changer', '有载分接开关', '-', 'IEC 60214-1, vacuum type preferred'],
-      ['Monitoring & communication', '监测与通讯', '-', 'On-line DGA, temperatures, OLTC, IEC 61850'],
+      ['Monitoring & communication', '监测与通讯', '-', 'SPLN T3.013-1:2024: winding / oil temperature, moisture, bushing tan δ, OLTC, cooling; DGA (EHV, ≥ 60 MVA); IEC 61850'],
       ['Interbus transformers (275 / 500 kV connections)', '联络变压器（275/500 kV接入）', '-', '500/150 kV 500 MVA (3 × 167 MVA 1-ph) · 275/150 kV 250 MVA; uk ≈ 12–14 %'],
       ['Transport weight & dimensions', '运输重量及尺寸', 't / mm', BID],
       ['Expected service life', '预期使用寿命', 'years', '≥ 40']
     ],
-    std: ['IEC 60076-1', 'IEC 60076-2', 'IEC 60076-3', 'IEC 60076-5', 'IEC 60076-7', 'IEC 60076-10', 'IEC 60214-1', 'IEC 60137', 'IEC 60296', 'IEC 61936-1', 'SPLN T3.007-2:2016'],
+    std: ['IEC 60076-1', 'IEC 60076-2', 'IEC 60076-3', 'IEC 60076-5', 'IEC 60076-7', 'IEC 60076-10', 'IEC 60214-1', 'IEC 60137', 'IEC 60296', 'IEC 61936-1', 'SPLN T3.007-2:2016', 'SPLN T3.013-1:2024', 'SPLN T4.001:2021'],
     t: [['Type tests: temperature rise, full and chopped lightning impulse, sound level; short-circuit withstand by test or calculation per IEC 60076-5.', '型式试验：温升、全波及截波雷电冲击、声级；按IEC 60076-5以试验或计算验证短路耐受能力。'],
         ['Routine tests: winding resistance, ratio and vector group, impedance and load loss, no-load loss and current, applied and induced voltage with partial discharge, tap-changer tests, insulation resistance, oil tests.', '出厂试验：绕组电阻、变比及联结组别、阻抗及负载损耗、空载损耗及电流、外施及感应耐压（含局放）、分接开关试验、绝缘电阻、油试验。'],
         ['Site: frequency-response (SFRA) fingerprint, oil DGA before and after energisation, protection and cooling function tests, no-load soak before loading.', '现场：频率响应（SFRA）基准测试、送电前后油色谱、保护及冷却功能试验、带负荷前空载运行。']] },
@@ -125,6 +127,7 @@
       ['Ground-fault relay operating time ≤ 50 % of the resistor time rating, with ≥ 300 ms grading to the standby earth-fault protection (Grid Code).', '接地故障继电器动作时间≤电阻时间额定的50%，与后备接地保护级差≥300 ms（电网规范）。'],
       ['Continuous current rating ≥ 5 % of the rated current (sustained unbalance and high-resistance faults).', '持续电流额定≥额定电流的5%（持续不平衡及高阻故障）。'],
       ['Neutral current transformer 400/1 A, 5P20, ≥ 20 VA (SPLN T3.013-3:2023) for restricted and standby earth-fault protection.', '中性点电流互感器400/1 A、5P20、≥20 VA（SPLN T3.013-3:2023），用于限制性接地及后备接地保护。'],
+      ['PLN specification: stainless-steel alloy, double-insulated, non-inductive grid elements; temperature rise ≤ 760 °C after 10 s at rated current from 30 °C ambient (IEEE C57.32); 20 kV post insulators C6-125 (IEC 60273 / 60168); hot-dip galvanised outdoor enclosure; type tests from an independent laboratory.', 'PLN技术规范：不锈钢合金、双重绝缘、无感栅格元件；环境30 °C、额定电流10 s后温升≤760 °C（IEEE C57.32）；20 kV支柱绝缘子C6-125（IEC 60273/60168）；热镀锌户外箱体；型式试验由独立实验室出具。'],
       ['Enclosure IP23 minimum, stainless-steel elements, insulation for the 20 kV system (24 kV, 125 kV lightning impulse, 50 kV power frequency), seismic withstand ≥ 0.3 g.', '外壳防护等级至少IP23，不锈钢电阻元件，绝缘满足20 kV系统（24 kV，雷电冲击125 kV，工频50 kV），抗震≥0.3 g。']
     ],
     tpg: [
@@ -134,6 +137,7 @@
       ['Rated resistance at 25 °C', '25 °C额定电阻', 'Ω', '40 (per PLN area practice)'],
       ['Rated current / rated time', '额定电流/额定时间', 'A / s', '300 / 10'],
       ['Continuous current', '持续电流', '% of rated', '≥ 5'],
+      ['Temperature rise at rated current and time', '额定电流及时间下温升', '°C', '≤ 760 (IEEE C57.32)'],
       ['Insulation level: lightning impulse / power frequency', '绝缘水平：雷电冲击/工频', 'kV', '125 / 50'],
       ['Resistor element material', '电阻元件材料', '-', 'Stainless steel'],
       ['Enclosure / degree of protection', '外壳/防护等级', '-', 'Outdoor, IP23'],
@@ -147,6 +151,79 @@
         ['Site: resistance and insulation check, CT ratio and polarity, earth-fault protection test with PLN.', '现场：电阻及绝缘检查、CT变比及极性、与PLN联合进行接地保护试验。']] },
 
   /* ------------------------------------------------------------------ */
+  { id: 'EL-27', sys: 'EL', cls: 'M', en: 'HV Substation Protection, Control & Automation (IEC 61850 SAS)', zh: '高压变电站保护、控制及自动化（IEC 61850 SAS）',
+    fn: ['Protects the lines, transformers and busbars of the on-site HV substation, controls and monitors every bay locally and from the PLN control centre, records disturbances and meters the energy at the connection point.',
+         '保护场内高压变电站的线路、变压器及母线，就地及由PLN调度中心对各间隔进行控制和监视，记录扰动并在接入点计量电能。'],
+    ty: ['Bay-oriented numerical IEDs on an IEC 61850 station / bay LAN (single or double fibre ring, managed switches), station HMI and gateway (IEC 60870-5-101 / 104 to the PLN control centre), GPS clock, digital fault recorders, main and check revenue meters; line current differential over fibre for the cable connection to PLN.',
+         '按间隔配置的数字式IED，接入IEC 61850站控层/间隔层LAN（单环或双环光纤、网管交换机），站控HMI及网关（IEC 60870-5-101/104接PLN调度中心），GPS时钟，故障录波，主/校核关口电能表；至PLN的电缆接入采用光纤线路差动。'],
+    s: [
+      ['Line protection per the Grid Code (Permen ESDM 20/2020) and SPLN T5.002:2021 (PLN specification): 150 / 66 kV — one main protection, line current differential over direct single-mode fibre for short lines and cables (otherwise differential or distance over 2 Mbit/s fibre / IEEE C37.94) with distance zone 2 / 3 and directional earth-fault back-up; 500 / 275 kV — two independent main protections of complementary principle from two manufacturers; trip command of the main line protection ≤ 20 ms.',
+       '线路保护按电网规范（能矿部长令2020年第20号）及SPLN T5.002:2021（PLN技术规范）：150/66 kV——一套主保护，短线路及电缆采用直连单模光纤线路差动（否则采用2 Mbit/s光纤/IEEE C37.94差动或距离），配距离二、三段及方向接地后备；500/275 kV——两套原理互补、来自两家制造商的独立主保护；主保护出口时间≤20 ms。'],
+      ['Transformers: numerical differential with dual-slope bias, 2nd-harmonic inrush and 5th-harmonic over-excitation restraint and high-set 500–2,000 %, high-impedance restricted earth fault per winding, over-fluxing (V/Hz), plus Buchholz, sudden-pressure and temperature trips — trip command ≤ 30 ms for HV units, ≤ 20 ms and duplicated (main A / B) for EHV units.',
+       '变压器：数字式差动（双斜率制动、二次谐波励磁涌流及五次谐波过励磁闭锁、差动速断500–2,000%），各绕组高阻抗限制性接地，过励磁（V/Hz），及瓦斯、突发压力和温度跳闸——高压主变出口≤30 ms，超高压主变≤20 ms且双重化（主A/B）。'],
+      ['Busbars and breakers: busbar differential with breaker-failure / short-zone protection on every breaker; duplicated trip-circuit supervision where breakers have two trip coils; auto-reclose with check-synchronising and dead-line logic on overhead lines (normally off on cable-only circuits); only the required functions enabled in each multi-function relay.',
+       '母线及断路器：母线差动，各断路器配失灵/死区保护；双跳圈断路器配双重跳闸回路监视；架空线配同期检定及无压检定重合闸（纯电缆回路通常不投）；多功能继电器仅投入所需功能。'],
+      ['SAS architecture: decentralised and bay-oriented (station, bay and process levels); each bay IED independent of the others and wired directly to instrument transformers and trip / close coils; a server failure must not affect the gateway; control priority to the lowest enabled level with select-before-execute and double-point indications; SNTP / IRIG-B time synchronisation from GPS (drift < 1 ms per day unsynchronised).',
+       'SAS架构：分布式、面向间隔（站控层、间隔层及过程层）；各间隔IED相互独立，直接接入互感器及跳合闸线圈；服务器故障不影响网关；控制权优先于最低已投入层级，采用选择-执行及双位置遥信；GPS对时（SNTP/IRIG-B），失步时时钟漂移<1 ms/天。'],
+      ['Performance: display change < 0.5 s, binary change < 0.5 s, analogue change < 1 s, command to process output < 0.5 s; Ethernet switches and IEDs on 110 V DC (EL-28); logic per IEC 61131-3; PLN interface — telemetry, revenue metering (main + check), disturbance recorders, telecom back-up ≥ 8 h — per the connection agreement.',
+       '性能：画面切换<0.5 s，遥信变化<0.5 s，遥测变化<1 s，命令至输出<0.5 s；以太网交换机及IED采用110 V直流（EL-28）；逻辑编程按IEC 61131-3；PLN接口——遥测、关口计量（主+校核）、故障录波、通信后备≥8 h——按接入协议。'],
+      ['Data-center cable connections (Deltamas study): settings, interlocking and trip logic verified by functional tests — including communication failure, which must block 87L and leave distance in service — before energisation.',
+       '数据中心电缆接入（德尔塔马斯研究）：送电前通过功能试验核验定值、联锁及跳闸逻辑——包括通信故障，此时须闭锁87L并保持距离保护投入。']
+    ],
+    tpg: [
+      {g: ['General', '一般']},
+      ['Manufacturer / country of origin', '制造商 / 原产地', '-', BID],
+      ['Applicable standards', '适用标准', '-', 'IEC 61850, IEC 60255, IEC 60870-5-101/104, SPLN T5.002:2021'],
+      {g: ['Protection', '保护']},
+      ['Main protection of the 150 kV cable / line connection', '150 kV电缆/线路接入主保护', '-', '87L line differential over fibre + 21 distance back-up'],
+      ['Main line protection operating time (trip command)', '线路主保护动作时间（出口）', 'ms', '≤ 20'],
+      ['Transformer main protection operating time', '主变主保护动作时间', 'ms', '≤ 30 (HV) · ≤ 20, duplicated (EHV)'],
+      ['Transformer protection functions', '主变保护功能', '-', '87T, 64REF, 24 V/Hz, 50/51, Buchholz, pressure, temperature'],
+      ['Busbar / breaker failure', '母线/断路器失灵', '-', '87B + 50BF / short zone'],
+      ['Fault clearing at the connection point (Grid Code)', '接入点故障切除（电网规范）', 'ms', '≤ 120 (150 kV) · ≤ 90 (500 kV)'],
+      {g: ['Substation automation', '变电站自动化']},
+      ['Station / bay LAN', '站控层/间隔层网络', '-', 'IEC 61850, single / double fibre ring, managed switches'],
+      ['Gateway to the PLN control centre', '至PLN调度中心网关', '-', 'IEC 60870-5-101 / 104'],
+      ['Time synchronisation', '对时', '-', 'GPS, SNTP / IRIG-B; drift < 1 ms/day'],
+      ['HMI response: binary / analogue / command', 'HMI响应：遥信/遥测/遥控', 's', '< 0.5 / < 1 / < 0.5'],
+      ['Disturbance recording and metering', '故障录波及计量', '-', 'DFR; revenue meters main + check per PLN'],
+      ['Auxiliary supply', '辅助电源', 'V DC', '110 (EL-28)']
+    ],
+    std: ['IEC 61850', 'IEC 60255', 'IEC 60870-5-101', 'IEC 60870-5-104', 'IEC 61131-3', 'IEEE C37.94', 'SPLN T5.002:2021', 'Permen ESDM 20/2020'],
+    t: [['FAT of the SAS with all IEDs: IEC 61850 conformance (reports, GOOSE), HMI and gateway functions, relay type tests per IEC 60255.', 'SAS连同全部IED的工厂验收：IEC 61850一致性（报告、GOOSE）、HMI及网关功能，继电器按IEC 60255型式试验。'],
+        ['Site: secondary injection of every protection function, end-to-end 87L tests with the remote PLN substation, trip-circuit and interlocking checks, communication-failure behaviour, point-to-point tests with the PLN control centre.', '现场：各保护功能二次注入试验，与对端PLN变电站的87L端对端试验，跳闸回路及联锁检查，通信故障行为试验，与PLN调度中心的点对点联调。']] },
+
+  /* ------------------------------------------------------------------ */
+  { id: 'EL-28', sys: 'EL', cls: 'S', en: 'HV Substation DC Supply 110 V / 48 V (Batteries, Chargers, DC Boards)', zh: '高压变电站直流电源110 V/48 V（蓄电池、充电器、直流屏）',
+    fn: ['Keeps protection, control and breaker / disconnector operation (110 V DC) and SCADA / telecom (48 V DC) supplied for at least 8 hours after loss of the AC auxiliary supply.',
+         '在交流站用电失去后至少8小时维持保护、控制及断路器/隔离开关操作（110 V直流）和SCADA/通信（48 V直流）供电。'],
+    ty: ['Separate 110 V and 48 V systems, each with battery, self-regulating charger (thyristor or IGBT, galvanically isolated, diode dropper for boost charge) and DC switchboard; heavy-duty nickel-cadmium (IEC 60623 / 62259) or LFP with BMS (IEC 62619) in a separate air-conditioned room; sized per IEEE 1115.',
+         '110 V与48 V系统分设，各含蓄电池、自调节充电器（晶闸管或IGBT，电气隔离，均充时配降压硅链）及直流屏；重载镍镉（IEC 60623/62259）或带BMS的磷酸铁锂（IEC 62619，独立空调房间）；按IEEE 1115计算容量。'],
+    s: [
+      ['Autonomy ≥ 8 h with the chargers out of service (PLN specification); capacity by IEEE 1115 with ageing factor 1.25 and temperature correction — e.g. PLN 500 kV GIS substation: 110 V NiCd ≥ 400 Ah, 48 V NiCd ≥ 200 Ah at the 8-hour rate.',
+       '充电器退出时后备≥8 h（PLN技术规范）；容量按IEEE 1115计算，老化系数1.25并作温度修正——如PLN 500 kV GIS变电站：110 V镍镉≥400 Ah，48 V镍镉≥200 Ah（8小时率）。'],
+      ['Voltage window: 110 V system 93.5–121 V (NiCd cells: float 1.40 V, boost 1.65 V, end of discharge 1.14 V); 48 V system 40.8–52.8 V.', '电压范围：110 V系统93.5–121 V（镍镉单体：浮充1.40 V，均充1.65 V，放电终止1.14 V）；48 V系统40.8–52.8 V。'],
+      ['Duplicated sets with automatic change-over between the DC switchboards; earth-fault detection by high-resistance centre tap with local and remote alarms; under- and over-voltage detection (charger isolated on over-voltage); charger and BMS communication to the SAS (EL-27).', '双套配置，直流屏间自动切换；高阻中点接地检测并就地及远方报警；欠压及过压检测（过压时隔离充电器）；充电器及BMS通讯接入SAS（EL-27）。'],
+      ['DC switchboards: cubicle type, copper busbars, two-pole MCBs ≥ 10 A selective with the downstream panels, short-circuit rating ≥ 16 kA, IP42, suitable for rooms without air-conditioning; charger AC input breaker 16 kA at 400 / 230 V.', '直流屏：柜式，铜母线，双极微断≥10 A并与下级屏柜选择性配合，短路额定≥16 kA，IP42，适用于无空调房间；充电器交流进线断路器400/230 V 16 kA。'],
+      ['Batteries on insulated steel racks ≥ 300 mm above the floor; 10 % spare cells; vented NiCd cells shipped dry and filled on site; LFP installed in a room separate from NiCd.', '蓄电池置于绝缘钢架上，底层离地≥300 mm；备用单体10%；排气式镍镉单体干式运输、现场注液；磷酸铁锂与镍镉分室安装。']
+    ],
+    tpg: [
+      ['Manufacturer / type', '制造商 / 型号', '-', BID],
+      ['System voltage nominal / maximum / minimum', '系统电压 额定/最高/最低', 'V DC', '110 / 121 / 93.5 · 48 / 52.8 / 40.8'],
+      ['Battery type', '蓄电池类型', '-', 'NiCd medium-rate (IEC 60623) or LFP with BMS (IEC 62619)'],
+      ['Capacity at the 8-hour rate', '8小时率容量', 'Ah', '≥ 400 (110 V) · ≥ 200 (48 V), by IEEE 1115 calculation'],
+      ['Autonomy with chargers out of service', '充电器退出时后备时间', 'h', '≥ 8'],
+      ['NiCd cell voltage: boost / float / end of discharge', '镍镉单体电压：均充/浮充/放电终止', 'V', '1.65 / 1.40 / 1.14'],
+      ['Chargers', '充电器', '-', 'Thyristor or IGBT, galvanically isolated, float / boost, diode dropper, SAS link'],
+      ['DC switchboard short-circuit rating / protection degree', '直流屏短路额定/防护等级', 'kA / -', '≥ 16 / IP42'],
+      ['Earth-fault detection', '接地检测', '-', 'High-resistance centre tap, local + remote alarm'],
+      ['Spare cells', '备用单体', '%', '10']
+    ],
+    std: ['IEC 60623', 'IEC 62259', 'IEC 62619', 'IEEE 1115', 'IEC 61439-1', 'IEC 61439-2', 'IEC 60947', 'IEC 60269'],
+    t: [['Routine: capacity test at the 8-hour rate, charger float / boost and current-limit tests, insulation and earth-fault alarm tests.', '出厂：8小时率容量试验，充电器浮充/均充及限流试验，绝缘及接地报警试验。'],
+        ['Site: discharge test to the end voltage, change-over between sets, alarms and measurements to the SAS.', '现场：放电至终止电压试验，双套切换试验，报警及测量上传SAS。']] },
+
+  /* ------------------------------------------------------------------ */
   { id: 'EL-01', sys: 'EL', cls: 'M', en: 'Medium Voltage Switchgear', zh: '中压开关柜',
     fn: ['Receives the utility supply (and/or MV generator output), protects and distributes power to the MV/LV transformers. Forms the first switching point of the critical power chain.',
          '接收市电（和/或中压发电机输出），对电源进行保护并分配至中压/低压变压器，是关键供电链的第一个开关节点。'],
@@ -158,7 +235,8 @@
       ['Numerical protection relays (50/51, 50N/51N, 27/59, 81, 87T where applicable) with IEC 61850 communication to the EPMS.', '配置数字式综合保护继电器（50/51、50N/51N、27/59、81，必要时87T），通过IEC 61850与电力监控系统通讯。'],
       ['Full mechanical and electrical interlocking (five-prevention) and key interlocks with downstream transformer doors.', '应具备完善的机械与电气联锁（“五防”），并与下游变压器柜门设钥匙联锁。'],
       ['Arc-flash mitigation: arc detection relays or arc-resistant design; arc-flash labels per IEEE 1584 study.', '电弧防护：配置弧光保护或耐弧设计，并根据IEEE 1584计算结果张贴电弧危险标签。'],
-      ['Spare capacity: minimum 20% spare equipped feeders or space for future phases.', '预留容量：至少20%的备用回路或预留未来扩容位置。']
+      ['Spare capacity: minimum 20% spare equipped feeders or space for future phases.', '预留容量：至少20%的备用回路或预留未来扩容位置。'],
+      ['PLN substation specification (20 kV switchgear with panels): metal-clad, withdrawable breakers operable with live busbars, single busbar 2,000 A with bus-section breaker, incomers 2,000 A 25 kA; earthed metallic partitions between busbar, breaker and cable compartments; enclosure IP42, covers withstanding 2 J impact; mechanical interlocks at the point of operation plus electrical interlocks for remote control; circuit and busbar earthing never closed together; type tests incl. internal arc.', 'PLN变电站技术规范（20 kV开关柜）：金属铠装，断路器可在母线带电时抽出，单母线2,000 A设分段断路器，进线2,000 A、25 kA；母线、断路器及电缆室间以接地金属隔板分隔；外壳IP42，门板耐受2 J冲击；操作处设机械联锁并为远方操作设电气联锁；回路接地与母线接地不得同时合上；型式试验含内部燃弧。']
     ],
     tpg: [
       {g: ['General', '一般']},
@@ -693,7 +771,8 @@
     s: [
       ['Combined earthing system resistance ≤ 1 Ω (≤ 0.5 Ω preferred for telecom).', '联合接地电阻≤1 Ω（通信优先≤0.5 Ω）。'],
       ['Telecommunications bonding per TIA-607: TMGB in entrance room, TGB in each telecom space, bonding to every rack.', '按TIA-607进行通信接地：进线间设TMGB，各通信空间设TGB，每个机柜均联结。'],
-      ['Exothermic welding for buried connections; inspection pits for testing.', '埋地连接采用放热焊接；设测试检查井。']
+      ['Exothermic welding for buried connections; inspection pits for testing.', '埋地连接采用放热焊接；设测试检查井。'],
+      ['HV substation (SPLN T5.012:2020, IEEE 80 / 81; PLN 500 kV GIS TPG): bare-copper mesh ≥ 150 mm² (equipment connections 2 × 120 mm²), spacing ≤ 5 × 5 m by calculation, depth ≥ 0.5 m, extended 1.5–2 m beyond the fence, exothermic joints; design fault current = switchgear rating (≥ 50 kA at 500 kV), current-division factor ≥ 60 %, 1 s; 50 kg body and washed-granite surface 5,000 Ω·m → touch ≤ 787 V, step ≤ 2,800 V; grid resistance ≤ 0.5 Ω; earth plates not accepted as electrodes; surge arresters and HF coupling equipment with additional driven rods; the data-center earthing bonded to the substation grid.', '高压变电站（SPLN T5.012:2020，IEEE 80/81；PLN 500 kV GIS TPG）：裸铜网格≥150 mm²（设备连接2×120 mm²），间距按计算≤5×5 m，埋深≥0.5 m，延伸出围墙1.5–2 m，放热焊接；设计故障电流取开关设备额定（500 kV≥50 kA），分流系数≥60%，1 s；人体50 kg、表层水洗花岗岩5,000 Ω·m→接触电压≤787 V、跨步电压≤2,800 V；接地电阻≤0.5 Ω；不接受接地板作接地极；避雷器及高频耦合设备另设垂直接地极；数据中心接地与变电站接地网联结。']
     ],
     tpg: [
       ['Earth resistance (combined)', '联合接地电阻', 'Ω', '≤ 1'],
@@ -701,9 +780,15 @@
       ['Main earthing conductor size', '主接地导体截面', 'mm²', '≥ 120 Cu'],
       ['TMGB / TGB busbar size', 'TMGB / TGB母排规格', 'mm', '≥ 6 × 100 Cu'],
       ['Rack bonding conductor', '机柜联结导体', 'mm²', '≥ 16 Cu (6 AWG)'],
-      ['Signal reference grid spacing', '信号参考网格间距', 'mm', '600 – 1,200']
+      ['Signal reference grid spacing', '信号参考网格间距', 'mm', '600 – 1,200'],
+      {g: ['HV substation earthing grid (SPLN T5.012:2020, IEEE 80)', '高压变电站接地网（SPLN T5.012:2020，IEEE 80）']},
+      ['Grid conductor / equipment connections', '接地网导体/设备连接', 'mm² Cu', '≥ 150 / 2 × 120'],
+      ['Mesh spacing / burial depth', '网格间距/埋深', 'm', '≤ 5 × 5 (calculated) / ≥ 0.5'],
+      ['Design fault current · division factor · duration', '设计故障电流·分流系数·持续时间', 'kA · % · s', '= switchgear rating · ≥ 60 · 1'],
+      ['Tolerable touch / step voltage (50 kg, 5,000 Ω·m gravel)', '允许接触/跨步电压（50 kg，5,000 Ω·m砾石）', 'V', '≤ 787 / ≤ 2,800'],
+      ['Grid resistance', '接地网电阻', 'Ω', '≤ 0.5']
     ],
-    std: ['IEC 60364-5-54', 'IEEE 80', 'IEEE 1100', 'TIA-607-D', 'GB 50169', 'GB 50689'],
+    std: ['IEC 60364-5-54', 'IEEE 80', 'IEEE 81', 'SPLN T5.012:2020', 'IEEE 1100', 'TIA-607-D', 'GB 50169', 'GB 50689'],
     t: [['Fall-of-potential earth resistance test; continuity of bonding.', '电位降法接地电阻测试；联结导通测试。']] },
 
   /* ------------------------------------------------------------------ */

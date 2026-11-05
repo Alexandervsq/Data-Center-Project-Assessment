@@ -347,7 +347,7 @@
       [['2 · Grid impact study', '2 · 电网影响研究'], ['by the consumer (consultant) with PLN network data — ≈ 1–2 months at 20 kV, 3–6 months at 70–150 kV, 6–12 months at 275–500 kV', '由用户（咨询方）采用PLN电网数据编制——20 kV约1–2个月，70–150 kV约3–6个月，275–500 kV约6–12个月']],
       [['3 · PLN evaluation', '3 · PLN评估'], ['presentation to the PLN planner and system operator; corrections until accepted', '向PLN规划及调度部门汇报；修改至通过']],
       [['4 · Agreement & works', '4 · 协议与建设'], ['connection agreement (SPJBTL), substation and line works, protection settings, planning and operating data (CC 7)', '接入协议（SPJBTL）、变电站及线路工程、保护定值、规划及运行数据（CC 7）']],
-      [['5 · Energisation', '5 · 送电'], ['commissioning tests, SLO certificate, phased energisation and power-quality measurement', '调试试验、SLO证书、分期送电及电能质量测试']]],
+      [['5 · Energisation', '5 · 送电'], ['test documents to PLN Pusertif ≥ 3 months ahead; offline site tests → RLB (Rekomendasi Layak Bertegangan) → energised tests; SLO certificate, phased energisation and power-quality measurement', '试验文件提前≥3个月提交PLN Pusertif；离线现场试验→RLB（可带电建议书）→带电试验；SLO证书、分期送电及电能质量测试']]],
     nerc: [['NERC Incident Review (Jan 2025): ≈ 1,500 MW of voltage-sensitive data-center load transferred to UPS after a 230 kV line fault (July 2024)', 'NERC事件回顾（2025年1月）：一次230 kV线路故障后约1,500 MW电压敏感数据中心负荷转入UPS（2024年7月）'],
       ['NERC Level 2 alert (Sep 2025) and Level 3 Essential Actions (May 2026) on large computational loads: ride-through settings, staged re-transfer, load models for studies', 'NERC二级警示（2025年9月）及三级必要措施（2026年5月）：大型计算负荷的穿越设定、分级回切、研究用负荷模型'],
       ['ERCOT studies loads ≥ 75 MW as large loads; ride-through aligned with PRC-024 / PRC-029 and IEEE 2800 practice', 'ERCOT将≥75 MW负荷按大负荷研究；穿越要求参照PRC-024/PRC-029及IEEE 2800']]
@@ -864,6 +864,9 @@
       if (hv.ibt) add('EL-25', hv.ibt.total, 'no.', hv.ibt.mva + ' MVA ' + hv.ibt.ratio, 'Interbus transformers (single-phase banks)', '联络变压器（单相组）', '台');
       add('EL-25', hv.ht.total, 'no.', hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %', (hv.ht.split ? 'Split-winding, ' : '') + 'ONAN ' + hv.ht.onan + ' / ONAF ' + hv.ht.mva + ' MVA', (hv.ht.split ? '分裂绕组，' : '') + 'ONAN ' + hv.ht.onan + '/ONAF ' + hv.ht.mva + ' MVA', '台');
       add('EL-26', hv.ht.total, 'no.', '40 Ω · 300 A · 10 s', 'One per HV/MV transformer (20 kV neutral)', '每台主变一台（20 kV中性点）', '台');
+      add('EL-27', 1, 'lot', 'IEC 61850 SAS · ' + bays + ' bays · 87L + 21 per circuit, 87T / 64REF per transformer, 87B + 50BF', 'Protection, control & automation; gateway IEC 60870-5-104 to PLN; DFR, revenue metering main + check', '保护、控制及自动化；IEC 60870-5-104网关接PLN；故障录波、主/校核关口计量', '套');
+      add('EL-28', 2, 'systems', '110 V DC (≥ 400 Ah class) + 48 V DC (≥ 200 Ah class), 8 h, duplicated', 'Batteries (NiCd or LFP), chargers and DC boards; capacity by IEEE 1115', '蓄电池（镍镉或磷酸铁锂）、充电器及直流屏；容量按IEEE 1115', '套');
+      if (R.gimp && R.gimp.reactor > 0) add('EL-24', 1, 'bay', 'Shunt reactor ≈ ' + fmt(Math.ceil(R.gimp.reactor)) + ' MVAr (150 kV bay or 20 kV bus)', 'Cable charging at light load: keeps the power factor within 0.9 leading (grid impact study)', '轻载时电缆充电：保持功率因数在超前0.9以内（电网影响研究）', '间隔');
     }
     add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel + ' · uk ' + el.lv.uk + ' %');
     add('EL-03', el.txTotal, 'line-ups', fmt(el.lv.acb) + ' A · ' + el.lv.icw + ' kA', 'One per transformer', '每台变压器一组', '组');

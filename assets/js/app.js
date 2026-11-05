@@ -682,7 +682,7 @@
       '<h4>BESS — ' + (el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh (' + el.bess.containers + ' × 20-ft)' : L('not included', '未配置')) + '</h4>' + why('bessOn') +
       (el.bess ? kv([['BESS CAPEX', '储能投资', money(R.capex.bess) + ' (≈ USD ' + E.BESS_USD_KWH + '/kWh)'], ['Peak-shaving saving / yr', '年削峰节省', money(-R.opex.bessSave)], ['Yard area', '场地面积', F(el.bess.area) + ' m²']]) : '') + '</div></div>';
     html += gridImpactCard(R);
-    return html + eqLinks((el.hv.kv > 20 ? ['EL-24', 'EL-25', 'EL-26'] : []).concat(['EL-01', 'EL-02', 'EL-03', 'EL-04', 'EL-06', 'EL-09', p.battery === 'LI' ? 'EL-10' : 'EL-11', 'EL-23', el.useBusway ? 'EL-13' : 'EL-12', 'EL-14'], R.gimp && R.gimp.ahf ? ['EL-17'] : []));
+    return html + eqLinks((el.hv.kv > 20 ? ['EL-24', 'EL-25', 'EL-26', 'EL-27', 'EL-28'] : []).concat(['EL-01', 'EL-02', 'EL-03', 'EL-04', 'EL-06', 'EL-09', p.battery === 'LI' ? 'EL-10' : 'EL-11', 'EL-23', el.useBusway ? 'EL-13' : 'EL-12', 'EL-14'], R.gimp && R.gimp.ahf ? ['EL-17'] : []));
   }
   /* connection assessment of the selected voltage (engine): standard / possible with conditions / not practical */
   function asmChip(hv) { var c = hv.asm.c; return '<span class="chip ' + (c === 'std' ? 'green' : (c === 'opt' ? 'amber' : 'coral')) + '" title="' + esc(L(hv.asm.en, hv.asm.zh)) + '">' + (c === 'std' ? L('standard solution', '标准方案') : (c === 'opt' ? L('possible — conditions', '可行——有条件') : L('not practical', '不可行'))) + '</span>'; }
