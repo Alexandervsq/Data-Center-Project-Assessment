@@ -73,6 +73,8 @@
   /* design parameters (each one is editable in a calculator of the simulation and listed in the knowledge documents): value now, rule value (AUTO), options or range */
   var DG = { S: ['Site & load', '场地与负载'], W: ['IT & white space', 'IT与白区'], P: ['Power path', '供电路径'], C: ['Cooling', '制冷'], B: ['Building', '建筑'], $: ['Energy & commercial', '能源与商务'] };
   var VFD_O = [[35, ['6-pulse with DC choke ≈ 35 %', '6脉波+直流电抗器 约35%']], [10, ['18-pulse ≈ 10 %', '18脉波 约10%']], [5, ['Active front end ≈ 5 %', '有源前端 约5%']]];
+  /* UPS / IT rectifier front end — THDi at full load (Deltamas study: ideal 12-pulse library model 14 % exceeds the limits; IGBT active front ends < 5 %) */
+  var UPS_O = [[3, ['IGBT active front end ≈ 3 % (< 5 %)', 'IGBT有源前端约3%（<5%）']], [8, ['12-pulse with passive filter ≈ 8 %', '12脉波+无源滤波约8%']], [14, ['12-pulse ≈ 14 % (study library model)', '12脉波约14%（研究库模型）']], [30, ['6-pulse ≈ 30 %', '6脉波约30%']]];
   function kOpts(list, unit) { return list.map(function (v) { return [v, F(v) + ' ' + unit]; }); }
   function designParams(x) {
     var R = x.R, p = x.p, pr = x.prop || {}, el = R.el, hv = el.hv, me = R.me, c = R.cap, K = E.K, yn = [[true, ['Yes', '是']], [false, ['No', '否']]];
@@ -92,6 +94,7 @@
       { g: 'P', k: 'pkPUE', l: ['Design-day PUE (peak cooling)', '设计日PUE（峰值制冷）'], u: '', min: 1.03, max: 2.5, st: 0.01, v: +R.eff.puePeak.toFixed(2), r: +R.eff.pueRule.toFixed(2) },
       { g: 'P', k: 'mdKVA', l: ['Maximum demand', '最大需量'], u: 'kVA', min: 10, max: 5000000, st: 10, v: Math.round(el.demandKVA), r: Math.round(el.demandRule) },
       { g: 'P', k: 'ikPCC', l: ['Fault level at the connection point', '接入点短路电流'], u: 'kA', min: 5, max: 80, st: 0.5, v: hv.pccIk, r: hv.pccRule },
+      { g: 'P', k: 'hvKm', l: ['HV connection cable route length', '高压接入电缆路径长度'], u: 'km', min: 0, max: 60, st: 0.1, v: R.gimp ? R.gimp.km : 5, r: hv.kv <= 150 ? 5 : 1, off: hv.kv <= 20 },
       { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts(E.HT_STD, 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
       { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000], 'kVA'), v: el.txSize, r: el.txRule },
       { g: 'P', k: 'txArch', l: ['MV/LV redundancy architecture', '中/低压变压器冗余架构'], o: [['N1', ['N+1 per group of six (block redundant)', '每6台加1台备用（块冗余）']], ['DR', ['Distributed redundant 3-make-2', '分布式冗余（3用2）']], ['2N', ['2N (A / B)', '2N（A/B）']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
@@ -106,6 +109,7 @@
       { g: 'P', k: 'bessOn', l: ['Battery energy storage (BESS)', '电池储能（BESS）'], o: yn, v: !!p.bessOn, r: pr.bessOn },
       { g: 'P', k: 'bessSh', l: ['BESS power share of IT', '储能功率占IT比例'], u: '%', min: 1, max: 60, st: 1, v: el.bess ? Math.round(el.bess.mw / c.itMW * 100) : 10, off: !p.bessOn },
       { g: 'P', k: 'bessH', l: ['BESS duration', '储能时长'], u: 'h', min: 0.5, max: 6, st: 0.5, v: p.bessH, r: pr.bessH, off: !p.bessOn },
+      { g: 'P', k: 'upsThd', l: ['UPS / IT front end (current distortion)', 'UPS/IT整流方式（电流畸变）'], o: UPS_O, v: R.gimp ? R.gimp.ut : 3, r: 3 },
       { g: 'P', k: 'vfdThd', l: ['Drive front end (current distortion)', '变频驱动整流方式（电流畸变）'], o: VFD_O, v: R.gimp ? R.gimp.vt : 35, r: 35 },
       { g: 'P', k: 'ahf', l: ['Active harmonic filters on drives', '驱动负荷有源滤波器'], o: yn, v: !!(R.gimp && R.gimp.ahf), r: R.gimp ? R.gimp.ahfAuto : null },
       { g: 'P', k: 'aiSwing', l: ['AI load swing (share of AI load)', 'AI负荷波动（占AI负荷）'], u: '%', min: 0, max: 100, st: 5, v: R.gimp ? R.gimp.swing : 0, r: R.gimp && R.gimp.aiKW > 0 ? 50 : 0, off: !(R.gimp && R.gimp.aiKW > 0) },
@@ -144,6 +148,8 @@
     mdKVA: ['Connection voltage, transformers, switchgear, generators, fuel, tariff class', '接入电压、变压器、开关设备、发电机、燃油、电价类别'],
     htMVA: ['Number of HV/MV transformers, split winding, impedance, 20 kV boards and their current and fault rating, neutral earthing resistors', '高/中压主变台数、分裂绕组、阻抗、20 kV开关柜段数及其电流与短路额定、中性点接地电阻'],
     ikPCC: ['GIS short-time rating, 20 kV fault level and board rating, short-circuit ratio, harmonic limits and voltage steps (grid impact)', 'GIS短时耐受电流、20 kV短路电流及开关柜额定、短路比、谐波限值及电压阶跃（电网影响）'],
+    upsThd: ['Harmonic current of the UPS / IT load → TDD and voltage distortion at the connection point, AFE UPS or input filters (Deltamas study: 12-pulse sources exceed the limits)', 'UPS/IT负荷谐波电流→接入点TDD及电压畸变、有源前端UPS或输入滤波器（德尔塔马斯研究：12脉波谐波源超限）'],
+    hvKm: ['Charging power of the HV cables, power factor at light load and shunt reactor, harmonic resonance order, 87L charging current', '高压电缆充电功率、轻载功率因数及并联电抗器、谐波谐振次数、87L充电电流'],
     vfdThd: ['Harmonic current of the chiller, pump and fan drives → TDD at the connection point, need for active filters (BOQ), voltage distortion', '冷机、水泵及风机变频驱动的谐波电流→接入点TDD、是否需要有源滤波器（清单）、电压畸变'],
     ahf: ['Harmonic current at the connection point (Grid Code TDD), active filters in the BOQ', '接入点谐波电流（电网规范TDD）、清单中的有源滤波器'],
     aiSwing: ['Voltage steps at the connection point, BESS / power-smoothing need, grid impact risks', '接入点电压阶跃、储能/功率平滑需求、电网影响风险'],
@@ -179,5 +185,5 @@
   };
 
   function resolve(input, chg) { return P.resolve(applyChg(JSON.parse(JSON.stringify(input)), chg || {})); }
-  g.DCConnect = { VFD_O: VFD_O, applyChg: applyChg, resolve: resolve, metrics: metrics, params: designParams, MG: MG, DG: DG, DRIVES: DRIVES, usd: usd };
+  g.DCConnect = { VFD_O: VFD_O, UPS_O: UPS_O, applyChg: applyChg, resolve: resolve, metrics: metrics, params: designParams, MG: MG, DG: DG, DRIVES: DRIVES, usd: usd };
 })(typeof window !== 'undefined' ? window : globalThis);
