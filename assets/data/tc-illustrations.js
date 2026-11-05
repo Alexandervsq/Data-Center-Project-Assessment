@@ -69,7 +69,7 @@
       return svg(s + foot([c.R.el.feeds + ' incomers · arc-resistant (IAC AFLR) · vacuum breakers', c.R.el.feeds + '路进线 · 内部燃弧分级（IAC AFLR）· 真空断路器']));
     },
     tx: function (c) {
-      var el = c.R.el, pct = Math.min(1, el.demandKVA / (el.txTotal * el.txSize)), s = ttl(['Cast-resin dry-type transformer (cut-away)', '环氧树脂浇注干式变压器（剖视）']);
+      var el = c.R.el, pct = Math.min(1, (el.lvKVA || el.demandKVA) / (el.txTotal * el.txSize)), s = ttl(['Cast-resin dry-type transformer (cut-away)', '环氧树脂浇注干式变压器（剖视）']);
       s += L.dryTx(40, 40, 230, 190);
       s += co(100, 130, 300, 70, ['HV winding · 20 kV', '高压绕组 · 20 kV']) + co(170, 170, 300, 104, ['LV winding · 0.4 kV', '低压绕组 · 0.4 kV']) + co(240, 60, 300, 138, ['Terminals & busbar', '端子与母排']) + co(262, 214, 300, 172, ['Enclosure + PT100', '外壳 + PT100测温']);
       s += tx(300, 204, ['Normal loading per unit', '单台正常负载率'], 'start', 'font-weight:700') + L.R(300, 212, 200, 12, '#E6E8F3', ' rx="6"') + L.R(300, 212, 200 * pct, 12, C.am, ' rx="6"') + txb(505, 222, Math.round(pct * 100) + ' %', 'end');

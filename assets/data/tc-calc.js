@@ -38,6 +38,7 @@
   function asmTxt(h) { return h.asm.c === 'std' ? ['✓ standard solution', '✓ 标准方案'] : (h.asm.c === 'opt' ? ['△ possible — see conditions', '△ 可行——见条件'] : ['✗ not practical', '✗ 不可行']); }
   var LLC = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load 75–300 MW: ride-through study', '大负荷75–300 MW：穿越研究'], vlarge: ['very large load > 300 MW: dynamic and EMT studies', '超大负荷>300 MW：动态及电磁暂态研究'] };
   var B = {
+    chv: ['Chiller supply voltage: large water-cooled centrifugal chillers (≥ 3,517 kW ≈ 1,000 TR, plants above ≈ 20 MW of cooling) are commonly MV — 6.6 kV motors with MV drives or soft starters fed by 20/6.6 kV transformers (N + 1); their compressors leave the 400 V system, so fewer MV/LV transformers, ACBs and LV feeders are needed. Smaller chillers stay on 400 V.', '冷机供电电压：大型水冷离心冷机（≥3,517 kW约1,000冷吨，制冷量约20 MW以上的冷站）通常采用中压——6.6 kV电机配中压变频或软启动，由20/6.6 kV变压器（N+1）供电；压缩机不再占用400 V系统，中/低压变压器、框架断路器及低压馈线减少。较小冷机仍用400 V。'],
     tariff: ['PLN tariff class follows the connection voltage (Q4 2026): 20 kV (TM) → B-3 / I-3, ≈ Rp' + F(DB.idTariffs[0].eff, 1) + '/kWh blended 24/7; 70 kV and above (TT / TET) → I-4, Rp' + F(DB.idTariffs[2].eff, 2) + '/kWh.',
       'PLN电价类别取决于接入电压（2026年第四季度）：20 kV（中压）→B-3/I-3，24/7加权约' + F(DB.idTariffs[0].eff, 1) + '印尼盾/kWh；70 kV及以上（高压/超高压）→I-4，' + F(DB.idTariffs[2].eff, 2) + '印尼盾/kWh。'],
     kv: ['Connection rule: ≤ 30 MVA at 20 kV (PLN TM), ≤ 300 MVA at 150 kV (TT); above that 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi (≤ 900 MVA), otherwise several 150 kV substations. 220 / 230 kV is the international equivalent, not a PLN voltage.',
@@ -151,30 +152,36 @@
       ['ld', ['Loading limit', '负载率上限'], '%', 50, 100, 1, function (c) { return Math.round(c.R.el.txLoad * 100); }],
       ['size', ['Transformer rating', '变压器容量'], 'kVA', 100, 4000, 5, function (c) { return c.R.el.txSize; }],
       ['uk', ['Impedance uk', '短路阻抗uk'], '%', 4, 8, .5, function (c) { return c.R.el.lv.uk; }],
+      ['chv', ['Chillers on MV (6.6 kV)', '冷机采用中压（6.6 kV）'], '', 0, 1, 1, function (c) { return c.R.el.chV === 'MV' ? 1 : 0; }, [[0, ['No — 400 V chillers', '否——400 V冷机']], [1, ['Yes — 6.6 kV via 20/6.6 kV transformers', '是——经20/6.6 kV变压器供6.6 kV']]]],
       ['arch', ['Redundancy architecture', '冗余架构'], '', 1, 3, 1, function (c) { return ({ N1: 1, DR: 2, '2N': 3 })[c.R.el.txArch] || 1; }, [[1, ['N+1 per group of six (block redundant)', '每6台加1台备用（块冗余）']], [2, ['Distributed redundant 3-make-2', '分布式冗余（3用2）']], [3, ['2N (A / B)', '2N（A/B）']]]]],
       a: { size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
-        arch: { b: B.arch, f: function (v) { return T(v) >= 4 ? 3 : 1; } } },
-      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] } },
+        arch: { b: B.arch, f: function (v) { return T(v) >= 4 ? 3 : 1; } }, chv: { b: B.chv, f: function (v, c) { return c.R.el.chVRule === 'MV' ? 1 : 0; } } },
+      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] }, chv: { k: 'chV', map: [[0, 'LV'], [1, 'MV']] } },
       f: function (v, c) {
-        var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1';
-        function count(sz, ar) { var n = Math.ceil(v.kva / (sz * v.ld / 100)), r = ar === '2N' ? n : (ar === 'DR' ? Math.ceil(n / 2) * 3 - n : (t >= 3 ? Math.max(1, Math.ceil(n / 6)) : 0)); return { n: n, r: r, t: n + r }; }
+        var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1', el0 = c.R.el, chOn = Math.round(v.chv) === 1 && el0.chKWe > 0;
+        var chk = chOn ? v.kva * (el0.chKWe / 0.95) / Math.max(1, el0.demandKVA) : 0, lvk = Math.max(0.3 * v.kva, v.kva - chk);
+        var cn = chOn ? Math.max(1, Math.ceil(chk / 8000)) : 0, cs = chOn ? pick([2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000], chk / (cn * 0.8)) : 0, cr = chOn ? (t >= 4 ? cn : (t >= 2 ? 1 : 0)) : 0;
+        function count(sz, ar) { var n = Math.ceil(lvk / (sz * v.ld / 100)), r = ar === '2N' ? n : (ar === 'DR' ? Math.ceil(n / 2) * 3 - n : (t >= 3 ? Math.max(1, Math.ceil(n / 6)) : 0)); return { n: n, r: r, t: n + r }; }
         var k = count(v.size, arch), n = k.n, r = k.r, tot = k.t, iFL = v.size * 1000 / (1.732 * 400), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik);
-        var fail = arch === '2N' ? v.kva / (n * v.size) * 100 : (arch === 'DR' ? v.kva / tot * 1.5 / v.size * 100 : (tot > 1 ? v.kva / ((tot - 1) * v.size) * 100 : null));
+        var fail = arch === '2N' ? lvk / (n * v.size) * 100 : (arch === 'DR' ? lvk / tot * 1.5 / v.size * 100 : (tot > 1 ? lvk / ((tot - 1) * v.size) * 100 : null));
         var h = conn(v.kva / 1000, t, chg(c, 'hvKV'), chg(c, 'htMVA'), c), el = c.R.el, itShare = Math.min(1, el.itKVA / Math.max(1, el.demandKVA));
         var AL = { N1: ['N+1 per six', '每6台+1'], DR: ['3-make-2', '3用2'], '2N': ['2N', '2N'] };
         function alt(sz) { return F(sz) + ' kVA: ' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + ' (' + AL[a][0] + ')'; }).join(' · '); }
         function altZh(sz) { return F(sz) + ' kVA：' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + '（' + AL[a][1] + '）'; }).join(' · '); }
-        return [[['Duty transformers', '工作变压器'], '⌈' + F(v.kva) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
+        return [[['Chiller compressors on 6.6 kV (design day)', '6.6 kV冷机压缩机（设计日）'], el0.chKWe > 0 ? ['chilled-water load ÷ COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95', '冷冻水负荷÷COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95'] : ['no water-cooled chiller plant', '无水冷冷站'],
+            chOn ? [F(chk) + ' kVA → ' + (cn + cr) + ' × ' + F(cs) + ' kVA 20/6.6 kV (' + cn + ' + ' + cr + ')', F(chk) + ' kVA→' + (cn + cr) + '×' + F(cs) + ' kVA 20/6.6 kV（' + cn + '+' + cr + '）'] : ['on 400 V (included below)', '采用400 V（计入下方）']],
+          [['Load on the 400 V system', '400 V系统负荷'], chOn ? F(v.kva) + ' − ' + F(chk) + ' kVA' : ['maximum demand', '最大需量'], F(lvk) + ' kVA'],
+          [['Duty transformers', '工作变压器'], '⌈' + F(lvk) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
           [['Redundancy: ' + AL[arch][0] + ' (Tier ' + roman(t) + ')', '冗余：' + AL[arch][1] + '（Tier ' + roman(t) + '）'], arch === 'DR' ? ['groups of three, any two carry the group', '每组3台，任意2台可承担全组'] : (arch === '2N' ? ['A and B side each carry the whole block', 'A、B侧各自承担整个模块'] : E.redLabel(n, r)), '+' + F(r)],
           [['Installed', '安装台数'], F(n) + ' + ' + F(r), F(tot) + ' × ' + F(v.size) + ' kVA'],
           [['Of which for the UPS-fed IT load', '其中供UPS-IT负荷'], [F(itShare * 100) + ' % of the demand (IT + UPS losses)', '需量的' + F(itShare * 100) + '%（IT+UPS损耗）'], [F(Math.round(n * itShare)) + ' duty units; the rest feed cooling and building', F(Math.round(n * itShare)) + '台工作变压器；其余供制冷及建筑']],
-          [['Normal loading per unit', '正常时单台负载率'], F(v.kva) + ' ÷ (' + F(tot) + ' × ' + F(v.size) + ')', F(v.kva / (tot * v.size) * 100) + ' %'],
-          [['Loading after one failure', '一台故障后负载率'], arch === 'DR' ? ['group load ÷ two remaining units', '组负荷 ÷ 剩余2台'] : (arch === '2N' ? ['other side carries the block', '另一侧承担整个模块'] : (fail === null ? '–' : F(v.kva) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')')), fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
+          [['Normal loading per unit', '正常时单台负载率'], F(lvk) + ' ÷ (' + F(tot) + ' × ' + F(v.size) + ')', F(lvk / (tot * v.size) * 100) + ' %'],
+          [['Loading after one failure', '一台故障后负载率'], arch === 'DR' ? ['group load ÷ two remaining units', '组负荷 ÷ 剩余2台'] : (arch === '2N' ? ['other side carries the block', '另一侧承担整个模块'] : (fail === null ? '–' : F(lvk) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')')), fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
           [['LV full-load current → main ACB', '低压满载电流→主框架断路器'], F(v.size) + ' kVA ÷ (√3 × 400 V) → IEC 60947-2', F(iFL) + ' A → ' + F(acb) + ' A' + (iFL > 5000 ? ' (6,300 A frame)' : '')],
           [['LV fault level → switchboard rating', '低压短路电流→配电柜额定'], F(iFL) + ' A ÷ ' + F(v.uk, 1) + ' % → IEC 61439-2', F(ik, 1) + ' kA → ' + icw + ' kA'],
           [['Same demand, other ratings and architectures', '同一需量的其他容量及架构'], [alt(2500) + ' | ' + alt(3150), altZh(2500) + ' | ' + altZh(3150)], [alt(4000), altZh(4000)]],
           [['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' · ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio : ''), asmTxt(h)],
-          [['MV switchgear', '中压开关设备'], [F(tot) + ' TX feeders + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot) + '路变压器馈线 + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.name + ' GIS (Ur ' + h.ur + ' kV)' : '')]];
+          [['MV switchgear', '中压开关设备'], [F(tot + cn + cr) + ' TX feeders' + (chOn ? ' (incl. ' + (cn + cr) + ' to 20/6.6 kV)' : '') + ' + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot + cn + cr) + '路变压器馈线' + (chOn ? '（含' + (cn + cr) + '路至20/6.6 kV）' : '') + ' + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV · ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.name + ' GIS (Ur ' + h.ur + ' kV)' : '')]];
       } },
     fuel: { i: [['d', ['Maximum demand', '最大需量'], 'kW', 50, 1000000, 10, function (c) { return Math.round(c.R.el.demandKW); }], tierIn(),
       ['h', ['Fuel autonomy', '燃油自持'], 'h', 4, 120, 1, function (c) { return c.p.fuelH; }],

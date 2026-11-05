@@ -352,6 +352,14 @@
       ['NERC Level 2 alert (Sep 2025) and Level 3 Essential Actions (May 2026) on large computational loads: ride-through settings, staged re-transfer, load models for studies', 'NERC二级警示（2025年9月）及三级必要措施（2026年5月）：大型计算负荷的穿越设定、分级回切、研究用负荷模型'],
       ['ERCOT studies loads ≥ 75 MW as large loads; ride-through aligned with PRC-024 / PRC-029 and IEEE 2800 practice', 'ERCOT将≥75 MW负荷按大负荷研究；穿越要求参照PRC-024/PRC-029及IEEE 2800']]
   };
+  /* PLN standards cited by the reference documents — what each covers and how far it was verified (Nov 2026): online copies of the SPLN texts were not accessible */
+  var PLN_STDS = [
+    [['Permen ESDM 20/2020 (Grid Code)', '能矿部长令2020年第20号（电网规范）'], ['Connection studies, voltage range and maximum voltage (Table 3), harmonic voltage / current limits (Tables 4–5), clearing times, power factor, flicker', '接入研究、电压范围及最高电压（表3）、谐波电压/电流限值（表4–5）、切除时间、功率因数、闪变'], ['Verified on the original (all five system annexes); governs at transmission level', '已核对原文（五个系统附件）；输电层面以此为准']],
+    [['SPLN T6.001:2013 Tegangan-tegangan standar', 'SPLN T6.001:2013 标准电压'], ['Standard voltages (revision of SPLN 1:1995, aligned with IEC 60038): 150 kV → 170 kV and 66 kV → 72.5 kV highest equipment voltage; normal-system band ≤ 10 % of nominal; 20 kV ± 10 % as applied in the Deltamas study (+ 5 % / − 10 % service voltage also cited)', '标准电压（修订SPLN 1:1995，对应IEC 60038）：150 kV→170 kV、66 kV→72.5 kV设备最高电压；正常系统波动≤额定的10%；20 kV按德尔塔马斯研究取±10%（亦有+5%/−10%供电电压之说）'], ['HV values consistent with Grid Code Table 3; 20 kV band to be confirmed with the PLN distribution unit', '高压数值与电网规范表3一致；20 kV范围须与PLN配电单位确认']],
+    [['SPLN D5.004-1:2012 Power quality', 'SPLN D5.004-1:2012 电能质量'], ['Harmonics, flicker and voltage unbalance at customer connection points (LV / MV / HV), current limits by Isc/IL on the IEEE 519 basis; quoted with the Grid Code for the 150 kV limits in the Deltamas study', '用户接入点谐波、闪变及电压不平衡（低/中/高压），电流限值按Isc/IL（IEEE 519体系）；德尔塔马斯研究与电网规范一并引用150 kV限值'], ['Title and scope verified; tables not accessible — the engine uses the Grid Code tables', '标题及范围已核实；表格无法获取——引擎采用电网规范表格']],
+    [['SPLN T3.007 series (T3.007-2:2016) power transformers', 'SPLN T3.007系列（T3.007-2:2016）电力变压器'], ['PLN transformer specification: tap changers, loss capitalisation (Rp/kW), example for a 60 MVA 150/20 kV unit; cited by the PLN substation specification', 'PLN变压器规范：分接开关、损耗资本化（Rp/kW）、60 MVA 150/20 kV算例；PLN变电站技术规范引用'], ['As quoted in the PLN specification; ratings and impedances in EL-25 follow PLN practice and the reference projects', '按PLN技术规范引用；EL-25的容量及阻抗依据PLN惯例及参考项目']],
+    [['SPLN T3.013-1:2024 · T4.001:2021 · T5.002:2021 · T5.012:2020', 'SPLN T3.013-1:2024 · T4.001:2021 · T5.002:2021 · T5.012:2020'], ['On-line monitoring of transformers · fire prevention · transmission-line protection patterns · substation earthing', '变压器在线监测·防火·输电线路保护配置·变电站接地'], ['As quoted in the PLN substation specification (EL-25, EL-27, EL-18)', '按PLN变电站技术规范引用（EL-25、EL-27、EL-18）']],
+    [['RUPTL 2025–2034', 'RUPTL 2025–2034'], ['Planning criteria: static N-1, transformer loading 70–80 %, double circuits ≤ 50 % each', '规划准则：静态N-1，主变负载率70–80%，双回线每回≤50%'], ['As quoted in both grid impact studies', '按两份电网影响研究引用']]];
   /* reference grid impact studies reviewed for the knowledge base (CCEPC project files): parameters used as calibration, not as a design basis */
   var REF_STUDIES = [
     { id: 'MADANI', t: ['Data centers CGK-01 / CGK-02, Deltamas (West Java, JAMALI) — draft grid impact study, 12 Aug 2026', '数据中心CGK-01/CGK-02，德尔塔马斯（西爪哇，JAMALI）——电网影响研究草稿，2026年8月12日'], rows: [
@@ -474,12 +482,21 @@
     var hv = connection(mva, p, L), volt = hv.volt, vclass = hv.kv >= 70 ? 'TT' : 'TM';
     var feeds = p.tier >= 3 ? 2 : 1;
     var txLoad = p.txLoad > 0 ? p.txLoad / 100 : K.TX_LOAD;
-    var txRule = demandKVA / txLoad <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], demandKVA / txLoad) : (demandKVA > 40000 ? 3150 : 2500);
+    /* chiller supply voltage: large water-cooled centrifugal chillers (≥ 3,517 kW ≈ 1,000 TR) are commonly MV — 6.6 kV motors with MV drives or soft starters, fed by
+       20/6.6 kV transformers (MV chillers are offered up to 13.8 kV; 20 kV motors are uncommon). Their compressors then leave the 400 V system: fewer MV/LV
+       transformers, ACBs and LV feeders; pumps, towers and air-side fans stay on LV. Design-day compressor power = chilled-water load ÷ COP at the design wet bulb. */
+    var chwE = airTech === 'WCCH' ? airKW + itKW * (m.elec + m.misc * 0.5) : 0, chSzE = p.chKW > 0 ? p.chKW : (chwE >= 20000 ? 3517 : (chwE >= 6000 ? 2461 : 1407));
+    var cpE = coolParams(p), tevE = 273.15 + cpE.chws - 1.5, copD = clamp(0.5 * tevE / Math.max(5, 273.15 + L.wb + cpE.twAppr + 7 - tevE), 3, 12), chKWe = chwE / copD;
+    var chVRule = chwE > 0 && chSzE >= 3517 ? 'MV' : 'LV', chV = chwE > 0 ? (p.chV === 'LV' || p.chV === 'MV' ? p.chV : chVRule) : 'LV';
+    var chMV = chV === 'MV' ? chKWe / 0.95 : 0, lvKVA = Math.max(0.3 * demandKVA, demandKVA - chMV), chTx = null;
+    if (chMV > 0) { var cnD = Math.max(1, ceil(chMV / 8000)), csz = pick([2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000], chMV / (cnD * 0.8));
+      chTx = { kva: csz, n: cnD, r: p.tier >= 4 ? cnD : (p.tier >= 2 ? 1 : 0), kv: 6.6, kva6: chMV }; chTx.total = chTx.n + chTx.r; }
+    var txRule = lvKVA / txLoad <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], lvKVA / txLoad) : (lvKVA > 40000 ? 3150 : 2500);
     var txSize = p.txKVA > 0 ? p.txKVA : txRule;
     /* MV/LV redundancy architecture: N1 = one standby per group of six (block redundant), DR = distributed redundant "3-make-2" (any two of three carry the group,
        e.g. Schneider Electric reference design RD101: six 2.5 MVA units per 9.36 MW data hall), 2N = A/B pairs (each side carries the whole block) */
     var txArch = ['N1', 'DR', '2N'].indexOf(p.txArch) >= 0 ? p.txArch : (p.tier >= 4 ? '2N' : 'N1');
-    function txCount(sz, ld, arch) { var n = ceil(demandKVA / (sz * ld)), r; if (arch === '2N') r = n; else if (arch === 'DR') r = ceil(n / 2) * 3 - n; else { r = p.tier >= 3 ? Math.max(1, ceil(n / 6)) : 0; } return { n: n, r: r, t: n + r }; }
+    function txCount(sz, ld, arch) { var n = ceil(lvKVA / (sz * ld)), r; if (arch === '2N') r = n; else if (arch === 'DR') r = ceil(n / 2) * 3 - n; else { r = p.tier >= 3 ? Math.max(1, ceil(n / 6)) : 0; } return { n: n, r: r, t: n + r }; }
     var txc = txCount(txSize, txLoad, txArch), txN = txc.n, txR = txc.r;
     var txAlt = [2500, 3150, 4000].map(function (sz) { return { kva: sz, N1: txCount(sz, txLoad, 'N1').t, DR: txCount(sz, txLoad, 'DR').t, '2N': txCount(sz, txLoad, '2N').t }; });
     var itKVA = (itKW + mechUPS) * (1 + K.UPS_LOSS) / K.PF, txIT = Math.min(txN, ceil(itKVA / (txSize * txLoad)));
@@ -487,8 +504,8 @@
     var txUk = p.txUk > 0 ? p.txUk : (txSize <= 630 ? 4 : (txSize <= 1250 ? 5 : (txSize <= 2500 ? 6 : 7))), lvI = txSize * 1000 / (1.732 * 400), lvIk = lvI / (txUk / 100) / 1000;
     var lv = { i: lvI, acb: pick([630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6300], lvI), ik: lvIk, icw: pick([50, 65, 80, 100], lvIk), uk: txUk };
     /* cast-resin transformer losses (no-load ≈ 0.12 %, full-load ≈ 0.9 % of rating): another rating or loading limit changes the annual PUE */
-    function txLossKW(sz, ld) { var n = ceil(demandKVA / (sz * ld)), r = redundancy(p.tier, n, 'tx'); if (p.tier === 3 && n === 1) r = 1; var x = demandKVA * occF / ((n + r) * sz); return (n + r) * sz * (0.0012 + 0.009 * x * x); }
-    function txRuleAt(ld) { return demandKVA / ld <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], demandKVA / ld) : (demandKVA > 40000 ? 3150 : 2500); }
+    function txLossKW(sz, ld) { var n = ceil(lvKVA / (sz * ld)), r = redundancy(p.tier, n, 'tx'); if (p.tier === 3 && n === 1) r = 1; var x = lvKVA * occF / ((n + r) * sz); return (n + r) * sz * (0.0012 + 0.009 * x * x); }
+    function txRuleAt(ld) { return lvKVA / ld <= 3150 ? pick([100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150], lvKVA / ld) : (lvKVA > 40000 ? 3150 : 2500); }
     var dTx = (p.txKVA > 0 || p.txLoad > 0) ? (txLossKW(txSize, txLoad) - txLossKW(txRuleAt(K.TX_LOAD), K.TX_LOAD)) / itKW : 0;
     if (dTx) { m.elec += dTx; m.pue += dTx; R.eff.pue = m.pue; R.eff.elec = m.elec; R.eff.pue50 = pueAt(0.5); R.eff.gbGrade = m.pue <= 1.2 ? 1 : (m.pue <= 1.3 ? 2 : (m.pue <= 1.5 ? 3 : 0)); }
     var genRule = demandKW <= 1500 ? pick([300, 500, 800, 1000, 1250, 1500], demandKW / K.GEN_LOAD) : (demandKW <= 12000 ? 2000 : (demandKW <= 60000 ? 2500 : 3000));
@@ -534,7 +551,7 @@
     }
     /* MV generator plant paralleled with the utility (closed-transition transfer): its fault contribution (X"d ≈ 0.15) adds to the 20 kV boards */
     if (genV === 'MV') { var gpb = ceil((genN + genR) / Math.max(1, hv.mv.boards)), ikGen = gpb * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); hv.mv.ikGen = ikGen; var ikT = hv.mv.ikCalc + ikGen; if (ikT > hv.mv.ik) hv.mv.ik = pick([25, 31.5, 40, 50, 63], ikT); }
-    R.el = { txArch: txArch, txAlt: txAlt, txIT: txIT, itKVA: itKVA, upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
+    R.el = { txArch: txArch, txAlt: txAlt, txIT: txIT, itKVA: itKVA, lvKVA: lvKVA, chV: chV, chVRule: chVRule, chKWe: chKWe, chMV: chMV, chTx: chTx, chCopD: copD, upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
              txSize: txSize, txRule: txRule, txLoad: txLoad, txN: txN, txR: txR, txTotal: txN + txR, lv: lv, genSize: genSize, genRule: genRule, genN: genN, genR: genR, genTotal: genN + genR, genV: genV,
              fuelQ: fuelQ, fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tankRule: tankRule, tanks: tanks, upsSize: upsSize, upsRule: upsRule, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
              battAge: battAge, battKWh: battKWh, rows: rows, rackRow: rackRow, rowStd: nStd, rowHd: nHd, rowsStd: rowsStd, rowsHd: rowsHd, useBusway: useBusway, bwA: bwA, bwHdA: bwHdA, busways: busways,
@@ -856,7 +873,7 @@
     var fr = el.feedsPerRack, sp0 = R.stdP, hp0 = R.hdP, integ = function (pl) { return !!(pl && ((pl.cat === 'AI' && pl.kw >= 100) || pl.id === 'OCP-ORV3')); }, rpN = function (r) { return r ? fr * r[2] : 0; };
     var taps = c.stdR * fr * Math.max(1, el.rStd[2]) + (c.hdR ? c.hdR * fr * (el.rHd && el.rHd[2] ? el.rHd[2] : ceil(c.hd / 43)) : 0);
     var hv = el.hv, mvB = hv.mv.boards;
-    add('EL-01', mvB * (p.tier >= 3 ? 3 : 2) + el.txTotal + Math.max(1, ceil(el.txTotal * 0.2)) + (el.genV === 'MV' ? el.genTotal : 0), 'panels', '24 kV · ' + fmt(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA' + (hv.kv > 20 ? ' (from ' + hv.name + ' substation)' : ''),
+    add('EL-01', mvB * (p.tier >= 3 ? 3 : 2) + el.txTotal + (el.chTx ? el.chTx.total : 0) + Math.max(1, ceil(el.txTotal * 0.2)) + (el.genV === 'MV' ? el.genTotal : 0), 'panels', '24 kV · ' + fmt(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA' + (hv.kv > 20 ? ' (from ' + hv.name + ' substation)' : ''),
       mvB + ' board(s): incomers + bus coupler, ' + el.txTotal + ' transformer feeders' + (el.genV === 'MV' ? ', ' + el.genTotal + ' generator incomers' : ''), mvB + '段：进线+母联，' + el.txTotal + '路变压器馈线' + (el.genV === 'MV' ? '，' + el.genTotal + '路发电机进线' : ''), '面');
     if (hv.kv > 20) {
       var bays = hv.circ + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (p.tier >= 3 ? 2 : 1);
@@ -869,6 +886,10 @@
       if (R.gimp && R.gimp.reactor > 0) add('EL-24', 1, 'bay', 'Shunt reactor ≈ ' + fmt(Math.ceil(R.gimp.reactor)) + ' MVAr (150 kV bay or 20 kV bus)', 'Cable charging at light load: keeps the power factor within 0.9 leading (grid impact study)', '轻载时电缆充电：保持功率因数在超前0.9以内（电网影响研究）', '间隔');
     }
     add('EL-02', el.txTotal, 'no.', el.txSize + ' kVA', el.txLabel + ' · uk ' + el.lv.uk + ' %');
+    if (el.chTx) {
+      add('EL-02', el.chTx.total, 'no.', fmt(el.chTx.kva) + ' kVA 20/6.6 kV', 'MV/MV for the 6.6 kV chillers (' + el.chTx.n + ' + ' + el.chTx.r + ', ≤ 80 % loading)', '6.6 kV冷机用中压/中压变压器（' + el.chTx.n + '+' + el.chTx.r + '，负载率≤80%）', '台');
+      add('EL-01', el.chTx.total + (me.chN + me.chR) + 1, 'panels', '7.2 kV · 25 kA', '6.6 kV chiller switchboard: ' + el.chTx.total + ' incomers, ' + (me.chN + me.chR) + ' chiller feeders, bus section', '6.6 kV冷机配电：' + el.chTx.total + '路进线、' + (me.chN + me.chR) + '路冷机馈线、分段', '面');
+    }
     add('EL-03', el.txTotal, 'line-ups', fmt(el.lv.acb) + ' A · ' + el.lv.icw + ' kA', 'One per transformer', '每台变压器一组', '组');
     add('EL-04', el.genTotal, 'no.', el.genSize + ' kWe', el.genLabel + ', COP/DCC · ' + (el.genV === 'MV' ? '20 kV paralleled plant' : '400 V'), el.genLabel + '，持续功率 · ' + (el.genV === 'MV' ? '20 kV并机' : '400 V'), '台');
     if (el.genTotal > 1) add('EL-05', Math.max(1, ceil(el.genTotal / 10)), 'systems', '', 'Redundant controllers');
@@ -887,7 +908,7 @@
     add('EL-19', 1, 'lot', 'LPL I/II', 'SPD Type 1+2/2/3');
     add('EL-21', Math.round(c.itKW), 'kW', 'Rack + portable', 'Rental for L4/L5');
     if (me.cracN) add('ME-09', me.cracN + me.cracR, 'no.', me.cracSize + ' kW', redLabel(me.cracN, me.cracR));
-    if (me.chN && R.cool.airTech === 'WCCH') add('ME-01', me.chN + me.chR, 'no.', fmt(me.chSize, 0) + ' kW', me.chLabel);
+    if (me.chN && R.cool.airTech === 'WCCH') add('ME-01', me.chN + me.chR, 'no.', fmt(me.chSize, 0) + ' kW · ' + (el.chV === 'MV' ? '6.6 kV' : '400 V'), me.chLabel);
     if (me.chN && R.cool.airTech === 'ACCH') add('ME-02', me.chN + me.chR, 'no.', fmt(me.chSize, 0) + ' kW', me.chLabel);
     if (me.ctN) add('ME-03', me.ctN + me.ctR, 'cells', fmt(me.rejKW / me.ctN, 0) + ' kW', redLabel(me.ctN, me.ctR));
     if (me.pumps) add('ME-04', me.pumps, 'no.', '', 'CHW' + (R.cool.airTech === 'WCCH' ? ' + CW' : ''));
@@ -943,5 +964,5 @@
   g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, find: find, capacity: capacity, coolingMatrix: coolingMatrix,
                  loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
                  KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection, connAssess: connAssess, HT_STD: HT_STD, htUk: htUk,
-                 COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, REF_STUDIES: REF_STUDIES, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS, tddLimitOf: tddLimitOf, hEff: hEff, CABLE_C: CABLE_C };
+                 COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, REF_STUDIES: REF_STUDIES, PLN_STDS: PLN_STDS, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS, tddLimitOf: tddLimitOf, hEff: hEff, CABLE_C: CABLE_C };
 })(typeof window !== 'undefined' ? window : globalThis);
