@@ -17,6 +17,9 @@
       ['Gas compartments with temperature-compensated density monitors (two alarm stages and block); leakage ≤ 0.5 % per year per compartment; SF6 handling and recovery per IEC 62271-4 (SF6-free designs accepted where proven at the rated voltage).', '气室配温度补偿密度继电器（两级报警及闭锁）；每气室年泄漏率≤0.5%；SF6处理及回收按IEC 62271-4（在该电压等级有成熟业绩的无SF6设计可接受）。'],
       ['Insulation coordination per IEC 60071 with metal-oxide surge arresters at line entries and transformer bays (170 kV: lightning impulse 750 kV; 550 kV: lightning 1,550 kV, switching 1,175 kV).', '按IEC 60071进行绝缘配合，在线路入口及主变间隔设金属氧化物避雷器（170 kV：雷电冲击750 kV；550 kV：雷电冲击1,550 kV，操作冲击1,175 kV）。'],
       ['Protection and control on IEC 61850: line distance / differential (21 / 87L), busbar differential (87B), breaker failure (50BF), transformer differential (87T); bay controllers and local control cubicles with interlocking; 110 V DC auxiliary supply from two battery sets.', '基于IEC 61850的保护与控制：线路距离/差动（21/87L）、母线差动（87B）、断路器失灵（50BF）、主变差动（87T）；间隔控制器及就地控制柜带联锁；110 V直流电源由两组蓄电池供电。'],
+      ['Design for maintenance and extension (PLN 500 / 150 kV GIS specification, IEC 62271-203 Annex F): extension with one busbar and the existing feeders in service; repair of a busbar, busbar disconnector or breaker without shutting the substation; double busbar with separate compartments per bay at 150 kV; in breaker-and-a-half all lines stay in service with any breaker of a diameter out; bays removable; an internal arc must not burn through before the first protection stage operates.', '维护及扩建设计（PLN 500/150 kV GIS技术规范，IEC 62271-203附录F）：扩建时一组母线及现有馈线保持运行；母线、母线隔离开关或断路器检修不全站停电；150 kV双母线且每间隔独立气室；一个半断路器接线中任一断路器退出时所有线路保持运行；间隔可拆卸；内部燃弧在第一级保护动作前不得烧穿外壳。'],
+      ['Breaker duties to be type-tested: transformer magnetising, line and cable charging (data-center 150 kV cable connections), capacitor banks, short-line faults and out-of-phase switching; overhead-line breakers for single-phase high-speed and three-phase delayed auto-reclosing (normally not applied on cable-only circuits).', '断路器需经型式试验的开断工况：变压器励磁电流、线路及电缆充电电流（数据中心150 kV电缆接入）、电容器组、近区故障及失步开断；架空线断路器适用单相快速及三相延时重合闸（纯电缆回路通常不投重合闸）。'],
+      ['150 kV line / cable protection (PLN Java–Bali practice, Deltamas data-center study): main line current differential 87L with distance 21 back-up — zone 1 80 % instantaneous, zone 2 ≥ 120 % of the line at 0.4–0.8 s, zone 3 1.6 s, resistive reach ≤ 50 % of the load impedance, power-swing blocking at 120–130 % of the outer reach — plus local OCR / GFR; a communication failure blocks 87L and enables distance (no differential trip).', '150 kV线路/电缆保护（PLN爪哇-巴厘惯例，德尔塔马斯数据中心研究）：主保护线路差动87L，距离21后备——一段80%瞬动，二段≥线路120%、0.4–0.8 s，三段1.6 s，电阻定值≤负荷阻抗50%，振荡闭锁取最外段120–130%——另设本地过流/接地保护；通信故障时闭锁差动并投入距离保护（不误跳）。'],
       ['Grid Code duties at the connection point: fault clearing by main protection ≤ 120 ms at 150 kV (≤ 90 ms at 500 kV), revenue metering per PLN, power-quality meter, disturbance recorder and telemetry to the PLN control centre.', '接入点电网规范要求：主保护故障切除150 kV≤120 ms（500 kV≤90 ms），按PLN要求设关口计量，配电能质量表、故障录波及向PLN调度中心的遥测。']
     ],
     tpg: [
@@ -48,7 +51,8 @@
       {g: ['Gas system', '气体系统']},
       ['Insulating gas', '绝缘气体', '-', 'SF6 (or proven SF6-free alternative)'],
       ['Filling / alarm / block pressure (CB and other compartments)', '充气/报警/闭锁压力（断路器及其他气室）', 'MPa abs', BID],
-      ['Gas leakage rate per compartment', '每气室泄漏率', '% / year', '≤ 0.5'],
+      ['Gas leakage rate per compartment and between compartments', '每气室及气室间泄漏率', '% / year', '≤ 0.5'],
+      ['SF6 moisture in service: breaker / other compartments', '运行中SF6微水：断路器/其他气室', 'ppm (by weight)', '≤ 50 / ≤ 100'],
       ['Partial discharge at 1.2 Ur/√3 (routine test)', '局部放电（1.2 Ur/√3，出厂试验）', 'pC', '≤ 5'],
       {g: ['Instrument transformers, arresters & protection', '互感器、避雷器及保护']},
       ['Current transformers (protection / metering)', '电流互感器（保护/计量）', '-', '5P20 / 0.2S, 1 A secondary'],
@@ -146,8 +150,8 @@
   { id: 'EL-01', sys: 'EL', cls: 'M', en: 'Medium Voltage Switchgear', zh: '中压开关柜',
     fn: ['Receives the utility supply (and/or MV generator output), protects and distributes power to the MV/LV transformers. Forms the first switching point of the critical power chain.',
          '接收市电（和/或中压发电机输出），对电源进行保护并分配至中压/低压变压器，是关键供电链的第一个开关节点。'],
-    ty: ['Metal-clad, withdrawable VCB, 12 / 24 / 40.5 kV, 630–2500 A busbar, 25–31.5 kA. AIS or GIS where space is limited.',
-         '金属铠装、手车式真空断路器，12 / 24 / 40.5 kV，母线630–2500 A，25–31.5 kA；空间受限时采用GIS。'],
+    ty: ['Metal-clad, withdrawable VCB, 24 kV for the 20 kV system, 630–4,000 A busbar (GIS sections for large HV/MV transformers), 25 kA (PLN standard) or 31.5–40 kA where the transformer size or MV generators paralleled with the utility raise the fault level (Deltamas data centers: 31.5 kA boards, 19.7 kA calculated).',
+         '金属铠装、手车式真空断路器，20 kV系统用24 kV，母线630–4,000 A（大容量主变采用GIS分段），25 kA（PLN标准），主变容量大或中压发电机与市电并联使短路水平升高时采用31.5–40 kA（德尔塔马斯数据中心：31.5 kA开关柜，计算19.7 kA）。'],
     s: [
       ['Switchgear shall be metal-enclosed, LSC2B-PM, with internal arc classification IAC AFLR and withdrawable vacuum circuit breakers.', '开关柜应为金属封闭型，运行连续性等级LSC2B-PM，内部燃弧等级IAC AFLR，配手车式真空断路器。'],
       ['Double incoming feeders with bus-section (bus-coupler) breaker and automatic changeover shall be provided for Tier III/IV designs.', 'Tier III/IV设计应设双路进线及母联断路器，并具备自动切换功能。'],
@@ -615,13 +619,14 @@
     t: [['Sample load test, network monitoring integration test with DCIM.', '抽样负载试验，与DCIM的网络监控集成测试。']] },
 
   /* ------------------------------------------------------------------ */
-  { id: 'EL-15', sys: 'EL', cls: 'S', en: 'Medium Voltage Power Cables', zh: '中压电力电缆',
-    fn: ['Connect utility intake, MV switchgear, transformers and MV generators.', '连接市电进线、中压开关柜、变压器及中压发电机。'],
-    ty: ['Single-core XLPE, Cu or Al, 12/20 (24) kV, 95–630 mm², copper wire screen.', '单芯XLPE绝缘，铜或铝导体，12/20(24) kV，95–630 mm²，铜丝屏蔽。'],
+  { id: 'EL-15', sys: 'EL', cls: 'S', en: 'Medium & High Voltage Power Cables', zh: '中压及高压电力电缆',
+    fn: ['Connect the PLN substation to the on-site HV substation (150 kV cables) and the utility intake, MV switchgear, transformers and MV generators (20 kV).', '连接PLN变电站至场内高压变电站（150 kV电缆），以及市电进线、中压开关柜、变压器及中压发电机（20 kV）。'],
+    ty: ['20 kV: single-core XLPE, Cu or Al, 12/20 (24) kV, 95–630 mm², copper wire screen. 150 kV: single-core Cu XLPE with corrugated aluminium sheath and HDPE jacket (N2XCAS2Y), 1,000 mm² (≈ 787 A per circuit) or 1,200 mm² at river crossings (≈ 773 A) — e.g. dedicated double circuits of the Deltamas data centers.', '20 kV：单芯XLPE，铜或铝导体，12/20(24) kV，95–630 mm²，铜丝屏蔽。150 kV：单芯铜芯XLPE、皱纹铝护套、HDPE外护套（N2XCAS2Y），1,000 mm²（每回约787 A），过河段1,200 mm²（约773 A）——如德尔塔马斯数据中心专用双回电缆。'],
     s: [
       ['Cross-linked polyethylene insulation, LSZH outer sheath inside buildings.', '交联聚乙烯绝缘，建筑内采用低烟无卤外护套。'],
       ['Diverse routing of A/B feeders in separate trenches/fire compartments.', 'A/B路馈线分设电缆沟/防火分区，路径分离。'],
-      ['Cable sizing to include grouping, soil thermal resistivity and short-circuit withstand.', '截面选择应计及成组敷设、土壤热阻及短路耐受。']
+      ['Cable sizing to include grouping, soil thermal resistivity and short-circuit withstand.', '截面选择应计及成组敷设、土壤热阻及短路耐受。'],
+      ['150 kV cables: charging power ≈ U² ω C ≈ 1.6 MVAr per km per circuit (0.231 µF/km) — included in the load flow and in the reactive-power balance at the connection point; main protection line current differential (87L) with distance back-up (EL-24).', '150 kV电缆：充电功率≈U²ωC≈每回每公里1.6 MVAr（0.231 µF/km）——计入潮流及接入点无功平衡；主保护线路差动（87L）并以距离保护后备（EL-24）。']
     ],
     tpg: [
       ['Rated voltage U0/U (Um)', '额定电压U0/U(Um)', 'kV', '12/20 (24)'],
@@ -630,7 +635,14 @@
       ['Max. conductor temperature (normal / SC)', '导体最高温度(正常 / 短路)', '°C', '90 / 250'],
       ['Screen short-circuit rating', '屏蔽短路容量', 'kA / s', 'Per earth fault study'],
       ['Flame retardance', '阻燃性能', '-', 'IEC 60332-3 Cat. A'],
-      ['Partial discharge (routine)', '局部放电(例行)', 'pC', '≤ 5 at 1.73 U0']
+      ['Partial discharge (routine)', '局部放电(例行)', 'pC', '≤ 5 at 1.73 U0'],
+      {g: ['150 kV cable (IEC 60840) — Deltamas data-center connection data', '150 kV电缆（IEC 60840）——德尔塔马斯数据中心接入数据']},
+      ['Type / conductor', '型号/导体', '-', 'N2XCAS2Y, Cu 1,000 mm² (1,200 mm² at crossings)'],
+      ['AC resistance at 90 °C', '90 °C交流电阻', 'Ω/km', '0.0232 (1,000) · 0.0201 (1,200)'],
+      ['Positive-sequence reactance X1', '正序电抗X1', 'Ω/km', '0.161 · 0.170'],
+      ['Operating capacitance / charging current', '工作电容/充电电流', 'µF/km · A/km', '0.231 / 6.31 · 0.245 / 6.70'],
+      ['Current-carrying capacity per circuit', '每回载流量', 'A', '787 · 773 (river crossing)'],
+      ['Conductor short-circuit capacity (1 s)', '导体短路容量（1 s）', 'kA', '143.0 · 171.6']
     ],
     std: ['IEC 60502-2', 'GB/T 12706.2', 'IEC 60332-3', 'IEC 60840 (HV)'],
     t: [['Site VLF/AC withstand test and sheath test after installation.', '安装后现场超低频/交流耐压试验及护套试验。']] },
