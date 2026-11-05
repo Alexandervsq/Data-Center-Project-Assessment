@@ -1,5 +1,5 @@
 /* Language handling — English or 简体中文 (single-language interface).
- * L(en, zh) / Li(en, zh) -> escaped HTML for the active language · Lt(en, zh) -> plain text
+ * L(en, zh) / Li(en, zh) -> escaped HTML for the active language | Lt(en, zh) -> plain text
  * Lp([en, zh]) -> pair helper. */
 (function (g) {
   'use strict';

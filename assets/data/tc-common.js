@@ -37,7 +37,7 @@
   function connRows(c) {
     return c.R.el.hv.opts.map(function (o) {
       var st = o.avail === 4 ? ['private grid (not PLN)', '私营电网（非PLN）'] : (o.intl ? ['international (not PLN)', '国际等级（非PLN）'] : AVT[o.avail]), fit = o.asm.c === 'std' ? ['✓ standard', '✓ 标准方案'] : (o.asm.c === 'opt' ? ['△ possible / strategic', '△ 可行/战略方案'] : ['✗ not practical', '✗ 不可行']);
-      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS · Ur ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
+      var r = ['<b>' + L.te([o.en, o.zh]) + '</b>' + (o.rule ? ' <span class="tc-tag2">' + L.te(['recommended', '建议']) + '</span>' : ''), o.kv > 20 ? 'GIS | Ur ' + o.ur + ' kV' : '24 kV', F(o.lo) + '–' + F(o.hi) + ' MVA', F(o.circ), L.te(st), '<span title="' + L.e(L.t([o.asm.en, o.asm.zh])) + '">' + L.te(fit) + '</span>'];
       r.cur = o.sel; r.key = o.kv; return r;
     });
   }
@@ -54,15 +54,15 @@
   function gimpRows(c) {
     var gi = c.R.gimp; if (!gi) return [];
     function ok(b) { return b ? ' ✓' : ' ✗'; }
-    return [[L.te(['Short-circuit power · Isc/IL', '短路容量 · Isc/IL']), F(gi.ssc) + ' MVA · ' + F(gi.scr), L.te(gi.scr < 20 ? ['low ratio: strictest limits', '短路比低：限值最严'] : ['adequate', '满足'])],
+    return [[L.te(['Short-circuit power | Isc/IL', '短路容量 | Isc/IL']), F(gi.ssc) + ' MVA | ' + F(gi.scr), L.te(gi.scr < 20 ? ['low ratio: strictest limits', '短路比低：限值最严'] : ['adequate', '满足'])],
       [L.te(['Harmonic current TDD (estimate / limit)', '谐波电流TDD（估算/限值）']), F(gi.tdd, 1) + ' % / ' + F(gi.tddLimit, 1) + ' %' + ok(gi.tdd <= gi.tddLimit), L.te(['UPS front end ' + F(gi.ut) + ' %; ' + (gi.ahf ? 'active filters on drives (' + F(gi.vt) + ' % without)' : 'drives ' + F(gi.vt) + ' %, no filters') + (gi.still ? (gi.upsFix ? ' → AFE UPS or UPS input filters' : ' → central active filtering or a stronger connection') : ''), 'UPS整流' + F(gi.ut) + '%；' + (gi.ahf ? '驱动负荷配有源滤波（无滤波' + F(gi.vt) + '%）' : '驱动' + F(gi.vt) + '%，无滤波') + (gi.still ? (gi.upsFix ? '→有源前端UPS或UPS输入滤波器' : '→集中有源滤波或更强的接入点') : '')])],
       [L.te(['Voltage distortion THDv (estimate / limit)', '电压畸变THDv（估算/限值）']), F(gi.thdv, 2) + ' % / ' + gi.thdLim[1] + ' %' + ok(gi.thdv <= gi.thdLim[1]), L.te(['individual harmonic ≤ ' + gi.thdLim[0] + ' %', '单次谐波≤' + gi.thdLim[0] + '%'])],
-      [L.te(['HV cable charging · resonance · PF at 25 % load', '高压电缆充电·谐振·25%负荷功率因数']), gi.qc > 0 ? F(gi.qc, 1) + ' MVAr · h ≈ ' + F(gi.hr, 1) + ' · ' + F(gi.pfLight, 2) + (gi.hrNear.length || gi.reactor > 0 ? ' ✗' : ' ✓') : '–',
+      [L.te(['HV cable charging | resonance | PF at 25 % load', '高压电缆充电·谐振·25%负荷功率因数']), gi.qc > 0 ? F(gi.qc, 1) + ' MVAr | h ≈ ' + F(gi.hr, 1) + ' | ' + F(gi.pfLight, 2) + (gi.hrNear.length || gi.reactor > 0 ? ' ✗' : ' ✓') : '–',
         L.te(gi.qc > 0 ? [gi.circ + ' × ' + F(gi.km, 1) + ' km of cable' + (gi.reactor > 0 ? '; shunt reactor ≈ ' + F(gi.reactor, 1) + ' MVAr for 0.9 leading' : '; within 0.9 leading') + (gi.hrNear.length ? '; resonance near the ' + gi.hrNear.join(' / ') + 'th — frequency scan, detuned filters' : ''), gi.circ + '×' + F(gi.km, 1) + ' km电缆' + (gi.reactor > 0 ? '；需并联电抗器约' + F(gi.reactor, 1) + ' MVAr以满足超前0.9' : '；满足超前0.9') + (gi.hrNear.length ? '；谐振接近' + gi.hrNear.join('/') + '次——频率扫描、调谐滤波器' : '')] : ['20 kV: PLN feeder — not applicable', '20 kV：PLN馈线——不适用'])],
       [L.te(['Voltage step from AI load swing', 'AI负荷波动电压阶跃']), F(gi.dvAi, 2) + ' %' + ok(gi.dvAi <= 2), L.te(['≤ 2 % repetitive, ≤ 3 % infrequent; flicker Pst ≤ ' + (gi.kv >= 66 ? '0.8' : '1.0'), '重复≤2%、偶发≤3%；闪变Pst≤' + (gi.kv >= 66 ? '0.8' : '1.0')])],
       [L.te(['Loss of the whole load', '全部负荷失去']), F(gi.dvLoss, 1) + ' %', L.te(['re-transfer in blocks ≤ ' + F(gi.blk3) + ' MVA; ' + LLCT[gi.llc][0], '分块回切每块≤' + F(gi.blk3) + ' MVA；' + LLCT[gi.llc][1]])],
-      [L.te(['Power factor · voltage range', '功率因数 · 电压范围']), '≈ ' + F(gi.pfEst, 2), L.te(['0.9 lagging – 0.9 leading · ' + gi.vrange[0], '滞后0.9至超前0.9 · ' + gi.vrange[1]])],
-      [L.te(['Fault clearing · studies', '故障切除 · 研究']), gi.clearMs ? '≤ ' + gi.clearMs + ' ms' : '20 kV OCR', L.te([gi.studies.length + ' studies, ≈ ' + gi.months + ' months', gi.studies.length + '项研究，约' + gi.months + '个月'])]];
+      [L.te(['Power factor | voltage range', '功率因数 | 电压范围']), '≈ ' + F(gi.pfEst, 2), L.te(['0.9 lagging – 0.9 leading | ' + gi.vrange[0], '滞后0.9至超前0.9 | ' + gi.vrange[1]])],
+      [L.te(['Fault clearing | studies', '故障切除 | 研究']), gi.clearMs ? '≤ ' + gi.clearMs + ' ms' : '20 kV OCR', L.te([gi.studies.length + ' studies, ≈ ' + gi.months + ' months', gi.studies.length + '项研究，约' + gi.months + '个月'])]];
   }
   function gimpTable(c) {
     if (!c.R.gimp) return '';
@@ -76,18 +76,18 @@
   }
   function chainRows(c) {
     var el = c.R.el, h = el.hv, rows = [];
-    rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' · ' + h.circ + ' circuit(s)', h.name + ' · ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
-    if (h.gis) rows.push([L.te(['HV substation: ' + h.name + ' GIS (IEC 62271-203)', '高压变电站：' + h.name + ' GIS（IEC 62271-203）']), L.te(h.scheme), 'Ur ' + h.ur + ' kV · ' + h.ik + ' kA · ' + F(h.busA) + ' A']);
+    rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' | ' + h.circ + ' circuit(s)', h.name + ' | ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
+    if (h.gis) rows.push([L.te(['HV substation: ' + h.name + ' GIS (IEC 62271-203)', '高压变电站：' + h.name + ' GIS（IEC 62271-203）']), L.te(h.scheme), 'Ur ' + h.ur + ' kV | ' + h.ik + ' kA | ' + F(h.busA) + ' A']);
     if (h.ibt) rows.push([L.te(['EHV/HV interbus transformers', '超高压/高压联络变压器']), h.ibt.ratio, h.ibt.total + ' × ' + h.ibt.mva + ' MVA']);
-    rows.push([L.te(['Fault level at the connection point', '接入点短路水平']), L.te(['planning value, PLN confirms', '规划值，以PLN确认为准']), F(h.pccIk, 1) + ' kA · ' + F(h.ssc) + ' MVA']);
-    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' · uk ' + h.ht.uk + ' % · ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' · split winding', ' · 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA']);
-    if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω · 300 A · 10 s']);
-    rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']) + ' · ' + L.te(['fault ' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? ' incl. generators' : ''), '短路' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? '（含发电机）' : '')]), h.mv.boards + ' × ' + F(h.mv.busA) + ' A · ' + h.mv.ik + ' kA']);
-    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV · uk ' + el.lv.uk + ' % · ' + el.txLabel + L.te([' · ≈ ' + el.txIT + ' duty units for the UPS-fed IT', ' · 约' + el.txIT + '台工作变压器供UPS-IT']), el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
-    if (el.chTx) rows.push([L.te(['MV/MV transformers for MV chillers', '中压冷机用中压/中压变压器']), L.te(['20/6.6 kV · chiller compressors ' + F(el.chKWe) + ' kW (design day)', '20/6.6 kV · 冷机压缩机' + F(el.chKWe) + ' kW（设计日）']), el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA']);
-    rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB · fault level', '主框架断路器 · 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA']);
+    rows.push([L.te(['Fault level at the connection point', '接入点短路水平']), L.te(['planning value, PLN confirms', '规划值，以PLN确认为准']), F(h.pccIk, 1) + ' kA | ' + F(h.ssc) + ' MVA']);
+    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' | uk ' + h.ht.uk + ' % | ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' | split winding', ' | 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA (' + h.ht.lab + ')']);
+    if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω | 300 A | 10 s']);
+    rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']) + ' | ' + L.te(['fault ' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? ' incl. generators' : ''), '短路' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? '（含发电机）' : '')]), h.mv.boards + ' × ' + F(h.mv.busA) + ' A | ' + h.mv.ik + ' kA']);
+    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV | uk ' + el.lv.uk + ' % | ' + el.txLabel + L.te([' | ≈ ' + el.txIT + ' duty units for the UPS-fed IT', ' | 约' + el.txIT + '台工作变压器供UPS-IT']), el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
+    if (el.chTx) rows.push([L.te(['MV/MV transformers for MV chillers', '中压冷机用中压/中压变压器']), L.te(['20/6.6 kV | chiller compressors ' + F(el.chKWe) + ' kW (design day)', '20/6.6 kV | 冷机压缩机' + F(el.chKWe) + ' kW（设计日）']), el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA']);
+    rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB | fault level', '主框架断路器 | 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A | ' + el.lv.icw + ' kA']);
     rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V sets with ATS', '400 V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
-    rows.push([L.te(['UPS · batteries', 'UPS · 蓄电池']), el.upsLabel + ' · ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW · ' + F(el.battKWh) + ' kWh']);
+    rows.push([L.te(['UPS | batteries', 'UPS | 蓄电池']), el.upsLabel + ' | ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW | ' + F(el.battKWh) + ' kWh']);
     return rows;
   }
 
@@ -97,8 +97,8 @@
       func: ['Brings utility power from the PLN grid to the site through dedicated feeders or an on-site substation.', '通过专用馈线或场内变电站，将PLN电网电力引入场地。'],
       how: ['The connection voltage follows the maximum demand and the PLN system: up to ≈ 30 MVA on dedicated 20 kV (TM) feeders; up to ≈ 300 MVA at 150 kV (TT) with an on-site GIS substation and 150/20 kV transformers; above that an extra-high-voltage connection — 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi — with 500/150 or 275/150 kV interbus transformers feeding a 150 kV campus network. 220/230 kV is the equivalent level in other ASEAN grids, not a PLN voltage. Tier III/IV sites take N-1 circuits from two PLN substations so that one outage does not drop the site.',
         '接入电压由最大需量及所在PLN电网决定：约30 MVA以内采用20 kV（中压）专用馈线；约300 MVA以内采用150 kV（高压），自建GIS变电站及150/20 kV主变；更大时采用超高压接入——爪哇-巴厘为500 kV，苏门答腊、加里曼丹、苏拉威西为275 kV——经500/150或275/150 kV联络变压器向园区150 kV网络供电。220/230 kV为其他东盟电网的对应等级，非PLN电压。Tier III/IV站点按N-1配置来自两座PLN变电站的进线，避免单一故障导致全站失电。'],
-      basis: function (c) { var R = c.R, gr = grid(c), h = R.el.hv; return [R.el.volt[0] + ' · ' + F(R.el.mva, 1) + ' MVA · ' + h.circ + ' circuit(s) · ' + gr.en + ' (reliability ' + relTxt(gr.rel)[0] + ') · Rp ' + F(c.p.tariffIDR, 1) + '/kWh · ≈ ' + h.lead + ' months of PLN works',
-        R.el.volt[1] + ' · ' + F(R.el.mva, 1) + ' MVA · ' + h.circ + '回进线 · ' + gr.zh + '（可靠性' + relTxt(gr.rel)[1] + '）· 电价 ' + F(c.p.tariffIDR, 1) + ' 印尼盾/kWh · PLN工程约' + h.lead + '个月']; },
+      basis: function (c) { var R = c.R, gr = grid(c), h = R.el.hv; return [R.el.volt[0] + ' | ' + F(R.el.mva, 1) + ' MVA | ' + h.circ + ' circuit(s) | ' + gr.en + ' (reliability ' + relTxt(gr.rel)[0] + ') | Rp ' + F(c.p.tariffIDR, 1) + '/kWh | ≈ ' + h.lead + ' months of PLN works',
+        R.el.volt[1] + ' | ' + F(R.el.mva, 1) + ' MVA | ' + h.circ + '回进线 | ' + gr.zh + '（可靠性' + relTxt(gr.rel)[1] + '）· 电价 ' + F(c.p.tariffIDR, 1) + ' 印尼盾/kWh | PLN工程约' + h.lead + '个月']; },
       om: [['Start the PLN application (SLO, connection agreement) at feasibility — high-voltage connections take 18–36 months.', '可研阶段即启动PLN申请（SLO、接入协议）——高压接入需18–36个月。'],
         ['Agree protection settings and fault levels with PLN; record power quality (sags, harmonics) during commissioning.', '与PLN确认保护定值与短路水平；调试期间记录电能质量（电压暂降、谐波）。'],
         ['Weaker grids outside Java–Bali justify longer fuel autonomy and a battery energy storage system (BESS).', '爪哇-巴厘以外电网较弱地区，需更长燃油自持并配置电池储能系统（BESS）。']],
@@ -112,8 +112,8 @@
         '每路进线接入金属铠装、内部燃弧分级（IAC AFLR）的开关柜，配真空断路器及保护继电器。母联使任一路进线可带两段母线，出线断路器向变压器供电，联锁防止误操作。'],
       om: [['Thermographic scan of terminations under load every year.', '每年在带负荷状态下对接头进行红外测温。'], ['Test protection relays and breaker timing every 2–3 years.', '每2–3年测试保护继电器及断路器动作时间。'],
         ['Arc-flash study and labels before energisation; switching only under a written method of procedure (MOP).', '送电前完成弧闪分析并张贴标识；倒闸操作必须依据书面操作程序（MOP）。']],
-      basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (Ur ' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + (el.txTotal + (el.chTx ? el.chTx.total : 0)) + ' transformers',
-        h.name + ' GIS（Ur ' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']
+      basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (Ur ' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + (el.txTotal + (el.chTx ? el.chTx.total : 0)) + ' transformers',
+        h.name + ' GIS（Ur ' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']
         : [h.circ + ' incoming 20 kV feeder(s) on a 24 kV board (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + (el.txTotal + (el.chTx ? el.chTx.total : 0)) + ' transformers', h.circ + '路20 kV进线接入24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']; },
       extra: function (c) { return chainTable(c); },
       calc: 'mva' },
@@ -124,7 +124,7 @@
       om: [['Keep enclosure filters clean and check winding temperature (PT100) alarms monthly.', '保持外壳滤网清洁，每月检查绕组温度（PT100）报警。'], ['Partial-discharge test at commissioning; infrared scan of LV links every year.', '调试时进行局部放电测试；每年对低压连接进行红外测温。'],
         ['Order early: large transformers have 12–24 month lead times.', '尽早订货：大型变压器交货期12–24个月。']],
       basis: function (c) { var el = c.R.el, mvc = el.chTx ? [' + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV for the MV chillers (400 V load ' + F(el.lvKVA) + ' kVA)', ' + ' + el.chTx.total + '×' + F(el.chTx.kva) + ' kVA 20/6.6 kV供中压冷机（400 V负荷' + F(el.lvKVA) + ' kVA）'] : ['', ''];
-        return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ', uk ' + el.lv.uk + ' %) for ' + F(el.demandKVA) + ' kVA maximum demand' + mvc[0] + ' · LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '，uk ' + el.lv.uk + '%），最大需量' + F(el.demandKVA) + ' kVA' + mvc[1] + ' · 低压' + F(el.lv.acb) + ' A/' + el.lv.icw + ' kA']; },
+        return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ', uk ' + el.lv.uk + ' %) for ' + F(el.demandKVA) + ' kVA maximum demand' + mvc[0] + ' | LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '，uk ' + el.lv.uk + '%），最大需量' + F(el.demandKVA) + ' kVA' + mvc[1] + ' | 低压' + F(el.lv.acb) + ' A/' + el.lv.icw + ' kA']; },
       extra: function (c) { return chainTable(c); }, calc: 'tx' },
     lv: { eq: 'EL-03', more: ['EL-07', 'EL-08', 'EL-16'],
       how: ['The main switchboard receives the transformer and generator supplies and distributes 400 V to the UPS, mechanical plant and building services. Automatic transfer (ATS or breaker interlocks) moves the load to the generators within seconds of a utility failure and back again when PLN returns.',
@@ -138,7 +138,7 @@
       key: [['Fuel = demand × ' + K.FUEL_L_KWH + ' L/kWh × hours', '燃油 = 需量 × ' + K.FUEL_L_KWH + ' L/kWh × 小时'], function (c) { var el = c.R.el; return F(el.demandKW) + ' kW × ' + K.FUEL_L_KWH + ' × ' + c.p.fuelH + ' h = ' + F(el.fuelL / 1000) + ' m³'; }],
       om: [['Monthly start-and-run test; annual load-bank test at ≥ 80 % load to avoid wet stacking.', '每月启动运行试验；每年以≥80%负载做负载箱测试，避免湿堆积。'], ['Fuel sampling and polishing every 6–12 months (water, microbes).', '每6–12个月燃油取样及净化（水分、微生物）。'],
         ['Confirm emission permit, stack height and noise limits with the authority having jurisdiction.', '与主管部门确认排放许可、排气筒高度及噪声限值。']],
-      basis: function (c) { var el = c.R.el; return [el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + F(el.fuelL / 1000) + ' m³ fuel for ' + c.p.fuelH + ' h', el.genTotal + ' × ' + F(el.genSize) + ' kWe（' + el.genLabel + '）· 燃油' + F(el.fuelL / 1000) + ' m³（' + c.p.fuelH + ' h）']; },
+      basis: function (c) { var el = c.R.el; return [el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + F(el.fuelL / 1000) + ' m³ fuel for ' + c.p.fuelH + ' h', el.genTotal + ' × ' + F(el.genSize) + ' kWe（' + el.genLabel + '）· 燃油' + F(el.fuelL / 1000) + ' m³（' + c.p.fuelH + ' h）']; },
       calc: 'fuel' },
     ups: { eq: 'EL-09', more: ['EL-10', 'EL-11', 'EL-08'],
       how: ['The double-conversion UPS rectifies the incoming power to DC, keeps the batteries charged and inverts it back to a clean sine wave, so the IT never sees grid disturbances. On a utility failure the inverter keeps running from the batteries without any break until the generators take over; a static bypass handles faults and overloads.',
@@ -146,7 +146,7 @@
       key: [['Battery kWh = kW × min ÷ 60 × ' + K.BATT_AGE + ' ÷ ' + K.BATT_EFF, '电池kWh = kW × 分钟 ÷ 60 × ' + K.BATT_AGE + ' ÷ ' + K.BATT_EFF], function (c) { var el = c.R.el; return el.upsTotal + ' × ' + F(el.upsSize) + ' kW × ' + c.p.upsMin + ' min → ' + F(el.battKWh) + ' kWh'; }],
       om: [['Keep UPS and battery rooms at 20–25 °C; VRLA life halves for every ≈ 10 K above 25 °C.', 'UPS及电池室保持20–25 °C；温度每高于25 °C约10 K，铅酸电池寿命减半。'], ['Replace fans and DC capacitors on the manufacturer schedule (≈ 5–7 years).', '按厂家周期（约5–7年）更换风扇与直流电容。'],
         ['Use eco-mode only where the IT power supplies tolerate the transfer time.', '仅在IT电源可承受切换时间时使用ECO模式。']],
-      basis: function (c) { var el = c.R.el; return [el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') · ' + c.p.upsMin + ' min · ' + t(bat(c)), el.upsTotal + ' × ' + F(el.upsSize) + ' kW（' + el.upsLabel + '）· ' + c.p.upsMin + ' min · ' + bat(c)[1]]; },
+      basis: function (c) { var el = c.R.el; return [el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') | ' + c.p.upsMin + ' min | ' + t(bat(c)), el.upsTotal + ' × ' + F(el.upsSize) + ' kW（' + el.upsLabel + '）· ' + c.p.upsMin + ' min | ' + bat(c)[1]]; },
       calc: 'batt', ill: function () { return IV.ups(); } },
     batt: { eq: 'EL-10', more: ['EL-11', 'FP-08', 'ME-18'],
       how: ['Lithium iron phosphate (LFP) racks store the energy that bridges the gap until the generators carry the load. LFP is chosen for its thermal stability; each module is supervised by a battery management system (BMS) that balances the cells and trips on over-temperature or over-voltage.',
@@ -165,19 +165,19 @@
       how: ['Intelligent rack PDUs distribute power to each server inside the cabinet and meter it per outlet or per phase, which feeds capacity planning and billing in DCIM. Dual-corded servers plug into the A and the B PDU so either path can carry the full load.',
         '智能机柜PDU在机柜内为每台服务器配电，并按插座或相计量，为DCIM容量规划与计费提供数据。双电源服务器分别接入A、B路PDU，任一路均可承担全部负荷。'],
       om: [['Alarm thresholds at 80 % of the PDU breaker rating.', '在PDU断路器额定值的80%设置报警阈值。'], ['Balance phases within ± 10 %.', '三相不平衡控制在±10%以内。'], ['Keep firmware current — PDUs are network devices (cyber-security).', '保持固件更新——PDU属于网络设备（需考虑网络安全）。']],
-      basis: function (c) { var el = c.R.el; return [F(el.rpdus) + ' rack PDUs · standard racks ' + el.rStd[0] + (el.rHd ? ' · high-density ' + el.rHd[0] : ''), F(el.rpdus) + '个机柜PDU · 标准机柜' + el.rStd[1] + (el.rHd ? ' · 高密度' + el.rHd[1] : '')]; }, calc: 'bwy' },
+      basis: function (c) { var el = c.R.el; return [F(el.rpdus) + ' rack PDUs | standard racks ' + el.rStd[0] + (el.rHd ? ' | high-density ' + el.rHd[0] : ''), F(el.rpdus) + '个机柜PDU | 标准机柜' + el.rStd[1] + (el.rHd ? ' | 高密度' + el.rHd[1] : '')]; }, calc: 'bwy' },
     bess: { eq: 'EL-23',
       how: ['Containerised LFP batteries with a power conversion system (PCS) connect at medium voltage. They smooth fast load swings of AI clusters, shave PLN peak demand and firm on-site solar; they do not replace the UPS or the generators.',
         '集装箱式LFP电池经功率变换系统（PCS）接入中压。用于平抑AI集群的快速负荷波动、削减PLN峰值需量并稳定现场光伏出力；不能替代UPS或发电机。'],
       om: [['Keep the state of charge in the window agreed with the energy management system; test the response time every year.', '将荷电状态保持在与能量管理系统约定的区间；每年测试响应时间。'], ['Maintain container cooling, off-gas detection and deflagration venting.', '维护集装箱制冷、逸出气体探测及泄爆装置。'],
         ['Plan augmentation: usable energy falls to ≈ 70–80 % over the contract.', '规划扩容补充：合同期内可用能量降至约70–80%。']],
-      basis: function (c) { var b = c.R.el.bess; return b ? [F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh · ' + b.containers + ' containers · ' + usd(b.capex), F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh · ' + b.containers + '个集装箱 · ' + usd(b.capex)] : ['Not proposed for this design basis.', '本设计基准未建议配置。']; }, calc: 'bess' },
+      basis: function (c) { var b = c.R.el.bess; return b ? [F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh | ' + b.containers + ' containers | ' + usd(b.capex), F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh | ' + b.containers + '个集装箱 | ' + usd(b.capex)] : ['Not proposed for this design basis.', '本设计基准未建议配置。']; }, calc: 'bess' },
     fuel: { eq: 'EL-06', more: ['EL-04', 'CS-06'],
       how: ['Bulk tanks (often underground or in bunded yards) hold the autonomy fuel; duplicate transfer pumps and filters keep each generator day tank full. Level, leak and water sensors report to the building management system.',
         '主储油罐（通常为地下或带围堰场地）储存自持燃油；双套输油泵及滤器保持各发电机日用油箱满油。液位、泄漏及水分传感器接入楼宇管理系统。'],
       om: [['Fuel sampling every 6 months; polishing loop for long storage.', '每6个月取样；长期储存设燃油净化回路。'], ['Test leak detection and overfill alarms every year.', '每年测试泄漏探测及溢油报警。'],
         ['Keep a refuelling contract with guaranteed delivery during regional emergencies.', '签订在区域紧急情况下保证供油的加油合同。']],
-      basis: function (c) { var el = c.R.el; return [el.tanks + ' × ' + el.tankSize + ' m³ tanks · ' + F(el.fuelLph) + ' L/h at maximum demand', el.tanks + ' × ' + el.tankSize + ' m³储罐 · 最大需量耗油' + F(el.fuelLph) + ' L/h']; }, calc: 'fuel' },
+      basis: function (c) { var el = c.R.el; return [el.tanks + ' × ' + el.tankSize + ' m³ tanks | ' + F(el.fuelLph) + ' L/h at maximum demand', el.tanks + ' × ' + el.tankSize + ' m³储罐 | 最大需量耗油' + F(el.fuelLph) + ' L/h']; }, calc: 'fuel' },
     earth: { eq: 'EL-18', more: ['EL-19'],
       how: ['A common bonding network ties the building steel, rack frames, cable trays and the main earth bar into one equipotential mesh, so faults clear fast and electronics see no dangerous voltage differences. External lightning protection and surge protective devices (SPD) at every distribution level divert strikes and surges.',
         '公共联结网络将建筑钢结构、机柜框架、桥架及总接地排连接为等电位网格，使故障快速切除，电子设备之间无危险电位差。外部防雷及各级配电的浪涌保护器（SPD）泄放雷击与浪涌。'],
@@ -194,7 +194,7 @@
       key: [['Evaporation ≈ kW × 3,600 ÷ 2,400 kJ/kg', '蒸发量 ≈ kW × 3,600 ÷ 2,400 kJ/kg'], function (c) { var k = c.R.me.rejKW || c.R.cap.itKW; return F(k) + ' kW → ≈ ' + F(k * 0.0015, 1) + ' m³/h (' + F(k * 0.036) + ' m³/day)'; }],
       om: [['Water treatment and Legionella control (biocide, monthly sampling).', '水处理与军团菌控制（杀菌剂，每月取样）。'], ['Control cycles of concentration (CoC 4–6) with conductivity-based blowdown.', '依据电导率排污，控制浓缩倍数（4–6）。'],
         ['Clean fill and basins; check fan gearboxes and drives quarterly.', '清洗填料与集水盘；每季度检查风机齿轮箱及变频器。']],
-      basis: function (c) { var me = c.R.me; return me.ctN ? [(me.ctN + me.ctR) + ' cells · ' + F(me.rejKW) + ' kW rejected · ' + F(me.waterDay) + ' m³/day make-up', (me.ctN + me.ctR) + '格 · 散热' + F(me.rejKW) + ' kW · 补水' + F(me.waterDay) + ' m³/日'] : ['This design uses air-cooled or dry heat rejection (no cooling towers).', '本设计采用风冷或干式散热（无冷却塔）。']; }, calc: 'wue' },
+      basis: function (c) { var me = c.R.me; return me.ctN ? [(me.ctN + me.ctR) + ' cells | ' + F(me.rejKW) + ' kW rejected | ' + F(me.waterDay) + ' m³/day make-up', (me.ctN + me.ctR) + '格 | 散热' + F(me.rejKW) + ' kW | 补水' + F(me.waterDay) + ' m³/日'] : ['This design uses air-cooled or dry heat rejection (no cooling towers).', '本设计采用风冷或干式散热（无冷却塔）。']; }, calc: 'wue' },
     pumps: { eq: 'ME-04', more: ['ME-16', 'ME-20'],
       how: ['Variable-speed centrifugal pumps circulate chilled water to the air handlers and condenser water to the towers. Speed follows the differential pressure, so pump energy falls with the cube of the flow at part load; standby pumps give N+1.',
         '变频离心泵将冷冻水输送至空气处理设备，将冷却水输送至冷却塔。转速随压差调节，部分负荷时泵能耗随流量三次方下降；备用泵实现N+1。'],
@@ -203,7 +203,7 @@
     chiller: { eq: 'ME-01', more: ['ME-02', 'ME-05', 'ME-16'],
       how: ['Oil-free magnetic-bearing centrifugal chillers compress refrigerant to move heat from the chilled-water loop to the condenser-water loop. Elevated chilled water (for example 14 → 22 °C) raises efficiency; at part load and variable speed the plant reaches a coefficient of performance (COP) of ≈ 6–8.',
         '无油磁悬浮离心式冷水机组压缩制冷剂，把热量从冷冻水环路转移至冷却水环路。提高冷冻水温度（如14→22 °C）可提升效率；部分负荷与变频运行时机组性能系数（COP）约6–8。'],
-      key: [['RT = kW ÷ ' + K.RT_KW + ' · N = ⌈load ÷ size⌉', 'RT = kW ÷ ' + K.RT_KW + ' · N = ⌈负荷 ÷ 单机容量⌉'], function (c) { var me = c.R.me; return me.chN ? F(me.chwLoad) + ' kW = ' + F(me.chwLoad / K.RT_KW) + ' RT → ' + me.chN + ' + ' + me.chR + ' × ' + F(me.chSize) + ' kW' : '–'; }],
+      key: [['RT = kW ÷ ' + K.RT_KW + ' | N = ⌈load ÷ size⌉', 'RT = kW ÷ ' + K.RT_KW + ' | N = ⌈负荷 ÷ 单机容量⌉'], function (c) { var me = c.R.me; return me.chN ? F(me.chwLoad) + ' kW = ' + F(me.chwLoad / K.RT_KW) + ' RT → ' + me.chN + ' + ' + me.chR + ' × ' + F(me.chSize) + ' kW' : '–'; }],
       om: [['Log approach temperatures; a rising approach means fouled tubes.', '记录趋近温度；趋近温度上升说明换热管结垢。'], ['Clean condenser tubes every year and check for refrigerant leaks.', '每年清洗冷凝器管束并检查冷媒泄漏。'],
         ['Restart time after a power loss matters: specify fast restart (< 5 min) and add thermal storage.', '断电后的重启时间至关重要：规定快速重启（<5 min）并配置蓄冷。']],
       basis: function (c) { var me = c.R.me; return me.chN ? [(me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW ' + (c.R.cool.airTech === 'WCCH' ? 'water-cooled' : 'air-cooled') + ' chillers (' + me.chLabel + ') for ' + F(me.chwLoad) + ' kW', (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW' + (c.R.cool.airTech === 'WCCH' ? '水冷' : '风冷') + '冷水机组（' + me.chLabel + '），负荷' + F(me.chwLoad) + ' kW'] : ['No chillers in this design (DX or indirect evaporative cooling).', '本设计无冷水机组（直膨或间接蒸发冷却）。']; },
@@ -212,11 +212,11 @@
       how: ['A plate heat exchanger lets cool condenser water chill the loop directly when the outdoor wet-bulb is low enough, so the compressors can rest. In lowland Indonesia this rarely happens; it pays off with warm-water liquid cooling or at highland sites such as Bandung.',
         '当室外湿球温度足够低时，板式换热器可用冷却水直接冷却冷冻水环路，压缩机可以停机。印尼低地很少出现该条件；更适用于温水液冷或万隆等高原站点。'],
       om: [['Clean the plates when the approach rises above ≈ 1.5–2 K.', '趋近温度高于约1.5–2 K时清洗板片。'], ['Check gaskets for leaks every year.', '每年检查密封垫泄漏。'], ['Install strainers upstream to protect the narrow channels.', '上游设置过滤器保护狭窄流道。']],
-      basis: function (c) { return ['Climate class ' + c.R.L.cls + ' · design wet-bulb ' + c.R.L.wb + ' °C', '气候类型' + c.R.L.cls + ' · 设计湿球' + c.R.L.wb + ' °C']; }, calc: 'chw' },
+      basis: function (c) { return ['Climate class ' + c.R.L.cls + ' | design wet-bulb ' + c.R.L.wb + ' °C', '气候类型' + c.R.L.cls + ' | 设计湿球' + c.R.L.wb + ' °C']; }, calc: 'chw' },
     tes: { eq: 'ME-06',
       how: ['An insulated chilled-water tank stores enough cold water to keep the air handlers supplied while the chillers restart after a power interruption — typically 5–15 minutes. Without it, a high-density room can warm up by several kelvin per minute.',
         '保温冷冻水罐储存足够的冷水，在断电后冷机重启期间维持空气处理设备供冷——通常5–15分钟。若无蓄冷，高密度机房温度每分钟可上升数开尔文。'],
-      key: ['V = Q × t ÷ (ρ · cp · ΔT)', function (c) { return F(c.R.me.chwLoad || 0) + ' kW × ' + K.TES_S + ' s ÷ (4.186 × ' + K.CHW_DT + ') → ' + F(c.R.me.tesM3 || 0) + ' m³'; }],
+      key: ['V = Q × t ÷ (ρ | cp | ΔT)', function (c) { return F(c.R.me.chwLoad || 0) + ' kW × ' + K.TES_S + ' s ÷ (4.186 × ' + K.CHW_DT + ') → ' + F(c.R.me.tesM3 || 0) + ' m³'; }],
       om: [['Keep stratification with low-velocity inlet diffusers.', '采用低流速布水器保持分层。'], ['Prove the ride-through with a controlled chiller trip during the integrated systems test (IST).', '在综合系统测试（IST）中通过受控停冷机验证蓄冷时间。'], ['Inspect insulation and corrosion every year.', '每年检查保温与腐蚀。']],
       basis: function (c) { return c.R.me.tesM3 ? [F(c.R.me.tesM3) + ' m³ for ' + K.TES_S / 60 + ' min at ' + F(c.R.me.chwLoad) + ' kW', F(c.R.me.tesM3) + ' m³，在' + F(c.R.me.chwLoad) + ' kW下维持' + K.TES_S / 60 + '分钟'] : ['Not required for this design basis.', '本设计基准无需配置。']; }, calc: 'tes' },
     crah: { eq: 'ME-08', more: ['ME-07', 'ME-10', 'ME-09'],
@@ -232,7 +232,7 @@
         '热通道（或冷通道）封闭将送风与排风物理隔离。服务器前部吸入冷风，后部排出温升10–15 K的热风；封闭防止两股气流混合，可提高送风温度并降低风机能耗。'],
       om: [['Blanking panels in every empty U; seal cable openings.', '每个空U安装盲板；封堵线缆开孔。'], ['Containment roofs must not obstruct sprinkler or gas discharge (fusible or drop-away panels).', '封闭顶板不得阻挡喷淋或气体喷放（采用易熔或可脱落面板）。'],
         ['Watch the temperature rise across racks in DCIM to find recirculation.', '在DCIM中监测机柜温升以发现回流。']],
-      basis: function (c) { return [F(c.R.cap.racks) + ' racks in ' + c.R.el.rows + ' rows · white space ' + F(c.R.sp.ws) + ' m²', F(c.R.cap.racks) + '个机柜，' + c.R.el.rows + '排 · 白区' + F(c.R.sp.ws) + ' m²']; }, calc: 'air', ill: function () { return IV.aisle(); } },
+      basis: function (c) { return [F(c.R.cap.racks) + ' racks in ' + c.R.el.rows + ' rows | white space ' + F(c.R.sp.ws) + ' m²', F(c.R.cap.racks) + '个机柜，' + c.R.el.rows + '排 | 白区' + F(c.R.sp.ws) + ' m²']; }, calc: 'air', ill: function () { return IV.aisle(); } },
     rdhx: { eq: 'ME-11', more: ['FP-07'],
       how: ['A water coil in the rear door of a rack absorbs the hot exhaust before it leaves the rack, so 20–75 kW racks can stand in an air-cooled hall. Passive doors rely on the server fans; active doors add their own fans for higher densities.',
         '机柜后门内置水盘管，在热风离开机柜前将其吸收，使20–75 kW机柜可置于风冷机房。被动式背门依靠服务器风扇；主动式背门自带风扇，适用于更高密度。'],
@@ -245,7 +245,7 @@
       how: ['Storage tanks keep the cooling towers running when the municipal or groundwater supply is interrupted — sized like fuel, in hours of autonomy (often equal to the generator autonomy). Rainwater harvesting can cover part of the demand.',
         '储水箱在市政或地下水供应中断时维持冷却塔运行——与燃油相同，按自持小时数选型（通常与发电机自持时间相同）。雨水收集可满足部分需求。'],
       om: [['Two supply sources and duplicate make-up valves.', '双水源及双补水阀。'], ['Level alarms to the BMS; clean the tanks every year.', '液位报警接入BMS；每年清洗水箱。'], ['Groundwater permits (SIPA) where wells are used.', '使用水井时办理地下水许可（SIPA）。']],
-      basis: function (c) { return [F(c.R.me.waterStore) + ' m³ storage · ' + F(c.R.me.waterDay) + ' m³/day', '储水' + F(c.R.me.waterStore) + ' m³ · ' + F(c.R.me.waterDay) + ' m³/日']; }, calc: 'wue' },
+      basis: function (c) { return [F(c.R.me.waterStore) + ' m³ storage | ' + F(c.R.me.waterDay) + ' m³/day', '储水' + F(c.R.me.waterStore) + ' m³ | ' + F(c.R.me.waterDay) + ' m³/日']; }, calc: 'wue' },
     vfd: { eq: 'ME-20',
       how: ['Variable frequency drives run pumps, tower fans and air-handler fans at the speed actually needed. Because fan and pump power follows the cube of speed, running at 80 % speed needs only ≈ 51 % of the power.', '变频器使水泵、冷却塔风机及空气处理风机按实际需要的转速运行。风机水泵功率与转速三次方成正比，80%转速仅需约51%功率。'],
       om: [['Keep drives clean and cool; check their cooling fans every year.', '保持变频器清洁散热；每年检查其冷却风扇。'], ['Verify the bypass (where specified) for critical pumps.', '验证关键水泵的旁路（如有）。'], ['Limit harmonics: active front end or filters.', '限制谐波：有源前端或滤波器。']], calc: 'chw' },
@@ -257,12 +257,12 @@
       how: ['Each compute tray carries GPUs and CPUs with cold plates fixed directly on the chips. Coolant flows through micro-channels in the plates and removes ≈ 85–90 % of the tray heat; the remaining heat from memory, drives and power supplies is still air-cooled.',
         '每个计算托盘的GPU与CPU上直接安装冷板。冷却液流经冷板微通道，带走托盘约85–90%的热量；内存、硬盘及电源的其余热量仍需风冷。'],
       om: [['Follow the OEM coolant specification exactly (PG25 or treated water, filtration).', '严格遵循OEM冷却液规范（PG25或处理水、过滤精度）。'], ['Pressure-test trays after any cold-plate service.', '冷板维护后对托盘进行压力测试。'], ['Monitor GPU temperatures and throttling events in DCIM.', '在DCIM中监测GPU温度与降频事件。']],
-      basis: function (c) { var hp = c.R.hdP, cap = c.R.cap; return cap.hdR ? [F(cap.hdR) + ' × ' + hp.en + ' · ≈ ' + F(cap.gpus) + ' GPUs', F(cap.hdR) + ' × ' + hp.zh + ' · 约' + F(cap.gpus) + '颗GPU'] : null; }, calc: 'flow', ill: function () { return IV.coldplate(); } },
+      basis: function (c) { var hp = c.R.hdP, cap = c.R.cap; return cap.hdR ? [F(cap.hdR) + ' × ' + hp.en + ' | ≈ ' + F(cap.gpus) + ' GPUs', F(cap.hdR) + ' × ' + hp.zh + ' | 约' + F(cap.gpus) + '颗GPU'] : null; }, calc: 'flow', ill: function () { return IV.coldplate(); } },
     airack: { eq: 'IT-01', more: ['IT-08', 'CS-01'],
       how: ['An AI rack such as NVIDIA GB300 NVL72 joins 72 GPUs in one NVLink domain. It draws ≈ 135 kW, weighs ≈ 1.5 t and arrives as an integrated, pre-plumbed rack with its own manifolds and power shelves — the facility must supply liquid, power and floor strength to match.',
         'NVIDIA GB300 NVL72等AI机柜将72颗GPU组成一个NVLink域。功率约135 kW、重约1.5 t，以集成、预配管的整机柜交付，自带分液器及电源架——设施须提供相应的液冷、电力及楼面承载能力。'],
       om: [['Plan the delivery route: dock, freight lift and ramps rated for the rack on its pallet.', '规划运输路线：卸货平台、货梯及坡道须承载带托盘的机柜。'], ['Commission each rack with flow and pressure checks before power-on.', '每个机柜上电前进行流量与压力调试。'], ['Keep a rack-level spares kit (QDs, hoses, power shelves).', '配备机柜级备件包（快插接头、软管、电源架）。']],
-      basis: function (c) { var hp = c.R.hdP; return [hp.en + ': ' + hp.kw + ' kW design / ' + hp.kwPeak + ' kW peak · ' + hp.w + ' × ' + hp.d + ' mm · ' + hp.u + 'U · ≈ ' + F(hp.kg) + ' kg · ' + (hp.gpu || '–') + ' GPUs', hp.zh + '：设计' + hp.kw + ' kW / 峰值' + hp.kwPeak + ' kW · ' + hp.w + ' × ' + hp.d + ' mm · ' + hp.u + 'U · 约' + F(hp.kg) + ' kg · ' + (hp.gpu || '–') + '颗GPU']; },
+      basis: function (c) { var hp = c.R.hdP; return [hp.en + ': ' + hp.kw + ' kW design / ' + hp.kwPeak + ' kW peak | ' + hp.w + ' × ' + hp.d + ' mm | ' + hp.u + 'U | ≈ ' + F(hp.kg) + ' kg | ' + (hp.gpu || '–') + ' GPUs', hp.zh + '：设计' + hp.kw + ' kW / 峰值' + hp.kwPeak + ' kW | ' + hp.w + ' × ' + hp.d + ' mm | ' + hp.u + 'U | 约' + F(hp.kg) + ' kg | ' + (hp.gpu || '–') + '颗GPU']; },
       extra: function (c) {
         var rows = DB.platforms.filter(function (p) { return p.cat === 'AI'; }).map(function (p) { var r = [L.te([p.en, p.zh]) + (p.provisional ? ' *' : ''), p.kw + ' kW', p.cool, F(p.kg) + ' kg', p.gpu || '–']; r.cur = p.id === c.R.hdP.id; return r; });
         return '<div><h3>' + L.te(['AI rack platforms in the knowledge base', '知识库中的AI机柜平台']) + '</h3>' + L.ptable([['Platform', '平台'], ['Design', '设计'], ['Cooling', '冷却'], ['Weight', '重量'], 'GPU'], rows) + '<p class="tc-src">* ' + L.te(['provisional figures', '暂定数据']) + '</p></div>';
@@ -288,7 +288,7 @@
       how: ['Finned coils with large fans reject the facility-water heat to outdoor air. Adiabatic pads pre-cool the inlet air during the hottest hours; in Indonesia, warm supply water (≈ 35–40 °C or more) is needed for chiller-less operation all year.',
         '翅片盘管配大风量风机将设施水热量排至室外空气。最热时段由绝热湿帘预冷进风；在印尼，全年无冷机运行需要较高的供水温度（约35–40 °C或以上）。'],
       om: [['Clean coils (dust, insects) every 3–6 months.', '每3–6个月清洗盘管（灰尘、昆虫）。'], ['Adiabatic pads: water quality and replacement.', '绝热湿帘：水质及更换。'], ['Fan speed follows the supply temperature set-point.', '风机转速跟随供水温度设定值。']],
-      basis: function (c) { var me = c.R.me; return me.dcN ? [(me.dcN + me.dcR) + ' × ' + F(K.DC_KW) + ' kW dry coolers · design dry-bulb ' + c.R.L.db + ' °C', (me.dcN + me.dcR) + ' × ' + F(K.DC_KW) + ' kW干冷器 · 设计干球' + c.R.L.db + ' °C'] : null; }, calc: 'appr' },
+      basis: function (c) { var me = c.R.me; return me.dcN ? [(me.dcN + me.dcR) + ' × ' + F(K.DC_KW) + ' kW dry coolers | design dry-bulb ' + c.R.L.db + ' °C', (me.dcN + me.dcR) + ' × ' + F(K.DC_KW) + ' kW干冷器 | 设计干球' + c.R.L.db + ' °C'] : null; }, calc: 'appr' },
     leak: { eq: 'FP-07',
       how: ['Sensing cables along pipe runs and under CDUs and manifolds detect water within seconds and pinpoint the location, before a leak reaches electrical equipment.', '沿管道及CDU、分液器下方敷设的感应线缆可在数秒内探测漏水并精确定位，在泄漏蔓延至电气设备前报警。'],
       om: [['Test each zone with water every 6 months.', '每6个月用水测试每个防区。'], ['Map cable distances to room drawings.', '将线缆距离与房间图纸对应。'], ['Automatic isolation valves where the loop design allows.', '环路设计允许时设自动隔离阀。']] },
@@ -301,13 +301,13 @@
       how: ['AI racks weigh 1.3–1.5 t on ≈ 0.6–0.7 m² of floor. Slabs are designed for ≈ 20–25 kN/m² including the racks, coolant and overhead busway, and the delivery route (dock, lift, ramps) must carry the rack on its pallet.',
         'AI机柜重1.3–1.5 t，占地约0.6–0.7 m²。楼板按约20–25 kN/m²设计（含机柜、冷却液及上部母线），运输路线（卸货平台、货梯、坡道）须能承载带托盘的机柜。'],
       om: [['Check caster point loads on raised floors (if any).', '检查架空地板上的脚轮集中荷载（如有）。'], ['Mark permitted rack positions on the slab layout.', '在楼板布置图上标注允许的机柜位置。'], ['Seismic restraints for tall racks in higher-hazard zones (SNI 1726).', '较高地震风险区的高机柜设置抗震约束（SNI 1726）。']],
-      basis: function (c) { return ['Design floor load ≥ ' + c.R.sp.floorLoad + ' kN/m² · heaviest rack ≈ ' + F(c.R.sp.heavyRack) + ' kg · clear height ' + c.R.sp.clearH, '楼面设计荷载≥' + c.R.sp.floorLoad + ' kN/m² · 最重机柜约' + F(c.R.sp.heavyRack) + ' kg · 净高' + c.R.sp.clearHzh]; }, calc: 'floor' },
+      basis: function (c) { return ['Design floor load ≥ ' + c.R.sp.floorLoad + ' kN/m² | heaviest rack ≈ ' + F(c.R.sp.heavyRack) + ' kg | clear height ' + c.R.sp.clearH, '楼面设计荷载≥' + c.R.sp.floorLoad + ' kN/m² | 最重机柜约' + F(c.R.sp.heavyRack) + ' kg | 净高' + c.R.sp.clearHzh]; }, calc: 'floor' },
     hall: { eq: 'IT-01', more: ['IT-02', 'IT-03', 'IT-06', 'IT-08'], name: ['White space (data halls)', '白区（数据机房）'],
       func: ['Houses the IT racks in secure, precisely cooled halls with power and network delivered to every rack.', '在安全、精密制冷的机房中安放IT机柜，并向每个机柜提供电力与网络。'],
       how: ['Racks stand in rows with contained hot or cold aisles; overhead busway and fibre trays feed them. The IT load per rack drives everything else — power distribution, cooling technology, floor loading and white-space area. Typical enterprise racks draw 5–15 kW; AI racks such as NVIDIA GB300 NVL72 draw ≈ 135 kW.',
         '机柜成排布置并封闭冷/热通道，上方母线与光纤桥架为其供电与联网。单柜IT负载决定其余一切——配电方式、制冷技术、楼面荷载及白区面积。典型企业机柜5–15 kW；NVIDIA GB300 NVL72等AI机柜约135 kW。'],
       om: [['Track rack power and inlet temperature in DCIM; avoid stranded capacity.', '在DCIM中跟踪机柜功率与进风温度，避免容量闲置。'], ['Bond every rack to the common bonding network.', '每个机柜接入公共等电位联结网络。'], ['Clean-room discipline: no cardboard, filtered make-up air, access logs.', '洁净管理：禁止纸箱入内，新风过滤，出入登记。']],
-      basis: function (c) { var cap = c.R.cap; return [F(cap.racks) + ' racks: ' + F(cap.stdR) + ' × ' + F(cap.sd, 1) + ' kW + ' + F(cap.hdR) + ' × ' + F(cap.hd) + ' kW · ' + F(c.R.sp.ws) + ' m² in ' + c.R.sp.halls + ' hall(s)', F(cap.racks) + '个机柜：' + F(cap.stdR) + ' × ' + F(cap.sd, 1) + ' kW + ' + F(cap.hdR) + ' × ' + F(cap.hd) + ' kW · 白区' + F(c.R.sp.ws) + ' m²，' + c.R.sp.halls + '个机房']; },
+      basis: function (c) { var cap = c.R.cap; return [F(cap.racks) + ' racks: ' + F(cap.stdR) + ' × ' + F(cap.sd, 1) + ' kW + ' + F(cap.hdR) + ' × ' + F(cap.hd) + ' kW | ' + F(c.R.sp.ws) + ' m² in ' + c.R.sp.halls + ' hall(s)', F(cap.racks) + '个机柜：' + F(cap.stdR) + ' × ' + F(cap.sd, 1) + ' kW + ' + F(cap.hdR) + ' × ' + F(cap.hd) + ' kW | 白区' + F(c.R.sp.ws) + ' m²，' + c.R.sp.halls + '个机房']; },
       extra: function (c) { var ws = E.find(DB.spaces, 'WS'); return ws ? '<div><h3>' + L.te(['Spaces in the white space', '白区功能空间']) + '</h3><ul class="tc-li">' + ws.items.map(function (i) { return '<li>' + L.te(i) + '</li>'; }).join('') + '</ul></div>' : ''; }, calc: 'dens' },
     mmr: { eq: 'IT-10', more: ['IT-03', 'IT-05', 'IT-06', 'IT-11'],
       how: ['Carriers bring fibre into the site through at least two diverse duct routes and two entrance rooms; cross-connects in the meet-me room (MMR) join customers to carriers, clouds and internet exchanges. Carrier neutrality is a key value of colocation sites.',
@@ -317,7 +317,7 @@
       how: ['The first security layers: an anti-climb fence with perimeter intrusion detection, crash-rated vehicle barriers, a guardhouse and cameras, so an attempt is detected and verified before anyone reaches the building.',
         '首道安防层：防攀爬围栏配周界入侵探测、防冲撞车辆路障、门卫室及摄像机，在人员接近建筑前即探测并确认入侵企图。'],
       om: [['Walk-test every intrusion zone monthly.', '每月对每个入侵防区步测。'], ['Keep a vegetation-free clear zone along the fence.', '围栏沿线保持无植被的净空区。'], ['Camera call-up on every perimeter alarm.', '周界报警联动摄像机。']],
-      basis: function (c) { return [c.R.fs.securityLayers + ' security layers · ≈ ' + F(c.R.fs.cams) + ' cameras · ≈ ' + F(c.R.fs.readers) + ' access-controlled doors', c.R.fs.securityLayers + '道安防层 · 约' + F(c.R.fs.cams) + '台摄像机 · 约' + F(c.R.fs.readers) + '个门禁点']; }, calc: 'cctv' },
+      basis: function (c) { return [c.R.fs.securityLayers + ' security layers | ≈ ' + F(c.R.fs.cams) + ' cameras | ≈ ' + F(c.R.fs.readers) + ' access-controlled doors', c.R.fs.securityLayers + '道安防层 | 约' + F(c.R.fs.cams) + '台摄像机 | 约' + F(c.R.fs.readers) + '个门禁点']; }, calc: 'cctv' },
     fence: { eq: 'SC-03',
       how: ['An anti-climb fence with a perimeter intrusion detection system (vibration or fibre-optic sensor), lighting and cameras forms the outer layer; every alarm is verified on video before guards respond.', '防攀爬围栏配周界入侵探测系统（振动或光纤传感）、照明及摄像机构成外层防线；每次报警先经视频确认再由保安响应。'],
       om: [['Walk-test every zone monthly.', '每月对每个防区步测。'], ['Clear zone of 2–3 m on both sides of the fence.', '围栏两侧保持2–3 m净空区。'], ['Check fence tension and sensor cable after storms.', '暴风雨后检查围栏张力及传感线缆。']], calc: 'cctv' },
@@ -344,7 +344,7 @@
       how: ['Clean agents (FK-5-1-12 or HFC-227ea) flood a sealed room to a design concentration that stops combustion within ≈ 10 s of discharge and leave no residue on IT equipment. The room must be tight enough to hold the concentration for ≥ 10 minutes, proven by a door-fan test.',
         '洁净气体（全氟己酮或七氟丙烷）在约10 s内喷放并充满密闭房间至设计浓度，抑制燃烧且不在IT设备上留下残留。房间须足够密闭以保持浓度≥10分钟，并经门风扇测试验证。'],
       om: [['Weigh cylinders (or check level) every 6 months.', '每6个月称重钢瓶（或检查液位）。'], ['Door-fan integrity test after any room alteration.', '房间改动后进行门风扇密闭性测试。'], ['Abort and manual-release stations clearly labelled; staff trained.', '紧急中止及手动释放按钮清晰标识，人员受训。']],
-      basis: function (c) { var f = c.R.fs; return f.gasZones ? [f.gasZones + ' gas zones · ≈ ' + F(f.agentKg) + ' kg HFC-227ea equivalent', f.gasZones + '个气体防区 · 约' + F(f.agentKg) + ' kg（七氟丙烷当量）'] : ['Large halls: pre-action sprinklers; clean agent in MMR, electrical and battery rooms.', '大型机房：预作用喷淋；运营商交汇间、电气室及电池室采用洁净气体。']; }, calc: 'agent', ill: function () { return IV.agent(); } },
+      basis: function (c) { var f = c.R.fs; return f.gasZones ? [f.gasZones + ' gas zones | ≈ ' + F(f.agentKg) + ' kg HFC-227ea equivalent', f.gasZones + '个气体防区 | 约' + F(f.agentKg) + ' kg（七氟丙烷当量）'] : ['Large halls: pre-action sprinklers; clean agent in MMR, electrical and battery rooms.', '大型机房：预作用喷淋；运营商交汇间、电气室及电池室采用洁净气体。']; }, calc: 'agent', ill: function () { return IV.agent(); } },
     preact: { eq: 'FP-05', more: ['FP-06'],
       how: ['Pipes stay dry until two independent events occur — a detector alarm and a sprinkler head opening — so an accidentally damaged head does not flood the data hall. Common in large halls where gas suppression is impractical.', '管网平时为干式，只有两个独立事件同时发生——探测器报警且喷头开启——才放水，意外损坏的喷头不会淹没机房。常用于不宜采用气体灭火的大型机房。'],
       om: [['Trip test the valves every year; supervise the air pressure.', '每年做阀门跳闸试验；监控管网气压。'], ['Check head clearances above new containment and trays.', '检查新增通道封闭及桥架上方的喷头净空。'], ['Drain low points to avoid corrosion.', '排放低点积水，防止腐蚀。']] },
@@ -360,7 +360,7 @@
     dcim: { eq: 'MC-03', more: ['MC-01', 'MC-02', 'MC-04'],
       how: ['Data center infrastructure management (DCIM) combines asset, space, power and cooling data to show capacity per room, row and rack, model changes before they are made and report PUE and service-level performance.', '数据中心基础设施管理（DCIM）整合资产、空间、电力与制冷数据，按机房、列、机柜显示容量，在变更前进行模拟，并报告PUE及服务水平表现。'],
       om: [['Keep the asset database audited (quarterly walk-downs).', '定期审核资产数据库（每季度现场核对）。'], ['Integrate BMS and EPMS through open protocols (BACnet, Modbus, SNMP).', '通过开放协议（BACnet、Modbus、SNMP）集成BMS与EPMS。'], ['Use capacity reports before accepting new customers.', '接纳新客户前先查看容量报告。']],
-      basis: function (c) { return ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points · ≈ ' + F(c.R.fs.meters) + ' meters · ' + F(c.R.cap.racks) + ' racks in the asset model', '约' + F(c.R.fs.bmsPts) + '个BMS点位 · 约' + F(c.R.fs.meters) + '块电表 · 资产模型' + F(c.R.cap.racks) + '个机柜']; }, calc: 'points' },
+      basis: function (c) { return ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points | ≈ ' + F(c.R.fs.meters) + ' meters | ' + F(c.R.cap.racks) + ' racks in the asset model', '约' + F(c.R.fs.bmsPts) + '个BMS点位 | 约' + F(c.R.fs.meters) + '块电表 | 资产模型' + F(c.R.cap.racks) + '个机柜']; }, calc: 'points' },
     noc: { eq: 'MC-05', more: ['MC-03'],
       how: ['The network and operations centre (NOC) is staffed 24/7. Video walls show BMS, EPMS, DCIM, fire and security alarms in one place, so operators can follow the emergency operating procedures (EOP) for every event.', '网络运营中心（NOC）全天候值守。视频墙集中显示BMS、EPMS、DCIM、消防及安防报警，运维人员可按应急操作程序（EOP）处置每个事件。'],
       om: [['Shift handover checklist and incident log.', '交接班清单及事件日志。'], ['Run emergency drills (utility failure, fire, cooling loss) every quarter.', '每季度进行应急演练（市电失电、火灾、失冷）。'], ['Redundant NOC workstation or remote NOC for continuity.', '设冗余NOC工位或远程NOC以保障连续性。']],
@@ -370,12 +370,12 @@
       how: ['The building carries heavy racks and roof plant, separates halls, electrical and battery rooms into fire compartments, keeps water out and gives loading docks and lifts sized for racks and transformers. Seismic design follows SNI 1726:2019 for the site.',
         '建筑承载重型机柜及屋面设备，将机房、电气室及电池室划分为防火分区，防止渗水，并设置满足机柜与变压器运输的卸货平台及货梯。抗震设计按场地依据SNI 1726:2019。'],
       om: [['Roof and façade inspections before each rainy season.', '每个雨季前检查屋面及外墙。'], ['Fire-stopping audit after every cabling change.', '每次布线变更后检查防火封堵。'], ['Keep structural load drawings current with rack layouts.', '结构荷载图纸与机柜布置保持同步。']],
-      basis: function (c) { var sp = c.R.sp; return [F(sp.gfa) + ' m² GFA · ' + c.p.floors + ' storey(s) · floor ≥ ' + sp.floorLoad + ' kN/m² · site ≈ ' + F(sp.siteNeed / 1e4, 2) + ' ha', '建筑面积' + F(sp.gfa) + ' m² · ' + c.p.floors + '层 · 楼面≥' + sp.floorLoad + ' kN/m² · 用地约' + F(sp.siteNeed / 1e4, 2) + ' ha']; }, calc: 'space' },
+      basis: function (c) { var sp = c.R.sp; return [F(sp.gfa) + ' m² GFA | ' + c.p.floors + ' storey(s) | floor ≥ ' + sp.floorLoad + ' kN/m² | site ≈ ' + F(sp.siteNeed / 1e4, 2) + ' ha', '建筑面积' + F(sp.gfa) + ' m² | ' + c.p.floors + '层 | 楼面≥' + sp.floorLoad + ' kN/m² | 用地约' + F(sp.siteNeed / 1e4, 2) + ' ha']; }, calc: 'space' },
     ops: { name: ['Operations & commissioning', '运维与调试'],
       func: ['A 24/7 team, written procedures, maintenance and staged commissioning keep the design availability real.', '7×24团队、书面程序、维护保养及分级调试，使设计可用性真正落地。'],
       how: ['Most data-center outages trace back to people and process, not equipment. Sites run shift teams, standard (SOP), method (MOP) and emergency (EOP) procedures, planned maintenance and five commissioning levels from factory tests to the integrated systems test.',
         '大多数数据中心中断源于人员与流程而非设备。站点实行轮班团队、标准（SOP）、方法（MOP）及应急（EOP）程序、计划性维护，以及从工厂测试到综合系统测试的五级调试。'],
-      basis: function (c) { var s = c.R.staff; return [s.fte + ' FTE: facility ' + F(s.fac) + ' · security ' + F(s.sec) + ' · NOC ' + F(s.noc) + ' · management ' + F(s.mgmt), s.fte + '人：设施' + F(s.fac) + ' · 安保' + F(s.sec) + ' · NOC ' + F(s.noc) + ' · 管理' + F(s.mgmt)]; },
+      basis: function (c) { var s = c.R.staff; return [s.fte + ' FTE: facility ' + F(s.fac) + ' | security ' + F(s.sec) + ' | NOC ' + F(s.noc) + ' | management ' + F(s.mgmt), s.fte + '人：设施' + F(s.fac) + ' | 安保' + F(s.sec) + ' | NOC ' + F(s.noc) + ' | 管理' + F(s.mgmt)]; },
       extra: function () {
         return '<div class="tc-g2"><div><h3>' + L.te(['Commissioning levels', '调试等级']) + '</h3>' + L.ptable(null, DB.cxLevels.map(function (x) { return ['<b>' + x[0] + '</b>', L.te([x[1], x[2]]), L.te([x[3], x[4]])]; })) + '</div>' +
           '<div><h3>' + L.te(['Project lifecycle', '项目生命周期']) + '</h3><ul class="tc-chain" style="gap:10px 24px">' + DB.lifecycle.map(function (x) { return '<li>' + L.te([x.en, x.zh]) + '</li>'; }).join('') + '</ul></div></div>';
@@ -391,7 +391,7 @@
       func: ['BMS, EPMS and DCIM give operators real-time visibility and control of power, cooling, environment and capacity.', 'BMS、EPMS与DCIM使运维人员实时掌握并控制电力、制冷、环境与容量。'],
       how: ['The building management system (BMS) runs the mechanical plant, the electrical power monitoring system (EPMS) watches the power chain, and DCIM ties assets, space and capacity together; alarms converge in the 24/7 NOC.',
         '楼宇管理系统（BMS）控制机电设备，电力监控系统（EPMS）监视供电链，DCIM整合资产、空间与容量；所有报警汇集至7×24 NOC。'],
-      basis: function (c) { return ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points · ≈ ' + F(c.R.fs.meters) + ' meters', '约' + F(c.R.fs.bmsPts) + '个BMS点位 · 约' + F(c.R.fs.meters) + '块电表']; },
+      basis: function (c) { return ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points | ≈ ' + F(c.R.fs.meters) + ' meters', '约' + F(c.R.fs.bmsPts) + '个BMS点位 | 约' + F(c.R.fs.meters) + '块电表']; },
       om: [['Alarm rationalisation: every alarm has an owner and a response.', '报警梳理：每条报警都有责任人及处置方式。'], ['Time-sync and back up all systems.', '所有系统时钟同步并备份。'], ['Separate OT network; strict remote access.', '独立OT网络；严格远程访问。']], calc: 'points' }
   };
 
@@ -412,9 +412,9 @@
     tier: { i: [['tier', ['Tier', '等级'], '', 1, 4, 1, function (c) { return c.p.tier; }], ['n', ['Duty units needed (N)', '所需工作单元（N）'], ['units', '台'], 1, 60, 1, function (c) { return c.R.el.upsN; }]],
       f: function (v) {
         var tr = DB.tiers[Math.min(3, Math.max(0, Math.round(v.tier) - 1))], r = E.redundancy(Math.round(v.tier), Math.round(v.n), 'ups'), dt = (1 - tr.avail / 100) * 8760;
-        return [[['Availability target', '可用性目标'], tr.tia + ' · ' + tr.sni, F(tr.avail, 3) + ' %'],
+        return [[['Availability target', '可用性目标'], tr.tia + ' | ' + tr.sni, F(tr.avail, 3) + ' %'],
           [['Downtime per year', '年停机时间'], '(1 − ' + F(tr.avail, 3) + ' %) × 8,760 h', F(dt, 1) + ' h (' + F(dt * 60) + ' min)'],
-          [['Redundancy rule', '冗余规则'], tr.red, E.redLabel(Math.round(v.n), r)],
+          [['Redundancy rule', '冗余规则'], tr.red, E.redLabel(Math.round(v.n), r, 'block')],
           [['Units installed', '安装台数'], F(v.n) + ' + ' + r, F(v.n + r)],
           [['Concurrently maintainable / fault tolerant', '可同时维护 / 容错'], tr.cm ? 'CM ✓' : 'CM ✗', (tr.ft ? 'FT ✓' : 'FT ✗')]];
       } },
@@ -444,7 +444,7 @@
       f: function (v, c) {
         var n = Math.ceil(v.kva / (v.size * v.ld / 100)), r = E.redundancy(c.p.tier, n, 'tx'), tot = n + r;
         return [[['Duty transformers', '工作变压器'], '⌈' + F(v.kva) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
-          [['Redundancy (Tier ' + roman(c.p.tier) + ')', '冗余（Tier ' + roman(c.p.tier) + '）'], E.redLabel(n, r), '+' + F(r)],
+          [['Redundancy (Tier ' + roman(c.p.tier) + ')', '冗余（Tier ' + roman(c.p.tier) + '）'], E.redLabel(n, r, 'block'), '+' + F(r)],
           [['Installed', '安装台数'], F(n) + ' + ' + F(r), F(tot) + ' × ' + F(v.size) + ' kVA'],
           [['Normal loading per unit', '正常时单台负载率'], F(v.kva) + ' ÷ (' + F(tot) + ' × ' + F(v.size) + ')', F(v.kva / (tot * v.size) * 100) + ' %']];
       } },
@@ -621,14 +621,14 @@
       for (var i = 0; i < 12; i++) o += L.R(160 + i * 18, 128, 8, 32, i % 2 ? '#7ADBEE' : '#4FC3E0', ' rx="2"');
       o += L.pipe('M60 140H150', 'tcs', 7) + L.pipe('M380 150H470', 'tcr', 7);
       o += L.text(90, 128, ['in ≈ 35 °C', '进 ≈ 35 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700;fill:#0B7F99"') + L.text(430, 138, ['out ≈ 45 °C', '出 ≈ 45 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700;fill:#B0302A"');
-      o += L.text(265, 104, ['micro-channels (copper) · thermal interface material below', '微通道（铜）· 下方为导热界面材料'], 'tc-ls', ' text-anchor="middle"');
+      o += L.text(265, 104, ['micro-channels (copper) | thermal interface material below', '微通道（铜）· 下方为导热界面材料'], 'tc-ls', ' text-anchor="middle"');
       o += L.text(265, 60, ['≈ 85–90 % of tray heat to liquid', '约85–90%托盘热量由液体带走'], 'tc-lt', ' text-anchor="middle" style="font-size:14px"');
       return L.illSvg(o, '0 0 530 246');
     },
     cdu: function () {
       var o = L.text(20, 24, ['CDU: technology loop ↔ facility water', 'CDU：技术环路↔设施水'], 'tc-lt');
       o += L.R(200, 60, 130, 170, '#EFF1F8', ' rx="10" stroke="#9AA0BC"') + L.phe(225, 80, 80, 70) + L.text(265, 172, ['plate heat exchanger', '板式换热器'], 'tc-ls', ' text-anchor="middle"');
-      o += '<circle cx="240" cy="205" r="13" fill="#0EA5C6"/><circle cx="290" cy="205" r="13" fill="#0EA5C6"/>' + L.text(265, 248, ['duty + standby pumps · 25–50 µm filter', '主备水泵 · 25–50 µm过滤器'], 'tc-ls', ' text-anchor="middle"');
+      o += '<circle cx="240" cy="205" r="13" fill="#0EA5C6"/><circle cx="290" cy="205" r="13" fill="#0EA5C6"/>' + L.text(265, 248, ['duty + standby pumps | 25–50 µm filter', '主备水泵 | 25–50 µm过滤器'], 'tc-ls', ' text-anchor="middle"');
       o += L.pipe('M20 100H200', 'tcs', 7) + L.pipe('M200 200H20', 'tcr', 7) + L.pipe('M330 100H510', 'fwr', 7) + L.pipe('M510 200H330', 'fws', 7);
       o += L.text(110, 88, ['to racks (TCS) 35 °C', '至机柜（TCS）35 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700"') + L.text(110, 224, ['from racks 45 °C', '机柜回液 45 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700"');
       o += L.text(420, 88, ['to dry coolers (FWS) 40 °C', '至干冷器（FWS）40 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700"') + L.text(420, 224, ['from dry coolers 32 °C', '干冷器回水 32 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:700"');
@@ -641,7 +641,7 @@
       o += '<path d="M40 70V150" stroke="#E5534B" stroke-width="5"/>' + L.vesda(10, 150, 64, 86);
       var lv = [[['Alert', '警告'], .05, '#16A34A'], [['Action', '行动'], .1, '#E39B1B'], [['Fire 1', '火警1'], .2, '#E5534B'], [['Fire 2', '火警2'], .5, '#8E1F1A']];
       lv.forEach(function (l, j) { var y = 120 + j * 30; o += L.R(130, y, 60 + j * 70, 20, l[2], ' rx="5"') + L.text(140, y + 14, l[0], 'tc-lw') + L.text(200 + j * 70, y + 14, '≈ ' + l[1] + ' %obs/m', 'tc-ls', ' style="font-weight:700"'); });
-      o += L.text(270, 104, ['sampling holes · transport time ≤ 120 s', '采样孔 · 传输时间≤120 s'], 'tc-ls', ' text-anchor="middle"');
+      o += L.text(270, 104, ['sampling holes | transport time ≤ 120 s', '采样孔 | 传输时间≤120 s'], 'tc-ls', ' text-anchor="middle"');
       return L.illSvg(o, '0 0 530 252');
     },
     agent: function () {
@@ -650,7 +650,7 @@
       o += '<path d="M150 66H510" stroke="#C93A33" stroke-width="4"/>';
       [240, 330, 420].forEach(function (x) { o += '<path d="M' + x + ' 66v8" stroke="#C93A33" stroke-width="4"/>' + L.bubbles(x - 30, 76, 60, 40, 5, x, '#E5534B', .35, true, 3, 6); });
       o += L.gasCyl(20, 130, 4, 'tcRed') + '<path d="M50 118V66H150" stroke="#C93A33" stroke-width="4" fill="none"/>';
-      o += L.text(330, 246, ['design concentration held ≥ 10 min · door-fan test', '设计浓度保持≥10 min · 门风扇测试'], 'tc-ls', ' text-anchor="middle"');
+      o += L.text(330, 246, ['design concentration held ≥ 10 min | door-fan test', '设计浓度保持≥10 min | 门风扇测试'], 'tc-ls', ' text-anchor="middle"');
       return L.illSvg(o, '0 0 530 256');
     },
     twoN: function () {
@@ -672,7 +672,7 @@
         o += L.R(x, 50, p[1] * sc, 44, p[2]) + (p[1] * sc > 50 ? L.text(x + p[1] * sc / 2, 77, F(p[1], 2), 'tc-lw', ' text-anchor="middle"') : '');
         o += L.R(25 + i * 124, 108, 10, 10, p[2]) + L.text(39 + i * 124, 118, [t(p[0]) + ' ' + F(p[1], 2), t(p[0]) + ' ' + F(p[1], 2)], 'tc-ls', ' style="font-weight:700"'); x += p[1] * sc;
       });
-      o += L.text(265, 160, ['PUE = ' + F(e.pue, 2) + ' (annual) · ' + F(e.puePeak, 2) + ' (design day)', 'PUE = ' + F(e.pue, 2) + '（年均）· ' + F(e.puePeak, 2) + '（设计日）'], 'tc-lt', ' text-anchor="middle"');
+      o += L.text(265, 160, ['PUE = ' + F(e.pue, 2) + ' (annual) | ' + F(e.puePeak, 2) + ' (design day)', 'PUE = ' + F(e.pue, 2) + '（年均）· ' + F(e.puePeak, 2) + '（设计日）'], 'tc-lt', ' text-anchor="middle"');
       return L.illSvg(o, '0 0 530 180');
     },
     densRanges: function () {
@@ -686,7 +686,7 @@
     },
     layers: function (c) {
       var o = L.text(20, 24, ['Security layers from fence to rack', '从围栏到机柜的安防层级'], 'tc-lt'), labs = [['Perimeter fence & detection', '周界围栏与探测'], ['Gate & vehicle barriers', '入口与车辆路障'], ['Building envelope & reception', '建筑围护与前台'], ['Mantrap', '防尾随通道'], ['Data hall door', '机房门'], ['Customer cage', '客户笼位'], ['Locked rack', '机柜锁']];
-      var lt = ''; labs.forEach(function (l, i) { var p = i * 22; o += '<rect x="' + (20 + p) + '" y="' + (40 + p * .75) + '" width="' + (490 - 2 * p) + '" height="' + (230 - p * 1.5) + '" rx="10" fill="' + ['#ECECFB', '#E2E3F8', '#D8D9F4', '#CBCCF0', '#BBBDEA', '#A9ABE3', '#3F3CBB'][i] + '" stroke="#fff"/>'; lt += L.text(30 + p, 56 + p * .75, (i + 1) + ' · ' + t(l), i === 6 ? 'tc-lw' : 'tc-ls', ' style="font-weight:700"'); }); o += lt;
+      var lt = ''; labs.forEach(function (l, i) { var p = i * 22; o += '<rect x="' + (20 + p) + '" y="' + (40 + p * .75) + '" width="' + (490 - 2 * p) + '" height="' + (230 - p * 1.5) + '" rx="10" fill="' + ['#ECECFB', '#E2E3F8', '#D8D9F4', '#CBCCF0', '#BBBDEA', '#A9ABE3', '#3F3CBB'][i] + '" stroke="#fff"/>'; lt += L.text(30 + p, 56 + p * .75, (i + 1) + ' | ' + t(l), i === 6 ? 'tc-lw' : 'tc-ls', ' style="font-weight:700"'); }); o += lt;
       return L.illSvg(o, '0 0 530 280');
     },
     timeline: function (c) {
@@ -755,7 +755,7 @@
     bess: { title: ['Battery energy storage (BESS)', '电池储能系统（BESS）'],
       body: ['AI training clusters can swing tens of megawatts within seconds as jobs synchronise. A BESS of typically 10–25 % of the IT power for 1–2 h absorbs the swings, shaves PLN peak demand and firms solar. LFP containers of ≈ 3.5–5 MWh are tested to UL 9540A and spaced according to NFPA 855.',
         'AI训练集群在任务同步时可在数秒内波动数十兆瓦。通常按IT功率10–25%、时长1–2 h配置的储能可吸收波动、削减PLN峰值需量并稳定光伏。约3.5–5 MWh的LFP集装箱经UL 9540A测试，并按NFPA 855布置间距。'],
-      formula: ['MWh = MW × hours · containers = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉', 'MWh = MW × 小时 · 集装箱 = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉'],
+      formula: ['MWh = MW × hours | containers = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉', 'MWh = MW × 小时 | 集装箱 = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉'],
       ex: function (c) { var b = c.R.el.bess; return b ? ['This basis: <b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b> in ' + b.containers + ' containers, ≈ ' + usd(b.capex) + '. Basis of the proposal: ' + t(c.x.why.bessOn), '本基准：<b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b>，' + b.containers + '个集装箱，约' + usd(b.capex) + '。建议依据：' + t(c.x.why.bessOn)] : ['No BESS is proposed for this basis: ' + t(c.x.why.bessOn), '本基准未建议储能：' + t(c.x.why.bessOn)]; } },
     air: { title: ['Heat & airflow', '热量与风量'],
       body: ['Every kilowatt of IT becomes heat, and air can carry it only in large volumes. With a 12 K rise across the servers, 1 kW needs ≈ 250 m³/h of air — which is why air cooling stops being practical above ≈ 25–40 kW per rack.',
@@ -777,7 +777,7 @@
     tes: { title: ['Thermal storage ride-through', '蓄冷后备'],
       body: ['When the utility fails, the chillers stop until the generators are on line and the compressors restart — often 2–5 minutes. Pumps and fans on UPS keep circulating water from a storage tank sized for the restart time, so the IT inlet temperature stays inside the ASHRAE envelope.',
         '市电失电时，冷机停止运行，直至发电机上线且压缩机重启——通常需2–5分钟。UPS供电的水泵与风机继续从按重启时间选型的蓄冷罐循环供水，使IT进风温度保持在ASHRAE范围内。'],
-      formula: ['V = Q × t ÷ (ρ · cp · ΔT)', 'V = Q × t ÷ (ρ · cp · ΔT)'],
+      formula: ['V = Q × t ÷ (ρ | cp | ΔT)', 'V = Q × t ÷ (ρ | cp | ΔT)'],
       ex: function (c) { return c.R.me.tesM3 ? ['This basis: ' + F(c.R.me.chwLoad) + ' kW × ' + K.TES_S + ' s → <b>' + F(c.R.me.tesM3) + ' m³</b> at ΔT ' + K.CHW_DT + ' K.', '本基准：' + F(c.R.me.chwLoad) + ' kW × ' + K.TES_S + ' s → <b>' + F(c.R.me.tesM3) + ' m³</b>（温差' + K.CHW_DT + ' K）。'] : ['Not required for this basis (Tier and density below the threshold).', '本基准无需配置（等级与密度低于阈值）。']; } },
     ashrae: { title: ['ASHRAE thermal envelope', 'ASHRAE温湿度范围'], calc: false,
       body: ['ASHRAE TC 9.9 recommends 18–27 °C server inlet air (class A1 allowable 15–32 °C) with a dew point between −9 and 15 °C. Raising the supply towards 24–27 °C cuts chiller energy, but the hot aisle then reaches 35–45 °C — lighting, cabling and staff access must suit it. Liquid-cooled IT follows the W classes (W17–W45).',
@@ -790,7 +790,7 @@
     flow: { title: ['Coolant flow for cold plates', '冷板冷却液流量'],
       body: ['Per unit volume, water carries ≈ 3,500 times more heat than air. A GB300 NVL72 rack rejects ≈ 85–90 % of its heat to liquid; with 25 % propylene glycol (PG25) and a 10 K rise it needs ≈ 1.5 L/min per kW — about 180 L/min for the rack.',
         '单位体积的水携热能力约为空气的3,500倍。GB300 NVL72机柜约85–90%热量进入液体；采用25%丙二醇（PG25）、温升10 K时约需1.5 L/min/kW——整柜约180 L/min。'],
-      formula: ['Flow (L/min) = kW ÷ (ρ · cp · ΔT) × 60,000\nPG25: ρ ≈ 1,020 kg/m³, cp ≈ 3.9 kJ/kg·K', '流量（L/min）= kW ÷ (ρ · cp · ΔT) × 60,000\nPG25：ρ ≈ 1,020 kg/m³，cp ≈ 3.9 kJ/kg·K'],
+      formula: ['Flow (L/min) = kW ÷ (ρ | cp | ΔT) × 60,000\nPG25: ρ ≈ 1,020 kg/m³, cp ≈ 3.9 kJ/kg·K', '流量（L/min）= kW ÷ (ρ | cp | ΔT) × 60,000\nPG25：ρ ≈ 1,020 kg/m³，cp ≈ 3.9 kJ/kg·K'],
       ex: function (c) { var hp = c.R.hdP, q = hp.kw * (hp.liq || .85); return [hp.en + ': ' + F(q) + ' kW to liquid → <b>' + F(q / (1020 * 3.9 * 10) * 60000) + ' L/min</b> at ΔT 10 K.', hp.zh + '：液冷' + F(q) + ' kW → 温升10 K时<b>' + F(q / (1020 * 3.9 * 10) * 60000) + ' L/min</b>。']; },
       visual: function () { return IV.coldplate(); } },
     cdu: { title: ['CDU & heat rejection', 'CDU与散热'],

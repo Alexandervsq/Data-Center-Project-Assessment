@@ -38,19 +38,19 @@
     o += L.thin('M330 150V124H1220', 'data', 2.4, '3 4') + L.thin('M912 182V124', 'data', 2.4, '3 4') + L.thin('M1010 150V124', 'data', 2.4, '3 4');
     /* fire water and gas */
     o += L.pipe('M660 513V430', 'fire', 6, true, true) + L.pipe('M612 400V392H662', 'fire', 4, false) + L.thin('M430 410V372H1380V392', 'sig', 2.2, '3 4');
-    o += L.banner(140, 0, 1310, ['① SECURITY LAYERS · 安防层级', '① 安防层级 · SECURITY'], ['detect, delay and verify from the fence to the rack', '从围栏到机柜逐层探测、延迟与确认'], null, 'tcZone');
-    o += L.banner(640, 290, 820, ['② FIRE DETECTION & SUPPRESSION · 火灾探测与灭火', '② 火灾探测与灭火 · FIRE'], ['see smoke early, suppress without water damage', '早期发现烟雾，灭火不损坏设备'], null, 'tcZone4');
-    o += L.banner(130, 290, 490, ['③ CONTROL & BATTERIES · 控制与电池', '③ 控制与电池 · CONTROL'], ['panel · batteries', '主机 · 电池'], null, 'tcZone5');
+    o += L.banner(140, 0, 1310, ['① SECURITY LAYERS | 安防层级', '① 安防层级 | SECURITY'], ['detect, delay and verify from the fence to the rack', '从围栏到机柜逐层探测、延迟与确认'], null, 'tcZone');
+    o += L.banner(640, 290, 820, ['② FIRE DETECTION & SUPPRESSION | 火灾探测与灭火', '② 火灾探测与灭火 | FIRE'], ['see smoke early, suppress without water damage', '早期发现烟雾，灭火不损坏设备'], null, 'tcZone4');
+    o += L.banner(130, 290, 490, ['③ CONTROL & BATTERIES | 控制与电池', '③ 控制与电池 | CONTROL'], ['panel | batteries', '主机 | 电池'], null, 'tcZone5');
     /* row 1 */
     var f1 = L.fence(150, 232, 170, 62) + L.R(326, 140, 4, 92, '#5E6484') + L.camera(330, 146, .9);
     o += L.hot('fence', ['Perimeter', '周界'], 144, 38, 220, 200, f1 + L.label(245, 60, '01', ['Perimeter', '周界'], ['fence + intrusion detection', '围栏+入侵探测']));
-    o += L.hot('gate', ['Gate & barriers', '入口与路障'], 396, 38, 270, 200, L.building(400, 186, 84, 46, '#5D6280') + L.barrier(492, 232, 80) + L.bollards(596, 232, 4) + L.label(520, 60, '02', ['Gate & barriers', '入口与路障'], ['crash-rated · guardhouse', '防冲撞 · 门卫室']));
+    o += L.hot('gate', ['Gate & barriers', '入口与路障'], 396, 38, 270, 200, L.building(400, 186, 84, 46, '#5D6280') + L.barrier(492, 232, 80) + L.bollards(596, 232, 4) + L.label(520, 60, '02', ['Gate & barriers', '入口与路障'], ['crash-rated | guardhouse', '防冲撞 | 门卫室']));
     o += L.hot('mantrap', ['Mantrap', '防尾随门'], 694, 38, 110, 200, L.mantrap(700, 232, 96) + L.label(730, 60, '03', ['Mantrap', '防尾随门'], ['anti-tailgating', '防尾随']));
     var door = L.R(830, 128, 70, 104, '#E9EBF4', ' rx="3" stroke="#5E6484" stroke-width="2"') + L.R(842, 140, 46, 36, 'url(#tcGlass)', ' rx="2"') + L.R(888, 182, 6, 14, '#5E6484', ' rx="2"') + L.reader(906, 168);
     o += L.hot('access', ['Access control', '门禁'], 824, 38, 120, 200, door + L.label(905, 60, '04', ['Access control', '门禁'], ['≈ ' + F(fs.readers) + ' doors', '约' + F(fs.readers) + '个门']));
     var cam = L.cab(980, 150, 60, 82, '#E9EBF4', { door: false }) + L.R(988, 164, 44, 6, '#16A34A') + L.R(988, 176, 44, 6, '#16A34A') + L.R(988, 188, 44, 6, '#16A34A') + L.camera(1066, 142, 1) + L.R(1150, 150, 4, 82, '#5E6484') + L.camera(1150, 156, 1, true);
     o += L.hot('cctv', ['CCTV', '视频监控'], 974, 38, 220, 200, cam + L.label(1080, 60, '05', ['CCTV', '视频监控'], ['≈ ' + F(fs.cams) + ' cameras', '约' + F(fs.cams) + '台摄像机']));
-    o += L.hot('noc', ['NOC', '运营中心'], 1214, 38, 240, 200, L.nocWall(1220, 112, 230, 120) + L.label(1335, 60, '06', ['NOC', '运营中心'], ['24/7 · BMS · EPMS · DCIM', '7×24 · BMS·EPMS·DCIM']));
+    o += L.hot('noc', ['NOC', '运营中心'], 1214, 38, 240, 200, L.nocWall(1220, 112, 230, 120) + L.label(1335, 60, '06', ['NOC', '运营中心'], ['24/7 | BMS | EPMS | DCIM', '7×24 | BMS·EPMS·DCIM']));
     /* row 2: data hall */
     var hall = L.R(650, 380, 790, 117, '#F7F8FD', ' rx="4" stroke="#C9CDE0"') + L.rackRow(720, 432, 13, 40, 64, { blink: true });
     o += hall;
@@ -59,10 +59,10 @@
     vp += L.bubbles(700, 396, 640, 30, 6, 21, '#9AA0BC', .5, false, 1, 2);
     o += L.hot('vesda', ['Aspirating smoke detection', '吸气式感烟探测'], 664, 330, 790, 70, vp + L.vesda(1380, 404, 48, 84) + L.label(1300, 352, '07', ['Aspirating detection', '吸气式探测'], ['≈ ' + fs.asd + ' detectors', '约' + fs.asd + '台']));
     o += L.hot('preact', ['Pre-action sprinklers', '预作用喷淋'], 664, 400, 710, 34, L.sprinklers(680, 410, 690, 12) + L.R(654, 420, 16, 30, '#C93A33', ' rx="3"') + L.label(1046, 352, '08', ['Pre-action sprinklers', '预作用喷淋'], ['double interlock', '双连锁']));
-    o += L.hot('agent', ['Clean-agent gas', '洁净气体'], 520, 330, 120, 170, L.gasCyl(530, 404, 4) + L.label(590, 352, '09', ['Clean agent', '洁净气体'], fs.gasZones ? [fs.gasZones + ' zones · ' + F(fs.agentKg) + ' kg', fs.gasZones + '区 · ' + F(fs.agentKg) + ' kg'] : ['MMR · electrical rooms', 'MMR · 电气室']));
+    o += L.hot('agent', ['Clean-agent gas', '洁净气体'], 520, 330, 120, 170, L.gasCyl(530, 404, 4) + L.label(590, 352, '09', ['Clean agent', '洁净气体'], fs.gasZones ? [fs.gasZones + ' zones | ' + F(fs.agentKg) + ' kg', fs.gasZones + '区 | ' + F(fs.agentKg) + ' kg'] : ['MMR | electrical rooms', 'MMR | 电气室']));
     o += L.hot('fap', ['Fire alarm panel', '火灾报警控制器'], 360, 330, 140, 170, L.firePanel(400, 410, 60, 88) + L.label(410, 352, '10', ['Fire panel', '火警主机'], ['cause & effect', '联动矩阵']));
     var li = L.R(150, 400, 190, 97, '#F7F8FD', ' rx="4" stroke="#C9CDE0"') + L.battRack(160, 420, 3, 96, 76, true) + L.fan(300, 420, 12, 1.6, true) + '<circle cx="300" cy="460" r="7" fill="#E39B1B"/><path d="M296 460h8M300 456v8" stroke="#fff" stroke-width="1.6"/>';
-    o += L.hot('liion', ['Li-ion battery room', '锂电池室'], 140, 330, 210, 170, li + L.label(240, 352, '11', ['Li-ion room', '锂电池室'], ['off-gas · NFPA 855', '逸出气体 · NFPA 855']));
+    o += L.hot('liion', ['Li-ion battery room', '锂电池室'], 140, 330, 210, 170, li + L.label(240, 352, '11', ['Li-ion room', '锂电池室'], ['off-gas | NFPA 855', '逸出气体 | NFPA 855']));
     var fp = L.pump(40, 600, .9, '#C93A33') + L.pump(130, 600, .9, '#C93A33') + '<circle cx="238" cy="560" r="12.5" fill="url(#tcZone4)"/>' + L.text(238, 564.5, '12', 'tc-ln', ' text-anchor="middle"') + L.text(256, 566, ['Fire-water reservoir & fire pumps', '消防水池与消防泵'], 'tc-lw', ' style="font-size:14px"');
     o += L.hot('firepump', ['Fire pumps & water', '消防泵与水池'], 20, 520, 560, 96, fp);
     return '<svg class="tc-pfd tc-abs" viewBox="0 0 1470 620" role="img" aria-label="' + L.te(['Fire, security and monitoring', '消防、安防与监控']) + '">' + o + '</svg>';
@@ -82,7 +82,7 @@
       L.chips([['bms', 'monitor', ['BMS', '楼宇自控']], ['epms', 'bolt', ['EPMS', '电力监控']], ['dcim', 'grid', ['DCIM', 'DCIM']], ['leak', 'drop', ['Leak detection', '漏水检测']]]) +
       L.kpis([['layers', String(fs.securityLayers), ['layers', '层'], ['Security layers', '安防层级'], ['fence → rack', '围栏→机柜']],
         ['agentT', '≤ 10', 's', ['Agent discharge', '气体喷放'], ['NFPA 2001 halocarbon', 'NFPA 2001卤代烷']],
-        ['asdT', '≤ 120', 's', ['ASD transport', '吸气传输时间'], ['EN 54-20 · NFPA 72', 'EN 54-20 · NFPA 72']],
+        ['asdT', '≤ 120', 's', ['ASD transport', '吸气传输时间'], ['EN 54-20 | NFPA 72', 'EN 54-20 | NFPA 72']],
         ['cctvT', '≥ 90', ['days', '天'], ['Video retention', '录像保存'], ['≈ ' + F(fs.cams) + ' cameras', '约' + F(fs.cams) + '台摄像机']]]);
   }
   function bottom(c) {
@@ -101,7 +101,7 @@
     return L.freePanel('fstd', '§', ['Fire & life-safety codes', '消防与生命安全规范'], ['From the standards library of this website', '来自本网站规范库'], L.ptable([['Code', '规范'], ['Region', '地区'], ['Scope', '范围']], rows), 'x');
   }
   var card = {
-    id: 'FSM', abbr: null, title: ['Fire, Security & Monitoring', '消防、安防与监控'], short: ['Fire · Security · Monitoring', '消防·安防·监控'], icon: 'shield',
+    id: 'FSM', abbr: null, title: ['Fire, Security & Monitoring', '消防、安防与监控'], short: ['Fire | Security | Monitoring', '消防·安防·监控'], icon: 'shield',
     blurb: ['Security layers, early detection, suppression, NOC', '安防层级、早期探测、灭火、NOC'], badge: ['Safety & operations', '安全与运维'], basis: 'A05', units: UNITS, faq: FAQ,
     calc: Object.assign({}, X.CALC, { asdT: X.CALC.asd, agentT: X.CALC.agent, cctvT: X.CALC.cctv, pointsT: X.CALC.points }),
     gloss: [['ASD', '吸气式感烟探测', 'Aspirating smoke detection (VESDA-type).', '吸气式感烟探测（VESDA类）。'], ['PIDS', '周界入侵探测', 'Perimeter intrusion detection system.', '周界入侵探测系统。'], ['NOAEL', '无可见不良影响水平', 'No-observed-adverse-effect level of an agent.', '灭火剂的无可见不良影响浓度。'], ['NVR', '网络录像机', 'Network video recorder.', '网络录像机。'], ['EOP / SOP / MOP', '应急/标准/方法操作程序', 'Emergency, standard and method of procedure documents.', '应急、标准及方法操作程序文件。']],

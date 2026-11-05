@@ -3,7 +3,7 @@
   'use strict';
   var TC = g.TC, L = TC.lib, X = g.TCX, DB = g.DCDB, F = L.F, t = L.t;
   function U(k, o) { return Object.assign({}, X.U[k], o || {}); }
-  var PWR = { card: 'PWR', label: ['Critical power', '关键供电'] }, CHW = { card: 'CHW', label: ['Chilled-water cooling', '冷冻水风冷'] }, DLC = { card: 'DLC', label: ['Direct liquid cooling', '冷板液冷'] }, FSM = { card: 'FSM', label: ['Fire · security · monitoring', '消防·安防·监控'] };
+  var PWR = { card: 'PWR', label: ['Critical power', '关键供电'] }, CHW = { card: 'CHW', label: ['Chilled-water cooling', '冷冻水风冷'] }, DLC = { card: 'DLC', label: ['Direct liquid cooling', '冷板液冷'] }, FSM = { card: 'FSM', label: ['Fire | security | monitoring', '消防·安防·监控'] };
   var UNITS = [
     U('grid', { id: 'grid', no: '01', rel: [PWR, ['mva', ['From IT load to PLN demand', '从IT负载到PLN需量']]] }),
     U('tx', { id: 'tx', no: '02', name: ['MV switchgear & transformers', '中压开关柜与变压器'], more: ['EL-01', 'EL-15'], rel: [PWR, ['tier', ['Redundancy', '冗余']]] }),
@@ -35,7 +35,7 @@
   function band() {
     var s = L.R(0, 513, 1470, 107, 'url(#tcDuct)');
     [538, 566, 594].forEach(function (y, i) { s += '<path d="M0 ' + y + 'H1470" stroke="#3A3780" stroke-width="7" stroke-linecap="round"/><path class="tc-flow' + (i === 1 ? ' tc-slow' : '') + '" d="M0 ' + y + 'H1470" stroke="#7CE3F6" stroke-width="2" stroke-dasharray="6 26"/>'; });
-    return s + L.text(735, 610, ['Underground: diverse fibre duct banks to the carriers · earthing grid', '地下：通往运营商的多路由光纤管群 · 接地网'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px;opacity:.9"');
+    return s + L.text(735, 610, ['Underground: diverse fibre duct banks to the carriers | earthing grid', '地下：通往运营商的多路由光纤管群 | 接地网'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px;opacity:.9"');
   }
   function pfd(c) {
     var R = c.R, el = R.el, me = R.me, cap = R.cap, o = '';
@@ -50,27 +50,27 @@
     o += L.air('M1002 484H1062', false, 4) + L.air('M1062 414H1004', true, 4);
     o += L.thin('M232 513V498', 'data', 3, '3 4') + L.thin('M1246 513V498', 'data', 3, '3 4');
     /* banners */
-    o += L.banner(140, 0, 1310, ['① POWER PATH · 供电路径', '① 供电路径 · POWER PATH'], ['PLN → transformers → generators → UPS: two independent paths to every rack', 'PLN → 变压器 → 发电机 → UPS：每个机柜两条独立路径'], null, 'tcZone3');
-    o += L.banner(1030, 290, 430, ['② WHITE SPACE · 白区', '② 白区 · WHITE SPACE'], ['racks · busway · containment', '机柜·母线·封闭'], null, 'tcZone');
-    o += L.banner(410, 290, 600, ['③ COOLING · 制冷', '③ 制冷 · COOLING'], ['heat from the racks to the outdoor air', '将机柜热量排至室外'], null, 'tcZone2');
-    o += L.banner(10, 290, 380, ['④ NETWORK · 网络', '④ 网络 · NETWORK'], ['carriers', '运营商'], null, 'tcZone5');
+    o += L.banner(140, 0, 1310, ['① POWER PATH | 供电路径', '① 供电路径 | POWER PATH'], ['PLN → transformers → generators → UPS: two independent paths to every rack', 'PLN → 变压器 → 发电机 → UPS：每个机柜两条独立路径'], null, 'tcZone3');
+    o += L.banner(1030, 290, 430, ['② WHITE SPACE | 白区', '② 白区 | WHITE SPACE'], ['racks | busway | containment', '机柜·母线·封闭'], null, 'tcZone');
+    o += L.banner(410, 290, 600, ['③ COOLING | 制冷', '③ 制冷 | COOLING'], ['heat from the racks to the outdoor air', '将机柜热量排至室外'], null, 'tcZone2');
+    o += L.banner(10, 290, 380, ['④ NETWORK | 网络', '④ 网络 | NETWORK'], ['carriers', '运营商'], null, 'tcZone5');
     /* row 1 */
     var g1 = L.pylon(48, 232, 150) + L.powerTx(78, 232, .9);
-    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, g1 + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.hv.name + ' · ' + F(el.mva, 1) + ' MVA'));
+    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, g1 + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.hv.name + ' | ' + F(el.mva, 1) + ' MVA'));
     o += L.hot('tx', UNITS[1].name, 184, 38, 200, 200, L.switchgear(190, 150, 4, 96, 82) + L.dryTx(300, 140, 78, 92) + L.label(280, 60, '02', ['MV & transformers', '中压与变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA'));
     o += L.hot('lv', ['LV switchboards', '低压配电柜'], 388, 38, 176, 200, L.lvBoard(420, 150, 4, 100, 82) + L.label(474, 60, '03', ['LV switchboards', '低压配电'], [el.txTotal + ' line-ups', el.txTotal + '组']));
-    o += L.hot('gen', ['Generators', '发电机'], 584, 38, 184, 200, L.genset(590, 160, 170, 72) + L.label(675, 60, '04', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe · ' + c.p.fuelH + ' h'));
-    o += L.hot('ups', ['UPS & batteries', 'UPS与电池'], 796, 38, 200, 200, L.upsCab(800, 130, 3, 96, 102) + L.battRack(906, 140, 3, 84, 92, c.p.battery === 'LI') + L.label(895, 60, '05', ['UPS & batteries', 'UPS与电池'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW · ' + c.p.upsMin + ' min'));
+    o += L.hot('gen', ['Generators', '发电机'], 584, 38, 184, 200, L.genset(590, 160, 170, 72) + L.label(675, 60, '04', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe | ' + c.p.fuelH + ' h'));
+    o += L.hot('ups', ['UPS & batteries', 'UPS与电池'], 796, 38, 200, 200, L.upsCab(800, 130, 3, 96, 102) + L.battRack(906, 140, 3, 84, 92, c.p.battery === 'LI') + L.label(895, 60, '05', ['UPS & batteries', 'UPS与电池'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW | ' + c.p.upsMin + ' min'));
     var sec = L.fence(1046, 232, 150, 44) + L.building(1206, 186, 72, 46, '#5D6280') + L.barrier(1290, 232, 64) + L.camera(1232, 150, 1, false) + L.bollards(1380, 232, 4) + L.camera(1060, 172, .9, false, false);
-    o += L.hot('secsite', UNITS[5].name, 1040, 38, 420, 200, sec + L.label(1222, 60, '06', ['Site security', '场地安防'], [R.fs.securityLayers + ' layers · ' + F(R.fs.cams) + ' cameras', R.fs.securityLayers + '道防线 · ' + F(R.fs.cams) + '台摄像机']));
-    o += L.hot('fuel', UNITS[11].name, 596, 244, 150, 36, L.fuelTank(600, 250, 132, 24) + L.text(748, 266, ['A · fuel', 'A · 燃油'], 'tc-lc'));
+    o += L.hot('secsite', UNITS[5].name, 1040, 38, 420, 200, sec + L.label(1222, 60, '06', ['Site security', '场地安防'], [R.fs.securityLayers + ' layers | ' + F(R.fs.cams) + ' cameras', R.fs.securityLayers + '道防线 | ' + F(R.fs.cams) + '台摄像机']));
+    o += L.hot('fuel', UNITS[11].name, 596, 244, 150, 36, L.fuelTank(600, 250, 132, 24) + L.text(748, 266, ['A | fuel', 'A | 燃油'], 'tc-lc'));
     /* row 2 */
     var hall = L.R(1046, 380, 400, 117, '#F7F8FD', ' rx="4" stroke="#C9CDE0"') + L.busway(1060, 386, 372, 9, 12) + L.R(1066, 424, 360, 9, 'url(#tcGlass)', ' rx="2" stroke="#7FC6DA"') + L.rackRow(1068, 434, 9, 36, 62, { blink: true });
-    o += L.hot('hall', UNITS[6].name, 1040, 330, 412, 170, hall + L.label(1246, 352, '07', ['White space', '白区'], [F(cap.racks) + ' racks · ' + F(cap.avgDens, 1) + ' kW avg', F(cap.racks) + '个机柜 · 平均' + F(cap.avgDens, 1) + ' kW']));
+    o += L.hot('hall', UNITS[6].name, 1040, 330, 412, 170, hall + L.label(1246, 352, '07', ['White space', '白区'], [F(cap.racks) + ' racks | ' + F(cap.avgDens, 1) + ' kW avg', F(cap.racks) + '个机柜 | 平均' + F(cap.avgDens, 1) + ' kW']));
     var tn = me.term ? (me.term.id === 'ME-10' ? ['In-row coolers', '列间空调'] : me.term.id === 'ME-07' ? ['CRAH units', '精密空调'] : ['Fan walls', '风墙']) : ['Precision AC', '精密空调'];
     o += L.hot('crah', tn, 880, 330, 160, 170, L.fanWall(920, 398, 80, 98, 2, 3, true) + L.label(960, 352, '08', tn, me.term ? (me.term.n + me.term.r) + ' × ' + me.term.size + ' kW' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW' : '–')));
-    o += L.hot('chiller', ['Chillers', '冷水机组'], 650, 330, 214, 170, L.chiller(660, 418, 190, 80) + L.label(755, 352, '09', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW' : ['DX · no chillers', '直膨 · 无冷机']));
-    o += L.hot('tower', ['Cooling towers', '冷却塔'], 420, 330, 190, 170, L.coolingTower(430, 442, 76, 56) + L.coolingTower(520, 442, 76, 56) + L.label(513, 352, '10', ['Cooling towers', '冷却塔'], me.ctN ? [(me.ctN + me.ctR) + ' cells · WUE ' + F(R.eff.wue, 2), (me.ctN + me.ctR) + '格 · WUE ' + F(R.eff.wue, 2)] : ['air / dry heat rejection', '风冷/干式散热']));
+    o += L.hot('chiller', ['Chillers', '冷水机组'], 650, 330, 214, 170, L.chiller(660, 418, 190, 80) + L.label(755, 352, '09', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW' : ['DX | no chillers', '直膨 | 无冷机']));
+    o += L.hot('tower', ['Cooling towers', '冷却塔'], 420, 330, 190, 170, L.coolingTower(430, 442, 76, 56) + L.coolingTower(520, 442, 76, 56) + L.label(513, 352, '10', ['Cooling towers', '冷却塔'], me.ctN ? [(me.ctN + me.ctR) + ' cells | WUE ' + F(R.eff.wue, 2), (me.ctN + me.ctR) + '格 | WUE ' + F(R.eff.wue, 2)] : ['air / dry heat rejection', '风冷/干式散热']));
     var mmr = L.pylon(72, 498, 112) + '<ellipse cx="86" cy="408" rx="9" ry="13" fill="#E9EBF4" stroke="#5E6484" stroke-width="1.5"/>' + L.building(170, 440, 120, 58, '#3F3CBB') + L.R(196, 462, 18, 30, '#2B2E4E', ' rx="2"') + L.R(218, 462, 18, 30, '#2B2E4E', ' rx="2"');
     o += L.hot('mmr', UNITS[10].name, 30, 330, 290, 170, mmr + L.label(232, 352, '11', ['Network & MMR', '网络与MMR'], ['2 diverse fibre routes', '两条不同光纤路由']));
     o += L.text(1400, 372, ['A + B', 'A + B'], 'tc-ls', ' style="font-weight:800;fill:#B8740B"');
@@ -106,7 +106,7 @@
     var mx = Math.max(sp.ws, sp.elecRoom, sp.mechRoom, sp.support);
     h += L.tile(2, 'space', 'building', ['Building areas', '建筑面积'], [F(sp.gfa) + ' m² GFA', '总' + F(sp.gfa) + ' m²'],
       L.miniBars([[['White space', '白区'], sp.ws, '#3F3CBB'], [['Electrical rooms', '电气房间'], sp.elecRoom, '#E39B1B'], [['Mechanical', '暖通机房'], sp.mechRoom, '#0EA5C6'], [['Support', '辅助区'], sp.support, '#5D6280']], mx, ' m²') +
-      L.note(['Site ≈ <b>' + F(sp.siteNeed / 1e4, 2) + ' ha</b> · ' + c.p.floors + ' storey(s) · floor ≥ ' + sp.floorLoad + ' kN/m²', '用地约<b>' + F(sp.siteNeed / 1e4, 2) + ' ha</b> · ' + c.p.floors + '层 · 楼面≥' + sp.floorLoad + ' kN/m²']));
+      L.note(['Site ≈ <b>' + F(sp.siteNeed / 1e4, 2) + ' ha</b> | ' + c.p.floors + ' storey(s) | floor ≥ ' + sp.floorLoad + ' kN/m²', '用地约<b>' + F(sp.siteNeed / 1e4, 2) + ' ha</b> | ' + c.p.floors + '层 | 楼面≥' + sp.floorLoad + ' kN/m²']));
     var refs = DB.references.filter(function (r) { return r.kind === 'real' && r.country === 'ID' && r.mw; }).sort(function (a, b) { return b.mw - a.mw; }).slice(0, 5), mxr = refs.length ? refs[0].mw : 1;
     h += L.tile(3, 'refs', 'pin', ['Projects in Indonesia', '印尼项目'], ['public data', '公开信息'],
       L.miniBars(refs.map(function (r) { return [[r.en.split(' — ')[0], r.zh.split('——')[0]], r.mw, '#2A2785']; }), mxr, ' MW') + L.note(['Announced campus capacity (MW IT); ' + DB.references.filter(function (r) { return r.kind === 'real'; }).length + ' real projects in the database.', '公开宣布的园区容量（MW IT）；数据库共' + DB.references.filter(function (r) { return r.kind === 'real'; }).length + '个真实项目。']), '#FCE9E7');

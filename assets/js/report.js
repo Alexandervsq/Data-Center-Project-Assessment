@@ -45,7 +45,7 @@
     /* cover */
     B.push({ t: 'cover', title: T('DATA CENTER PROJECT PROPOSAL', '数据中心项目建议书'), sub: T('Planning & Feasibility Assessment Report', '规划与可行性评估报告'), name: p.name,
       meta: [[T('Location', '地点'), T(L.en + ', ' + L.provEn + ', Indonesia', L.zh + '，' + L.provZh + '，印度尼西亚')], [T('Facility type', '设施类型'), T(c.type.en, c.type.zh)],
-             [T('Design IT capacity', '设计IT容量'), F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + T('racks', '个机柜')], [T('Resilience', '韧性等级'), T(c.tier.en, c.tier.zh)],
+             [T('Design IT capacity', '设计IT容量'), F(c.itMW, 2) + ' MW | ' + F(c.racks) + ' ' + T('racks', '个机柜')], [T('Resilience', '韧性等级'), T(c.tier.en, c.tier.zh)],
              [T('Report date', '报告日期'), new Date().toISOString().slice(0, 10)], [T('Estimate class', '估算等级'), T('Feasibility / AACE Class 4 (±25–30%)', '可行性/AACE 4级（±25–30%）')]] });
 
     /* executive summary */
@@ -53,16 +53,16 @@
     para(T('This proposal assesses a data center of ' + F(c.itMW, 2) + ' MW design IT load (' + c.type.en + ') at ' + L.en + ' (' + L.provEn + '). Parameters not fixed by the owner were proposed from the reference database (Indonesian regional data, IT platform catalogue, reference projects) and engineering standards (Uptime, TIA-942-C, SNI 8799, ASHRAE, NFPA, IEC).',
       '本建议书评估位于' + L.provZh + L.zh + '、设计IT负载' + F(c.itMW, 2) + ' MW的数据中心（' + c.type.zh + '）。业主未确定的参数依据参考数据库（印尼地区数据、IT平台目录、参考项目）及工程标准（Uptime、TIA-942-C、SNI 8799、ASHRAE、NFPA、IEC）提出。'));
     kv([
-      [T('IT capacity / racks', 'IT容量/机柜'), F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + T('racks', '柜') + ' · ' + T('avg ', '平均') + F(c.avgDens, 1) + ' kW'],
+      [T('IT capacity / racks', 'IT容量/机柜'), F(c.itMW, 2) + ' MW | ' + F(c.racks) + ' ' + T('racks', '柜') + ' | ' + T('avg ', '平均') + F(c.avgDens, 1) + ' kW'],
       [T('IT platforms', 'IT平台'), T(R.stdP.en, R.stdP.zh) + (c.hdR ? ' + ' + F(c.hdR) + ' × ' + hdTxt : '') + (c.gpus ? ' (≈ ' + F(c.gpus) + ' GPUs)' : '')],
-      [T('Resilience', '韧性等级'), T(c.tier.en, c.tier.zh) + ' · ' + c.tier.avail + '%'],
-      [T('Cooling', '制冷'), T(R.cool.obj.en, R.cool.obj.zh) + ' · PUE ' + F(R.eff.pue, 2) + ' · WUE ' + F(R.eff.wue, 2) + ' L/kWh'],
-      [T('PLN demand', 'PLN需量'), F(el.mva, 1) + ' MVA · ' + T(el.volt[0], el.volt[1])],
-      [T('Backup power', '备用电源'), el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + p.fuelH + ' h ' + T('fuel', '燃油') + ' · UPS ' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW, ' + p.upsMin + ' min' + (el.bess ? ' · BESS ' + F(el.bess.mw, 1) + ' MW/' + F(el.bess.mwh, 1) + ' MWh' : '')],
-      [T('Building / site', '建筑/场地'), F(sp.gfa) + ' m² GFA · ' + p.floors + ' ' + T('storey(s)', '层') + ' · ' + F(sp.siteNeed / 10000, 2) + ' ha'],
+      [T('Resilience', '韧性等级'), T(c.tier.en, c.tier.zh) + ' | ' + c.tier.avail + '%'],
+      [T('Cooling', '制冷'), T(R.cool.obj.en, R.cool.obj.zh) + ' | PUE ' + F(R.eff.pue, 2) + ' | WUE ' + F(R.eff.wue, 2) + ' L/kWh'],
+      [T('PLN demand', 'PLN需量'), F(el.mva, 1) + ' MVA | ' + T(el.volt[0], el.volt[1])],
+      [T('Backup power', '备用电源'), el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + p.fuelH + ' h ' + T('fuel', '燃油') + ' | UPS ' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW, ' + p.upsMin + ' min' + (el.bess ? ' | BESS ' + F(el.bess.mw, 1) + ' MW/' + F(el.bess.mwh, 1) + ' MWh' : '')],
+      [T('Building / site', '建筑/场地'), F(sp.gfa) + ' m² GFA | ' + p.floors + ' ' + T('storey(s)', '层') + ' | ' + F(sp.siteNeed / 10000, 2) + ' ha'],
       [T('Total CAPEX', '总投资'), money(cx.total) + ' (' + money(cx.perMW * 1e6, 2) + '/MW ' + T('facility', '设施') + ')'],
       [T('OPEX (stabilised)', '运营成本（稳定期）'), money(op.total) + T('/yr', '/年')],
-      p.revModel === 'lease' ? [T('Project IRR (with exit)', '项目IRR（含终值）'), (f.irrTV === null ? '–' : F(f.irrTV * 100, 1) + '%') + ' · NPV ' + money(f.npvTV) + ' @ ' + p.wacc + '%'] : [T('Cost of ownership', '拥有成本'), money(f.lcocAll, 0) + '/kW·' + T('month', '月')],
+      p.revModel === 'lease' ? [T('Project IRR (with exit)', '项目IRR（含终值）'), (f.irrTV === null ? '–' : F(f.irrTV * 100, 1) + '%') + ' | NPV ' + money(f.npvTV) + ' @ ' + p.wacc + '%'] : [T('Cost of ownership', '拥有成本'), money(f.lcocAll, 0) + '/kW·' + T('month', '月')],
       [T('Schedule to RFS (phase 1)', '至第一期投产'), R.sched.total + ' ' + T('months', '个月') + ' (≈ ' + R.sched.rfsYear + ')']
     ]);
     h2(T('Key recommendations', '主要建议'));
@@ -115,11 +115,11 @@
     /* 2 site */
     h1(T('2. Site & Regional Assessment', '2. 场地与区域评估'));
     kv([
-      [T('Province / location', '省份/地点'), T(L.provEn + ' — ' + L.en, L.provZh + '——' + L.zh)], [T('Island / PLN system', '岛屿/PLN电网'), T(L.island + ' · ' + R.grid.en, L.island + ' · ' + R.grid.zh)],
-      [T('Climate', '气候'), T(R.clim.en, R.clim.zh) + ' · ' + L.db + ' °C DB / ' + L.wb + ' °C WB · ' + F(L.elev) + ' m'],
+      [T('Province / location', '省份/地点'), T(L.provEn + ' — ' + L.en, L.provZh + '——' + L.zh)], [T('Island / PLN system', '岛屿/PLN电网'), T(L.island + ' | ' + R.grid.en, L.island + ' | ' + R.grid.zh)],
+      [T('Climate', '气候'), T(R.clim.en, R.clim.zh) + ' | ' + L.db + ' °C DB / ' + L.wb + ' °C WB | ' + F(L.elev) + ' m'],
       [T('Seismic / flood (planning)', '地震/洪水（规划级）'), T(({ low: 'Low', med: 'Medium', high: 'High' }[p.seismic]) + ' / ' + ({ low: 'Low', med: 'Medium', high: 'High' }[p.flood]), ({ low: '低', med: '中', high: '高' }[p.seismic]) + '/' + ({ low: '低', med: '中', high: '高' }[p.flood]))],
       [T('DC market status', '数据中心市场'), T({ major: 'Major hub', emerging: 'Emerging hub', none: 'No established hub' }[L.hub], { major: '主要枢纽', emerging: '新兴枢纽', none: '尚无成熟枢纽' }[L.hub])],
-      [T('Land / water / wages', '土地/水/工资'), 'USD ' + F(p.landPrice) + '/m² · USD ' + F(p.waterPrice, 2) + '/m³ · UMP 2026 Rp' + F(L.ump) + (L.umpApprox ? ' (≈)' : '')],
+      [T('Land / water / wages', '土地/水/工资'), 'USD ' + F(p.landPrice) + '/m² | USD ' + F(p.waterPrice, 2) + '/m³ | UMP 2026 Rp' + F(L.ump) + (L.umpApprox ? ' (≈)' : '')],
       [T('Construction logistics factor', '施工物流系数'), F(L.capexF, 2) + ' × ' + T('Greater Jakarta', '大雅加达')],
       [T('Site area required / available', '所需/可用用地'), F(sp.siteNeed) + ' m² / ' + (p.siteArea > 0 ? F(p.siteArea) + ' m² — ' + (sp.siteOK ? T('sufficient', '充足') : T('insufficient', '不足')) : T('not specified', '未提供'))]
     ]);
@@ -128,9 +128,9 @@
 
     /* 3 IT */
     h1(T('3. Capacity & IT Platforms', '3. 容量与IT平台'));
-    var plRows = [[T('Standard racks', '标准机柜'), T(R.stdP.en, R.stdP.zh), R.stdP.vendor, F(c.stdR), F(c.sd, 1) + ' / ' + F(R.stdP.kwPeak), R.stdP.cool, p.rackW + '×' + p.rackD + ' · ' + p.rackU + 'U', F(R.stdP.kg)]];
-    if (c.hdR) plRows.push([T('High-density racks', '高密度机柜'), T(R.hdP.en, R.hdP.zh), R.hdP.vendor, F(c.hdR), F(c.hd, 0) + ' / ' + F(R.hdP.kwPeak), R.hdP.cool, R.hdP.w + '×' + R.hdP.d + ' · ' + R.hdP.u + 'U', F(R.hdP.kg)]);
-    table([T('Group', '分组'), T('Platform', '平台'), T('Vendors', '厂商'), T('Racks', '数量'), T('kW design / peak', 'kW设计/峰值'), T('Cooling', '冷却'), T('W×D mm · U', '宽×深mm·U'), T('kg', 'kg')], plRows, [11, 22, 20, 7, 11, 8, 13, 8]);
+    var plRows = [[T('Standard racks', '标准机柜'), T(R.stdP.en, R.stdP.zh), R.stdP.vendor, F(c.stdR), F(c.sd, 1) + ' / ' + F(R.stdP.kwPeak), R.stdP.cool, p.rackW + '×' + p.rackD + ' | ' + p.rackU + 'U', F(R.stdP.kg)]];
+    if (c.hdR) plRows.push([T('High-density racks', '高密度机柜'), T(R.hdP.en, R.hdP.zh), R.hdP.vendor, F(c.hdR), F(c.hd, 0) + ' / ' + F(R.hdP.kwPeak), R.hdP.cool, R.hdP.w + '×' + R.hdP.d + ' | ' + R.hdP.u + 'U', F(R.hdP.kg)]);
+    table([T('Group', '分组'), T('Platform', '平台'), T('Vendors', '厂商'), T('Racks', '数量'), T('kW design / peak', 'kW设计/峰值'), T('Cooling', '冷却'), T('W×D mm | U', '宽×深mm·U'), T('kg', 'kg')], plRows, [11, 22, 20, 7, 11, 8, 13, 8]);
     bullets([TP(R.stdP.note)].concat(c.hdR ? [TP(R.hdP.note)] : []).concat([T('Cabinet: ', '机柜：') + TP([find(DB.cabinets, p.cabinet).en, find(DB.cabinets, p.cabinet).zh]) + ' — ' + TP(find(DB.cabinets, p.cabinet).note)]));
     para(T('Total ', '共') + F(c.racks) + T(' racks, average ', '个机柜，平均') + F(c.avgDens, 1) + T(' kW/rack; ', ' kW/柜；') + (c.gpus ? '≈ ' + F(c.gpus) + T(' GPUs/accelerators; ', '颗GPU/加速器；') : '') + p.phases + T(' phase(s) of ≈ ', '期，每期约') + F(c.phaseMW, 1) + ' MW.');
 
@@ -139,8 +139,8 @@
     para((p.ov && p.ov.tier && x.prop.tier !== p.tier ? T('Owner selection: ' + tierName + ' (assessment proposal: Tier ' + ['I', 'II', 'III', 'IV'][x.prop.tier - 1] + '). Basis of the proposal: ', '业主选择：' + tierName + '（评估建议：Tier ' + ['I', 'II', 'III', 'IV'][x.prop.tier - 1] + '）。建议依据：') : '') + TP(x.why.tier));
     table([T('Standard', '标准'), T('Level', '等级'), T('Key requirements for this level', '该等级主要要求')], x.tierStd.map(function (r) { return [r[0], r[1], T(r[2], r[3])]; }), [24, 20, 56]);
     kv([
-      [T('Maximum demand', '最大需量'), F(el.demandKW) + ' kW · ' + F(el.mva, 1) + ' MVA · ' + T(el.volt[0], el.volt[1])], [T('Utility circuits', '市电进线回路'), el.hv.circ + (el.hv.gis ? ' · ' + el.hv.name + ' GIS (Ur ' + el.hv.ur + ' kV) · ' + el.hv.ik + ' kA' + (el.hv.ibt ? ' · ' + el.hv.ibt.total + ' × ' + el.hv.ibt.mva + ' MVA ' + el.hv.ibt.ratio : '') + ' · ' + el.hv.ht.total + ' × ' + el.hv.ht.mva + ' MVA ' + el.hv.ht.ratio + ' · uk ' + el.hv.ht.uk + ' %' : '') + ' — ' + T(el.hv.asm.en, el.hv.asm.zh)],
-      [T('PLN grid impact (Grid Code)', 'PLN电网影响（电网规范）'), R.gimp ? F(R.gimp.pccIk, 1) + ' kA · ' + F(R.gimp.ssc) + ' MVA · Isc/IL ' + F(R.gimp.scr) + ' · TDD ' + F(R.gimp.tdd, 1) + ' % / ' + F(R.gimp.tddLimit, 1) + ' %' + (R.gimp.ahf ? T(' with active filters', '（含有源滤波）') : '') + ' · ' + T('AI step ', 'AI阶跃') + F(R.gimp.dvAi, 2) + ' % · ' + R.gimp.studies.length + T(' studies, ≈ ', '项研究，约') + R.gimp.months + T(' months', '个月') : '–'],
+      [T('Maximum demand', '最大需量'), F(el.demandKW) + ' kW | ' + F(el.mva, 1) + ' MVA | ' + T(el.volt[0], el.volt[1])], [T('Utility circuits', '市电进线回路'), el.hv.circ + (el.hv.gis ? ' | ' + el.hv.name + ' GIS (Ur ' + el.hv.ur + ' kV) | ' + el.hv.ik + ' kA' + (el.hv.ibt ? ' | ' + el.hv.ibt.total + ' × ' + el.hv.ibt.mva + ' MVA ' + el.hv.ibt.ratio : '') + ' | ' + el.hv.ht.total + ' × ' + el.hv.ht.mva + ' MVA ' + el.hv.ht.ratio + ' (' + el.hv.ht.lab + ')' + ' | uk ' + el.hv.ht.uk + ' %' : '') + ' — ' + T(el.hv.asm.en, el.hv.asm.zh)],
+      [T('PLN grid impact (Grid Code)', 'PLN电网影响（电网规范）'), R.gimp ? F(R.gimp.pccIk, 1) + ' kA | ' + F(R.gimp.ssc) + ' MVA | Isc/IL ' + F(R.gimp.scr) + ' | TDD ' + F(R.gimp.tdd, 1) + ' % / ' + F(R.gimp.tddLimit, 1) + ' %' + (R.gimp.ahf ? T(' with active filters', '（含有源滤波）') : '') + ' | ' + T('AI step ', 'AI阶跃') + F(R.gimp.dvAi, 2) + ' % | ' + R.gimp.studies.length + T(' studies, ≈ ', '项研究，约') + R.gimp.months + T(' months', '个月') : '–'],
       [T('Transformers', '变压器'), el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')'], [T('Generators', '发电机'), el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC'],
       [T('Fuel storage', '储油'), F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) — ' + TP(x.why.fuelH)], [T('UPS', 'UPS'), el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ') — ' + TP(x.why.upsMin)],
       [T('Batteries', '电池'), F(el.battKWh) + ' kWh ' + (p.battery === 'LI' ? 'Li-ion LFP' : 'VRLA') + ' — ' + TP(x.why.battery)],
@@ -155,7 +155,7 @@
       x.matrix.map(function (m) { return [T(m.en, m.zh), m.feasible ? '✓' : '✗', F(m.pue, 2), F(m.wue, 2), money(m.energyCost), F(m.s.eff, 1), F(m.s.water, 1), F(m.s.scale, 1), F(m.s.capex, 1), F(m.s.mat, 1), F(m.s.it, 1), m.feasible ? F(m.score, 2) : '–']; }),
       [26, 6, 6, 6, 11, 6, 6, 6, 6, 7, 6, 8]);
     para(TP(x.why.cooling));
-    var plant = [[T('Total heat', '总散热'), F(me.totalHeat) + ' kW · ' + F(me.tr) + ' RT'], [T('Air / liquid heat', '风冷/液冷热量'), F(R.cool.airKW) + ' / ' + F(R.cool.liquidKW) + ' kW']];
+    var plant = [[T('Total heat', '总散热'), F(me.totalHeat) + ' kW | ' + F(me.tr) + ' RT'], [T('Air / liquid heat', '风冷/液冷热量'), F(R.cool.airKW) + ' / ' + F(R.cool.liquidKW) + ' kW']];
     if (me.chN) plant.push([T('Chillers', '冷水机组'), (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW (' + me.chLabel + ')']);
     if (me.ctN) plant.push([T('Cooling towers', '冷却塔'), (me.ctN + me.ctR) + T(' cells', '格')]);
     if (me.term) plant.push([T('Air terminals', '空气末端'), T(me.term.en, me.term.zh) + ' × ' + (me.term.n + me.term.r)]);
@@ -165,18 +165,18 @@
     if (me.cduN) plant.push([T('CDUs', 'CDU'), (me.cduN + me.cduR) + ' × ' + me.cduSize + ' kW']);
     if (me.dcN) plant.push([T('Warm-water heat rejection', '温水散热'), (me.dcN + me.dcR) + ' × 1,500 kW']);
     if (me.tesM3) plant.push([T('Thermal storage', '蓄冷'), F(me.tesM3) + ' m³']);
-    plant.push([T('Water use', '用水'), F(me.waterDay) + ' m³/' + T('day', '日') + ' · WUE ' + F(R.eff.wue, 2) + ' L/kWh']);
+    plant.push([T('Water use', '用水'), F(me.waterDay) + ' m³/' + T('day', '日') + ' | WUE ' + F(R.eff.wue, 2) + ' L/kWh']);
     plant.push([T('PUE (annual / design day)', 'PUE（年均/设计日）'), F(R.eff.pue, 2) + ' / ' + F(R.eff.puePeak, 2) + ' — ' + T('target ', '目标') + F(p.targetPUE, 2)]);
-    plant.push([T('Renewables & carbon', '可再生能源与碳排放'), p.renewable + '% · ' + F(op.co2t) + ' tCO₂e/' + T('yr', '年') + ' — ' + TP(x.why.renewable)]);
+    plant.push([T('Renewables & carbon', '可再生能源与碳排放'), p.renewable + '% | ' + F(op.co2t) + ' tCO₂e/' + T('yr', '年') + ' — ' + TP(x.why.renewable)]);
     kv(plant);
     chart(svgBars([{ label: 'IT', v: 1, text: '1.00', color: '#a5b4fc' }, { label: T('Cooling', '制冷'), v: R.eff.mech, text: F(R.eff.mech, 3), color: '#0ea5c6' }, { label: T('Electrical losses', '电气损耗'), v: R.eff.elec, text: F(R.eff.elec, 3), color: '#f2a93b' }, { label: T('Lighting & other', '照明及其他'), v: R.eff.misc, text: F(R.eff.misc, 3), color: '#7c3aed' }]), 760, 140, T('PUE components (per unit of IT energy)', 'PUE构成（每单位IT能耗）'));
 
     /* 6 space */
     h1(T('6. Space, Building & Site', '6. 空间、建筑与场地'));
-    kv([[T('White space', '白区'), F(sp.ws) + ' m² · ' + sp.halls + T(' hall(s)', '个机房')], [T('Electrical rooms', '电气房间'), F(sp.elecRoom) + ' m²'], [T('Mechanical rooms', '暖通机房'), F(sp.mechRoom) + ' m²'],
-        [T('Support areas', '支持区'), F(sp.support) + ' m²'], [T('Gross floor area', '总建筑面积'), F(sp.gfa) + ' m² (' + F(sp.gfa / c.itMW) + ' m²/MW)'], [T('Footprint', '占地'), F(sp.footprint) + ' m² · ' + p.floors + T(' storey(s)', '层')],
+    kv([[T('White space', '白区'), F(sp.ws) + ' m² | ' + sp.halls + T(' hall(s)', '个机房')], [T('Electrical rooms', '电气房间'), F(sp.elecRoom) + ' m²'], [T('Mechanical rooms', '暖通机房'), F(sp.mechRoom) + ' m²'],
+        [T('Support areas', '支持区'), F(sp.support) + ' m²'], [T('Gross floor area', '总建筑面积'), F(sp.gfa) + ' m² (' + F(sp.gfa / c.itMW) + ' m²/MW)'], [T('Footprint', '占地'), F(sp.footprint) + ' m² | ' + p.floors + T(' storey(s)', '层')],
         [T('External yards / substation', '室外场地/变电站'), F(sp.yard) + ' / ' + F(sp.subst) + ' m²'], [T('Site area required', '所需用地'), F(sp.siteNeed) + ' m² (' + F(sp.siteNeed / 10000, 2) + ' ha)'],
-        [T('Floor live load / clear height', '楼面活荷载/净高'), sp.floorLoad + ' kN/m² · ' + T(sp.clearH, sp.clearHzh)], [T('White-space floor', '白区地面'), sp.raised ? T('Raised access floor', '防静电架空地板') : T('Slab-on-grade, overhead distribution', '无架空地板，上走线')]]);
+        [T('Floor live load / clear height', '楼面活荷载/净高'), sp.floorLoad + ' kN/m² | ' + T(sp.clearH, sp.clearHzh)], [T('White-space floor', '白区地面'), sp.raised ? T('Raised access floor', '防静电架空地板') : T('Slab-on-grade, overhead distribution', '无架空地板，上走线')]]);
 
     /* 7 fire */
     h1(T('7. Fire Protection, Security & Monitoring', '7. 消防、安防与监控'));

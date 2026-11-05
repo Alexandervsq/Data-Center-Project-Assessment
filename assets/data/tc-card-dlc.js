@@ -6,7 +6,7 @@
     aipow: { eq: 'EL-13', more: ['EL-14', 'EL-23'], name: ['Power for AI racks', 'AI机柜供电'],
       how: ['AI racks take power through OEM power shelves or a rack busbar fed from overhead busway: a 135 kW rack needs several 63 A three-phase feeds per side (A and B). Busway rated per row and tap-off boxes matched to the rack keep the power path short and maintainable.', 'AI机柜通过OEM电源架或机柜母排取电，由上方插接母线供电：135 kW机柜每路（A、B）需多条三相63 A进线。按排选型的母线及与机柜匹配的插接箱使供电路径短且易于维护。'],
       om: [['Thermal scan of tap-offs at full GPU load.', '在GPU满载时对插接箱红外测温。'], ['Watch phase balance — GPU loads switch together.', '关注三相平衡——GPU负载同步变化。'], ['Plan busway capacity for the next GPU generation.', '母线容量按下一代GPU预留。']],
-      basis: function (c) { var el = c.R.el; return [el.busways + ' busway runs × ' + el.bwA + ' A · high-density racks: ' + (el.rHd ? el.rHd[0] : '–'), el.busways + '条母线 × ' + el.bwA + ' A · 高密度机柜：' + (el.rHd ? el.rHd[1] : '–')]; }, calc: 'bwy' }
+      basis: function (c) { var el = c.R.el; return [el.busways + ' busway runs × ' + el.bwA + ' A | high-density racks: ' + (el.rHd ? el.rHd[0] : '–'), el.busways + '条母线 × ' + el.bwA + ' A | 高密度机柜：' + (el.rHd ? el.rHd[1] : '–')]; }, calc: 'bwy' }
   };
   function U(k, o) { return Object.assign({}, X.U[k] || EXTRA[k], o || {}); }
   var CHW = { card: 'CHW', label: ['Chilled-water cooling', '冷冻水风冷'] }, PWR = { card: 'PWR', label: ['Critical power', '关键供电'] };
@@ -60,29 +60,29 @@
   function pfd(c) {
     var R = c.R, me = R.me, el = R.el, hp = R.hdP, cap = R.cap, o = '';
     o += L.ground(132, 232, 1330) + L.R(132, 242, 1330, 40, 'url(#tcSoil)', ' opacity=".5"') + L.R(0, 497, 1470, 16, 'url(#tcGround)');
-    o += L.waves(0, 512, 1470, 108, 'url(#tcWater)', 6, 140, 6, '#7FD0EA') + L.text(735, 590, ['Facility water loop ≈ 32–45 °C · closed loop · dry coolers need no evaporation', '设施水环路约32–45 °C · 闭式环路 · 干冷器无需蒸发耗水'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px"');
+    o += L.waves(0, 512, 1470, 108, 'url(#tcWater)', 6, 140, 6, '#7FD0EA') + L.text(735, 590, ['Facility water loop ≈ 32–45 °C | closed loop | dry coolers need no evaporation', '设施水环路约32–45 °C | 闭式环路 | 干冷器无需蒸发耗水'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px"');
     /* technology loop */
     o += L.pipe('M727 120V100H606V110', 'tcs', 5) + L.pipe('M632 110V88H761V120', 'tcr', 5, true, true) + L.thin('M606 152H536', 'tcs', 3, '4 3') + L.thin('M632 196H536', 'tcr', 3, '4 3');
     /* facility loop */
     o += L.pipe('M751 232V262H1462V444H1454', 'fws', 6) + L.pipe('M1300 470H1262', 'fws', 6) + L.pipe('M1000 446H982V274H860V232', 'fwr', 6, true, true) + L.thin('M962 466H1000', 'fws', 3, '4 4');
     /* banners */
-    o += L.banner(140, 0, 1310, ['① TECHNOLOGY COOLING SYSTEM (TCS) · 技术冷却环路', '① 技术冷却环路 · TCS'], ['coolant through cold plates, manifolds and CDUs', '冷却液流经冷板、分液器与CDU'], null, 'tcZone');
-    o += L.banner(540, 290, 920, ['② FACILITY WATER SYSTEM (FWS) · 设施水系统', '② 设施水系统 · FWS'], ['warm water to dry coolers; residual air on chilled water', '温水至干冷器；余热经冷冻水'], null, 'tcZone2');
-    o += L.banner(130, 290, 390, ['③ BUILDING · 建筑', '③ 建筑 · BUILDING'], ['weight & space', '荷载与空间'], null, 'tcZone5');
+    o += L.banner(140, 0, 1310, ['① TECHNOLOGY COOLING SYSTEM (TCS) | 技术冷却环路', '① 技术冷却环路 | TCS'], ['coolant through cold plates, manifolds and CDUs', '冷却液流经冷板、分液器与CDU'], null, 'tcZone');
+    o += L.banner(540, 290, 920, ['② FACILITY WATER SYSTEM (FWS) | 设施水系统', '② 设施水系统 | FWS'], ['warm water to dry coolers; residual air on chilled water', '温水至干冷器；余热经冷冻水'], null, 'tcZone2');
+    o += L.banner(130, 290, 390, ['③ BUILDING | 建筑', '③ 建筑 | BUILDING'], ['weight & space', '荷载与空间'], null, 'tcZone5');
     /* row 1 */
     o += L.hot('gpu', ['Cold plates', '冷板'], 130, 38, 270, 200, tray(150, 160) + L.label(270, 60, '01', ['Cold plates', '冷板'], ['on every GPU and CPU', '覆盖每颗GPU与CPU']));
-    o += L.hot('airack', ['AI rack', 'AI机柜'], 424, 38, 120, 200, L.rack(430, 96, 104, 136, { gpu: true, blink: true }) + L.label(482, 60, '02', ['AI rack', 'AI机柜'], hp.kw + ' kW · ' + (hp.gpu || '–') + ' GPU'));
+    o += L.hot('airack', ['AI rack', 'AI机柜'], 424, 38, 120, 200, L.rack(430, 96, 104, 136, { gpu: true, blink: true }) + L.label(482, 60, '02', ['AI rack', 'AI机柜'], hp.kw + ' kW | ' + (hp.gpu || '–') + ' GPU'));
     o += L.hot('manifold', ['Manifolds & QDs', '分液器与快接'], 560, 38, 130, 200, manifolds(600, 110, 120) + L.label(640, 60, '03', ['Manifolds & QDs', '分液器与快接'], ['dripless couplings', '无滴漏接头']));
     o += L.hot('cdu', ['CDUs', 'CDU'], 694, 38, 214, 200, L.cduCab(700, 120, 96, 112) + L.cduCab(806, 120, 96, 112) + L.label(801, 60, '04', ['CDUs', 'CDU'], me.cduN ? (me.cduN + me.cduR) + ' × ' + F(me.cduSize) + ' kW' : '–'));
     var pw = L.busway(950, 104, 270, 6, 12) + L.rack(970, 140, 66, 92, { gpu: true }) + L.rack(1056, 140, 66, 92, { gpu: true }) + L.rack(1142, 140, 66, 92, { gpu: true });
-    o += L.hot('aipow', ['Power for AI racks', 'AI机柜供电'], 940, 38, 290, 200, pw + L.label(1085, 60, '05', ['Rack power', '机柜供电'], [el.bwA + ' A busway · A + B', el.bwA + ' A母线 · A+B']));
+    o += L.hot('aipow', ['Power for AI racks', 'AI机柜供电'], 940, 38, 290, 200, pw + L.label(1085, 60, '05', ['Rack power', '机柜供电'], [el.bwA + ' A busway | A + B', el.bwA + ' A母线 | A+B']));
     o += L.hot('bess', ['BESS', '储能'], 1250, 38, 200, 200, L.bessBox(1262, 172, 180, 60) + L.label(1350, 60, '06', ['BESS', '储能'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : ['optional', '可选']));
     /* row 2 */
-    o += L.hot('fws', ['FWS pumps', '设施水泵'], 1290, 330, 166, 170, L.pump(1300, 498, 1) + L.pump(1380, 498, 1) + L.label(1372, 352, '07', ['FWS pumps', '设施水泵'], ['N+1 · VFD', 'N+1 · 变频']));
+    o += L.hot('fws', ['FWS pumps', '设施水泵'], 1290, 330, 166, 170, L.pump(1300, 498, 1) + L.pump(1380, 498, 1) + L.label(1372, 352, '07', ['FWS pumps', '设施水泵'], ['N+1 | VFD', 'N+1 | 变频']));
     o += L.hot('dry', ['Dry coolers', '干冷器'], 994, 330, 276, 170, L.dryCooler(1000, 420, 260, 78, 4) + L.label(1130, 352, '08', ['Dry coolers', '干冷器'], me.dcN ? (me.dcN + me.dcR) + ' × ' + F(K.DC_KW) + ' kW' : '–'));
-    o += L.hot('trim', ['Trim chiller', '补冷冷机'], 754, 330, 214, 170, L.chiller(760, 420, 200, 78) + L.label(860, 352, '09', ['Trim chiller', '补冷冷机'], ['residual air · hot days', '余热 · 高温日']));
+    o += L.hot('trim', ['Trim chiller', '补冷冷机'], 754, 330, 214, 170, L.chiller(760, 420, 200, 78) + L.label(860, 352, '09', ['Trim chiller', '补冷冷机'], ['residual air | hot days', '余热 | 高温日']));
     o += L.hot('resair', ['Residual-air cooling', '余热风冷'], 550, 330, 190, 170, L.fanWall(560, 400, 100, 98, 2, 3, true) + L.label(640, 352, '10', ['Residual air', '余热风冷'], [F(R.cool.airKW) + ' kW by air', '风冷' + F(R.cool.airKW) + ' kW']));
-    o += L.hot('floor', ['Floor loading', '楼面荷载'], 140, 330, 380, 170, slab(160, 470, 340) + L.label(330, 352, '11', ['Floor loading', '楼面荷载'], ['≥ ' + R.sp.floorLoad + ' kN/m² · ≈ ' + F(R.sp.heavyRack) + ' kg rack', '≥' + R.sp.floorLoad + ' kN/m² · 机柜约' + F(R.sp.heavyRack) + ' kg']));
+    o += L.hot('floor', ['Floor loading', '楼面荷载'], 140, 330, 380, 170, slab(160, 470, 340) + L.label(330, 352, '11', ['Floor loading', '楼面荷载'], ['≥ ' + R.sp.floorLoad + ' kN/m² | ≈ ' + F(R.sp.heavyRack) + ' kg rack', '≥' + R.sp.floorLoad + ' kN/m² | 机柜约' + F(R.sp.heavyRack) + ' kg']));
     o += L.text(612, 236, ['35 °C →', '35 °C →'], 'tc-ls', ' style="font-weight:800;fill:#0B7F99"') + L.text(1100, 286, ['← 32 °C', '← 32 °C'], 'tc-ls', ' style="font-weight:800;fill:#0B7F99"');
     return '<svg class="tc-pfd tc-abs" viewBox="0 0 1470 620" role="img" aria-label="' + L.te(['Direct liquid cooling', '冷板式液冷']) + '">' + o + '</svg>';
   }
@@ -112,7 +112,7 @@
     var lq = hp.kw * (hp.liq || .85), parts = [[['To liquid', '进入液体'], lq, '#0EA5C6'], [['To air', '进入空气'], hp.kw - lq, '#E5806E']];
     h += L.tile(1, 'flowT', 'drop', ['Heat split per rack', '单柜热量分配'], hp.kw + ' kW', '<div style="display:flex;gap:12px;align-items:center">' + L.donut(parts, { center: String(hp.kw), unit: 'kW' }) + '<div style="display:grid;gap:5px;flex:1">' + L.legend(parts, 0, ' kW') + '</div></div>' + L.note(['Flow ≈ ' + F(lq / (1020 * 3.9 * 10) * 60000) + ' L/min per rack at ΔT 10 K.', '温差10 K时每柜约' + F(lq / (1020 * 3.9 * 10) * 60000) + ' L/min。']), '#E2F5FA');
     h += L.tile(2, 'floorT', 'building', ['Rack facts', '机柜参数'], [hp.en.split(' (')[0].replace('NVIDIA ', ''), hp.zh.split('（')[0]], L.facts([
-      [['Weight', '重量'], '≈ ' + F(hp.kg) + ' kg', ['floor ≥ ' + R.sp.floorLoad + ' kN/m²', '楼面≥' + R.sp.floorLoad + ' kN/m²']], [['Footprint', '占地'], hp.w + ' × ' + hp.d, ['mm · ' + hp.u + 'U', 'mm · ' + hp.u + 'U']],
+      [['Weight', '重量'], '≈ ' + F(hp.kg) + ' kg', ['floor ≥ ' + R.sp.floorLoad + ' kN/m²', '楼面≥' + R.sp.floorLoad + ' kN/m²']], [['Footprint', '占地'], hp.w + ' × ' + hp.d, ['mm | ' + hp.u + 'U', 'mm | ' + hp.u + 'U']],
       [['Accelerators', '加速器'], String(hp.gpu || '–'), ['GPUs per rack', '每柜GPU']], [['Peak power', '峰值功率'], hp.kwPeak + ' kW', ['design ' + hp.kw + ' kW', '设计' + hp.kw + ' kW']]]));
     var refs = DB.references.filter(function (r) { return r.kind === 'real' && r.type === 'AI' && r.mw; }).sort(function (a, b) { return b.mw - a.mw; }).slice(0, 5), mxr = refs.length ? refs[0].mw : 1;
     h += L.tile(3, 'refsAI', 'pin', ['AI campuses', 'AI园区'], ['public data', '公开信息'], L.miniBars(refs.map(function (r) { return [[r.en.split(' — ')[0], r.zh.split('——')[0]], r.mw, '#2A2785']; }), mxr, ' MW') + L.note(['Announced capacity; Indonesian and regional projects in the reference database.', '公开宣布的容量；参考数据库中的印尼及区域项目。']), '#FCE9E7');

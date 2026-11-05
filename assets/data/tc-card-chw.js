@@ -38,24 +38,24 @@
     var R = c.R, me = R.me, cap = R.cap, o = '';
     o += L.ground(132, 232, 1330) + L.R(132, 242, 1330, 40, 'url(#tcSoil)', ' opacity=".5"') + L.R(0, 497, 1470, 16, 'url(#tcGround)');
     o += L.waves(0, 512, 1470, 108, 'url(#tcWater)', 6, 140, 6, '#7FD0EA') + '<path d="M0 604' + new Array(14).join('q60 -10 120 0') + 'V620H0Z" fill="#C9C2A6" opacity=".9"/>';
-    o += L.text(735, 590, ['Make-up water: PDAM mains or groundwater · rainwater harvesting · stored for ' + c.p.fuelH + ' h', '补水：市政供水（PDAM）或地下水 · 雨水收集 · 储存' + c.p.fuelH + ' h'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px"');
+    o += L.text(735, 590, ['Make-up water: PDAM mains or groundwater | rainwater harvesting | stored for ' + c.p.fuelH + ' h', '补水：市政供水（PDAM）或地下水 | 雨水收集 | 储存' + c.p.fuelH + ' h'], 'tc-lw', ' text-anchor="middle" style="font-size:12.5px"');
     /* condenser loop */
     o += L.pipe('M412 222H440', 'cws', 6) + L.pipe('M604 204H640', 'cws', 6) + L.pipe('M880 176H900V96H190V150', 'cwr', 6, true, true);
     /* chilled-water loop */
     o += L.pipe('M880 212H1210', 'chws', 7) + L.pipe('M1374 204H1462V438H1432', 'chws', 7) + L.pipe('M1330 392V266H906V232', 'chwr', 6, true, true) + L.thin('M1108 212V232', 'chws', 3, '4 4');
     o += L.pipe('M226 513V494', 'water', 5, true, true) + L.thin('M302 462H350', 'water', 3, '4 4');
     /* banners */
-    o += L.banner(140, 0, 1310, ['① HEAT REJECTION & CHILLED-WATER PLANT · 散热与冷冻站', '① 散热与冷冻站 · CHILLED-WATER PLANT'], ['towers, pumps, chillers, economiser and thermal storage', '冷却塔、水泵、冷机、节能换热器及蓄冷'], null, 'tcZone2');
-    o += L.banner(600, 290, 860, ['② WHITE SPACE AIR SIDE · 白区气流', '② 白区气流 · AIR SIDE'], ['cold air in, hot air contained and returned', '冷风送入，热风封闭回流'], null, 'tcZone');
-    o += L.banner(130, 290, 450, ['③ WATER · 水系统', '③ 水系统 · WATER'], ['make-up & treatment', '补水与水处理'], null, 'tcZone5');
+    o += L.banner(140, 0, 1310, ['① HEAT REJECTION & CHILLED-WATER PLANT | 散热与冷冻站', '① 散热与冷冻站 | CHILLED-WATER PLANT'], ['towers, pumps, chillers, economiser and thermal storage', '冷却塔、水泵、冷机、节能换热器及蓄冷'], null, 'tcZone2');
+    o += L.banner(600, 290, 860, ['② WHITE SPACE AIR SIDE | 白区气流', '② 白区气流 | AIR SIDE'], ['cold air in, hot air contained and returned', '冷风送入，热风封闭回流'], null, 'tcZone');
+    o += L.banner(130, 290, 450, ['③ WATER | 水系统', '③ 水系统 | WATER'], ['make-up & treatment', '补水与水处理'], null, 'tcZone5');
     /* row 1 */
     var tw = L.coolingTower(150, 170, 80, 62) + L.coolingTower(240, 170, 80, 62) + L.coolingTower(330, 170, 80, 62);
-    o += L.hot('tower', ['Cooling towers', '冷却塔'], 144, 38, 272, 200, tw + L.label(280, 60, '01', ['Cooling towers', '冷却塔'], me.ctN ? [(me.ctN + me.ctR) + ' cells · ' + F(me.rejKW) + ' kW', (me.ctN + me.ctR) + '格 · ' + F(me.rejKW) + ' kW'] : ['air-cooled plant in this basis', '本基准为风冷系统']));
+    o += L.hot('tower', ['Cooling towers', '冷却塔'], 144, 38, 272, 200, tw + L.label(280, 60, '01', ['Cooling towers', '冷却塔'], me.ctN ? [(me.ctN + me.ctR) + ' cells | ' + F(me.rejKW) + ' kW', (me.ctN + me.ctR) + '格 | ' + F(me.rejKW) + ' kW'] : ['air-cooled plant in this basis', '本基准为风冷系统']));
     o += L.hot('cwp', ['Condenser-water pumps', '冷却水泵'], 434, 38, 176, 200, L.pump(440, 232, 1) + L.pump(526, 232, 1) + L.label(520, 60, '02', ['CW pumps', '冷却水泵'], ['variable speed', '变频']));
-    o += L.hot('chiller', ['Chillers', '冷水机组'], 634, 38, 252, 200, L.chiller(640, 150, 240, 82) + L.label(760, 60, '03', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW · ' + me.chLabel : '–'));
+    o += L.hot('chiller', ['Chillers', '冷水机组'], 634, 38, 252, 200, L.chiller(640, 150, 240, 82) + L.label(760, 60, '03', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW | ' + me.chLabel : '–'));
     o += L.hot('phe', ['Plate heat exchanger', '板式换热器'], 906, 38, 114, 200, L.phe(915, 168, 96, 64) + L.label(963, 60, '04', ['Plate HX', '板换'], ['economiser', '节能']));
     o += L.hot('tes', ['Thermal storage', '蓄冷罐'], 1052, 38, 120, 200, L.storageTank(1060, 120, 96, 112, '#0EA5C6') + L.label(1112, 60, '05', ['TES tank', '蓄冷罐'], me.tesM3 ? F(me.tesM3) + ' m³' : ['not required', '无需']));
-    o += L.hot('chwp', ['Chilled-water pumps', '冷冻水泵'], 1204, 38, 176, 200, L.pump(1210, 232, 1) + L.pump(1296, 232, 1) + L.label(1290, 60, '06', ['CHW pumps', '冷冻水泵'], ['N+1 · VFD', 'N+1 · 变频']));
+    o += L.hot('chwp', ['Chilled-water pumps', '冷冻水泵'], 1204, 38, 176, 200, L.pump(1210, 232, 1) + L.pump(1296, 232, 1) + L.label(1290, 60, '06', ['CHW pumps', '冷冻水泵'], ['N+1 | VFD', 'N+1 | 变频']));
     o += L.text(1040, 206, ['14 °C →', '14 °C →'], 'tc-ls', ' style="font-weight:800;fill:#0B7F99"') + L.text(1160, 260, ['← 22 °C return', '← 22 °C回水'], 'tc-ls', ' style="font-weight:800;fill:#B0302A"');
     /* row 2: air side */
     var tn = me.term ? (me.term.id === 'ME-10' ? ['In-row coolers', '列间空调'] : me.term.id === 'ME-07' ? ['CRAH units', '精密空调'] : ['Fan walls', '风墙']) : ['Precision AC', '精密空调'];
@@ -64,19 +64,19 @@
     room += L.rack(860, 402, 62, 68) + L.rack(1068, 402, 62, 68) + L.containment(922, 400, 146, 70);
     room += L.air('M1300 486H790', false, 4) + L.air('M826 482V420', false, 4) + L.air('M1170 482V420', false, 4) + L.air('M995 462V404', true, 5) + L.air('M995 392H1300', true, 4);
     room += L.text(826, 414, ['cold 24 °C', '冷 24 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#0B7F99;font-size:11.5px"') + L.text(1170, 414, ['cold 24 °C', '冷 24 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#0B7F99;font-size:11.5px"') + L.text(995, 440, ['hot 36 °C', '热 36 °C'], 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#B0302A;font-size:11.5px"');
-    o += L.hot('aisle', ['Hot-aisle containment', '热通道封闭'], 764, 330, 532, 170, room + L.label(1000, 352, '08', ['Hot-aisle containment', '热通道封闭'], [F(cap.racks) + ' racks · ΔT ≈ 12 K', F(cap.racks) + '个机柜 · 温差约12 K']));
+    o += L.hot('aisle', ['Hot-aisle containment', '热通道封闭'], 764, 330, 532, 170, room + L.label(1000, 352, '08', ['Hot-aisle containment', '热通道封闭'], [F(cap.racks) + ' racks | ΔT ≈ 12 K', F(cap.racks) + '个机柜 | 温差约12 K']));
     var rd = L.rack(640, 410, 60, 88) + L.R(700, 414, 12, 80, '#0EA5C6', ' rx="2"') + '<path d="M702 420V488M706 420V488M710 420V488" stroke="#E2F5FA" stroke-width="1"/>' + L.pipe('M706 414V392H740', 'chws', 3, false) + L.air('M716 454H750', false, 3);
     o += L.hot('rdhx', ['Rear-door heat exchangers', '背板换热器'], 620, 330, 140, 170, rd + L.label(690, 352, '09', ['Rear-door HX', '背板换热'], me.rdhx ? [me.rdhx + ' doors', me.rdhx + '个'] : ['20–75 kW racks', '20–75 kW机柜']));
     o += L.hot('makeup', ['Make-up water', '补水'], 140, 330, 180, 170, L.tankBox(150, 432, 150, 62, 16, 'tcWater', .7) + L.label(228, 352, '10', ['Make-up water', '补水'], F(me.waterStore) + ' m³'));
     var wt = L.cylV(350, 450, 26, 46, 'tcWhite') + L.R(352, 466, 22, 26, '#E39B1B', ' opacity=".8"') + L.cylV(386, 450, 26, 46, 'tcWhite') + L.R(388, 466, 22, 26, '#7C3AED', ' opacity=".7"') + L.cylV(422, 450, 26, 46, 'tcWhite') + L.R(424, 466, 22, 26, '#16A34A', ' opacity=".7"') + L.R(460, 462, 50, 34, '#3A3F63', ' rx="3"') + L.R(466, 468, 20, 8, '#0EA5C6', ' rx="1"');
-    o += L.hot('wtreat', ['Water treatment', '水处理'], 340, 330, 200, 170, wt + L.label(436, 352, '11', ['Water treatment', '水处理'], ['CoC 4–6 · Legionella', '浓缩4–6倍 · 军团菌']));
+    o += L.hot('wtreat', ['Water treatment', '水处理'], 340, 330, 200, 170, wt + L.label(436, 352, '11', ['Water treatment', '水处理'], ['CoC 4–6 | Legionella', '浓缩4–6倍 | 军团菌']));
     return '<svg class="tc-pfd tc-abs" viewBox="0 0 1470 620" role="img" aria-label="' + L.te(['Chilled-water cooling', '冷冻水制冷']) + '">' + o + '</svg>';
   }
   function principleSvg() {
     var o = '<svg viewBox="0 0 340 196" role="img" aria-label="airflow">';
     o += L.R(10, 160, 320, 6, '#C9CDE0') + L.rack(90, 70, 50, 90) + L.rack(200, 70, 50, 90) + L.containment(140, 62, 60, 98);
     o += L.air('M20 150H80', false, 4) + L.air('M320 150H260', false, 4) + L.air('M170 140V70', true, 4) + L.air('M170 52H320', true, 3);
-    o += L.text(48, 140, '24 °C', 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#0B7F99"') + L.text(170, 110, '36 °C', 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#B0302A"') + L.text(170, 186, ['Q = P ÷ (ρ · cp · ΔT)', 'Q = P ÷ (ρ · cp · ΔT)'], 'tc-lt', ' text-anchor="middle" style="font-size:13px"');
+    o += L.text(48, 140, '24 °C', 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#0B7F99"') + L.text(170, 110, '36 °C', 'tc-ls', ' text-anchor="middle" style="font-weight:800;fill:#B0302A"') + L.text(170, 186, ['Q = P ÷ (ρ | cp | ΔT)', 'Q = P ÷ (ρ | cp | ΔT)'], 'tc-lt', ' text-anchor="middle" style="font-size:13px"');
     return o + '</svg>';
   }
   function right(c) {

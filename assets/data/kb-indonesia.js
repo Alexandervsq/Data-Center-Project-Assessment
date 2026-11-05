@@ -1,10 +1,10 @@
 /* Indonesia regional database — 38 provinces with representative data-center locations.
  * Climate values are indicative design conditions (≈0.4% dry-bulb / design wet-bulb) for
  * planning; verify with BMKG / ASHRAE climatic data and a site survey.
- * cls: TROP = lowland tropical humid · HIGH = tropical highland (≥ ~450 m) · TDRY = tropical savanna (long dry season)
+ * cls: TROP = lowland tropical humid | HIGH = tropical highland (≥ ~450 m) | TDRY = tropical savanna (long dry season)
  * seis / flood: qualitative planning hazard (low / med / high) — confirm with SNI 1726:2019 site study & flood maps.
- * land: indicative DC-suitable industrial land, USD/m² (2026) · water: USD/m³ (PDAM / estate) ·
- * capexF: construction cost & logistics factor vs. Greater Jakarta · wage: blended O&M wage index vs. Jakarta.
+ * land: indicative DC-suitable industrial land, USD/m² (2026) | water: USD/m³ (PDAM / estate) ·
+ * capexF: construction cost & logistics factor vs. Greater Jakarta | wage: blended O&M wage index vs. Jakarta.
  * ump: provincial minimum wage 2026, IDR/month (Kemnaker / provincial decrees; "≈" = approximated). */
 (function (g) {
   var D = g.DCDB || (g.DCDB = { systems: [], equipment: [] });

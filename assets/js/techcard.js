@@ -285,7 +285,7 @@
     var s = shadow(x + w / 2, y + h + 4, w * .58, 5) + R_(x, y, w, h, 'url(#tcWhiteH)', ' rx="3" stroke="' + OUT + '" stroke-opacity=".35"');
     for (var i = 1; i < 6; i++) s += '<path d="M' + f1(x + i * w / 6) + ' ' + (y + 4) + 'V' + (y + h - 4) + '" stroke="#B7BCD2"/>';
     s += R_(x, y + h * .2, w, 6, '#0EA5C6', ' opacity=".85"') + R_(x + w - 4, y + h * .3, 12, h * .45, '#5E6484', ' rx="2"');
-    return s + text(x + w / 2, y + h * .72, 'BESS · LFP', 'tc-lc', ' text-anchor="middle" style="fill:#2A2785;font-size:12px"');
+    return s + text(x + w / 2, y + h * .72, 'BESS | LFP', 'tc-lc', ' text-anchor="middle" style="fill:#2A2785;font-size:12px"');
   }
   function busway(x, y, w, taps, drop) {
     var s = R_(x, y, w, 9, 'url(#tcAmber)', ' rx="2" stroke="' + OUT + '" stroke-opacity=".35"');
@@ -460,7 +460,7 @@
   /* ============================================================== slide furniture */
   var LOGO = 'assets/img/ccepc_logo_strip.png';
   var UI = {
-    eyebrow: ['Project Technology Simulation · Data Center', '项目技术模拟 · 数据中心'], org: ['PT CCEPC Indonesia · Data Center', 'PT CCEPC Indonesia · 数据中心业务'],
+    eyebrow: ['Project Technology Simulation | Data Center', '项目技术模拟 | 数据中心'], org: ['PT CCEPC Indonesia | Data Center', 'PT CCEPC Indonesia | 数据中心业务'],
     click: ['Click any part for details', '点击任意部分查看详情'], basis: ['Design basis', '设计基准'], gloss: ['Abbreviations & sources', '缩写与来源'],
     how: ['How it works', '工作原理'], forBasis: ['In this design basis', '本设计基准中'], ratings: ['Typical ratings', '典型规格'],
     params: ['Design parameters (TPG excerpt)', '设计参数（TPG摘录）'], req: ['Key technical requirements', '主要技术要求'], stds: ['Applicable standards', '适用标准'],
@@ -479,7 +479,7 @@
   };
   function langSwitch() { return '<button type="button" class="tc-lang" data-lang-btn aria-label="Language / 语言"><b class="' + (lang() === 'en' ? 'on' : '') + '">EN</b><b class="' + (lang() === 'zh' ? 'on' : '') + '">中文</b></button>'; }
   function header(card) {
-    return '<header class="tc-hdr tc-abs"><div class="tc-logo"><img src="' + LOGO + '" alt="MINMETALS · MCC · CCEPC"></div>' +
+    return '<header class="tc-hdr tc-abs"><div class="tc-logo"><img src="' + LOGO + '" alt="MINMETALS | MCC | CCEPC"></div>' +
       '<div class="tc-ttl"><div class="tc-eyebrow">' + te(UI.eyebrow) + '</div><h1 class="tc-h1">' + te(card.title) + (card.abbr ? ' <b>(' + e(card.abbr) + ')</b>' : '') + '<small>' + te(o(card.title)) + '</small></h1>' +
       '<div class="tc-tag">' + t(card.tag) + '</div></div>' +
       '<div class="tc-hdr-r"><span class="tc-badge">' + te(card.badge) + '</span><span class="tc-org">' + te(UI.org) + '</span>' + langSwitch() + '</div></header><div class="tc-ribbon tc-abs"></div>';
@@ -559,7 +559,7 @@
   /* unit panel bound to the equipment knowledge base */
   function unitPanel(u, ctx) {
     var q = u.eq ? eqOf(typeof u.eq === 'function' ? u.eq(ctx) : u.eq) : null, name = u.name || (q ? [q.en, q.zh] : u.id);
-    var sub = [o(name)]; if (q) sub.push(q.id + ' · ' + t([sysOf(q.sys).en, sysOf(q.sys).zh]));
+    var sub = [o(name)]; if (q) sub.push(q.id + ' | ' + t([sysOf(q.sys).en, sysOf(q.sys).zh]));
     var lead = u.func || (q ? q.fn : '');
     var right = '<div style="display:grid;gap:14px"><p class="tc-lead">' + t(lead) + '</p>';
     if (u.how) right += '<div><h3>' + te(UI.how) + '</h3><p>' + t(u.how) + '</p></div>';
@@ -576,11 +576,11 @@
     if (q) {
       var rows = q.tpg.filter(function (r) { return !r.g; }).slice(0, u.tpgN || 12).map(function (r) { return [t([r[0], r[1]]), e(r[2]), e(r[3])]; });
       var left = '<div><h3>' + te(UI.params) + '</h3>' + ptable([UI.desc, UI.unit, UI.req2], rows) +
-        '<div class="tc-rel" style="margin-top:10px"><a class="tc-ext" href="#equip/' + q.id + '" target="_blank" rel="noopener" title="' + te(['Opens in a new tab', '在新标签页打开']) + '">' + te(UI.fullSpec) + ' · ' + q.id + ' ↗</a></div></div>';
+        '<div class="tc-rel" style="margin-top:10px"><a class="tc-ext" href="#equip/' + q.id + '" target="_blank" rel="noopener" title="' + te(['Opens in a new tab', '在新标签页打开']) + '">' + te(UI.fullSpec) + ' | ' + q.id + ' ↗</a></div></div>';
       var rt = '<div style="display:grid;gap:16px;align-content:start"><div><h3>' + te(UI.ratings) + '</h3><p>' + t(q.ty) + '</p></div>' +
         '<div><h3>' + te(UI.req) + '</h3><ul class="tc-li">' + q.s.map(function (c) { return '<li>' + te(c) + '</li>'; }).join('') + '</ul></div>' +
         '<div><h3>' + te(UI.stds) + '</h3><div class="tc-stds">' + q.std.map(function (s) { return '<span>' + e(s) + '</span>'; }).join('') + '</div></div>';
-      if (u.more && u.more.length) rt += '<div><h3>' + te(UI.relEq) + '</h3><div class="tc-rel">' + u.more.map(function (id) { var m = eqOf(id); return m ? '<a class="tc-ext" href="#equip/' + id + '" target="_blank" rel="noopener">' + id + ' · ' + te([m.en, m.zh]) + ' ↗</a>' : ''; }).join('') + '</div></div>';
+      if (u.more && u.more.length) rt += '<div><h3>' + te(UI.relEq) + '</h3><div class="tc-rel">' + u.more.map(function (id) { var m = eqOf(id); return m ? '<a class="tc-ext" href="#equip/' + id + '" target="_blank" rel="noopener">' + id + ' | ' + te([m.en, m.zh]) + ' ↗</a>' : ''; }).join('') + '</div></div>';
       body += '<div class="tc-g2">' + left + rt + '</div></div>';
     }
     if (u.extra) body += u.extra(ctx);
@@ -588,7 +588,7 @@
     var tests = q && q.t ? q.t.map(function (x) { return '<li>' + te(x) + '</li>'; }).join('') : '';
     if (om || tests) body += '<div class="tc-g2">' + (om ? '<div><h3>' + te(UI.om) + '</h3><ul class="tc-li">' + om + '</ul></div>' : '<div></div>') + (tests ? '<div><h3>' + te(UI.tests) + '</h3><ul class="tc-li">' + tests + '</ul></div>' : '<div></div>') + '</div>';
     body += related(u.rel);
-    return article(u.id, 'u', name, mdHead(u.no, name, sub.join(' · ')) + '<div class="tc-mb">' + body + '</div>');
+    return article(u.id, 'u', name, mdHead(u.no, name, sub.join(' | ')) + '<div class="tc-mb">' + body + '</div>');
   }
   function theoryPanel(th, no, ctx) {
     var body = '<div class="tc-hero"><div style="display:grid;gap:14px"><p class="tc-lead">' + t(th.body) + '</p>';
@@ -621,15 +621,15 @@
     var codes = {}; (card.units || []).forEach(function (u) { var q = u.eq && eqOf(typeof u.eq === 'function' ? u.eq(CTX) : u.eq); if (q) q.std.forEach(function (s) { codes[s.replace(/[:\s]\d{4}.*$/, '').trim()] = 1; }); });
     var stds = DB.standards.filter(function (s) { var c = s.c.replace(/[:\s]\d{4}.*$/, '').trim(); return Object.keys(codes).some(function (k) { return k && (c.indexOf(k) === 0 || k.indexOf(c) === 0); }); });
     if (stds.length) body += '<div><h3>' + te(UI.stds) + '</h3>' + ptable(null, stds.map(function (s) { return [e(s.c), te([s.en, s.zh])]; })) + '</div>';
-    body += '<div class="tc-src"><b>' + te(['Sources:', '来源：']) + '</b> ' + (card.sources || []).map(te).join(' · ') + '</div>';
+    body += '<div class="tc-src"><b>' + te(['Sources:', '来源：']) + '</b> ' + (card.sources || []).map(te).join(' | ') + '</div>';
     return freePanel('gloss', 'Aa', UI.gloss, ['Terms, standards and sources used in this simulation', '本模拟使用的术语、标准与来源'], body, 'x');
   }
   function basisPanel(card, ctx, diff) {
     var R = ctx.R, p = ctx.p, c = R.cap;
     var rows = [[['Basis', '基准'], e(ctx.name)], [['Location', '地点'], te([R.L.en + ', ' + R.L.provEn, R.L.zh + '，' + R.L.provZh])], [['Facility type', '设施类型'], te([c.type.en, c.type.zh])],
-      [['Design IT load', '设计IT负载'], F(c.itMW, 2) + ' MW · ' + F(c.racks) + ' ' + te(['racks', '个机柜']) + ' · ' + F(c.avgDens, 1) + ' kW/' + te(['rack', '柜'])], [['Resilience', '韧性等级'], te([c.tier.en, c.tier.zh])],
-      [['Cooling', '制冷'], te([R.cool.obj.en, R.cool.obj.zh]) + ' · PUE ' + F(R.eff.pue, 2)], [['PLN demand', 'PLN需量'], F(R.el.mva, 1) + ' MVA · ' + te(R.el.volt)],
-      [['Backup', '备用电源'], R.el.genTotal + ' × ' + F(R.el.genSize) + ' kWe (' + R.el.genLabel + ') · ' + p.fuelH + ' h · UPS ' + R.el.upsTotal + ' × ' + F(R.el.upsSize) + ' kW, ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')],
+      [['Design IT load', '设计IT负载'], F(c.itMW, 2) + ' MW | ' + F(c.racks) + ' ' + te(['racks', '个机柜']) + ' | ' + F(c.avgDens, 1) + ' kW/' + te(['rack', '柜'])], [['Resilience', '韧性等级'], te([c.tier.en, c.tier.zh])],
+      [['Cooling', '制冷'], te([R.cool.obj.en, R.cool.obj.zh]) + ' | PUE ' + F(R.eff.pue, 2)], [['PLN demand', 'PLN需量'], F(R.el.mva, 1) + ' MVA | ' + te(R.el.volt)],
+      [['Backup', '备用电源'], R.el.genTotal + ' × ' + F(R.el.genSize) + ' kWe (' + R.el.genLabel + ') | ' + p.fuelH + ' h | UPS ' + R.el.upsTotal + ' × ' + F(R.el.upsSize) + ' kW, ' + p.upsMin + ' min ' + (p.battery === 'LI' ? 'LFP' : 'VRLA')],
       [['Design changes', '设计修改'], Object.keys(ctx.chg || {}).length ? te([Object.keys(ctx.chg).length + ' change(s) — listed below; every card and panel uses them', '共' + Object.keys(ctx.chg).length + '项修改——见下表；所有卡片及面板均已采用']) : te(['none — the basis as published', '无——按基准原样'])]];
     var body = '<p class="tc-lead">' + te(['The numbers in this simulation are computed by the assessment engine for the design basis selected above the slide. Choose another benchmark, or a project from your workspace, to simulate that design.', '本模拟中的数值由评估引擎针对幻灯片上方所选的设计基准计算得出。选择其他基准或工作区中的项目，即可模拟该设计。']) + '</p>' +
       (diff ? impactStrip(diff, 8) : '') + ptable(null, rows.map(function (r) { return [te(r[0]), r[1]]; })) + changesTable(ctx) + '<div class="tc-rel"><a class="tc-ext" href="#assess" target="_blank" rel="noopener">' + te(['Open Project Assessment (new tab)', '打开项目评估（新标签页）']) + ' ↗</a></div>';
@@ -653,7 +653,7 @@
   function basisInput(card, key) {
     if (key === 'ACTIVE' && g.DCApp && g.DCApp.activeInput && g.DCApp.activeInput()) return { input: g.DCApp.activeInput(), name: t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName() };
     var r = E.find(DB.references, key) || E.find(DB.references, card.basis);
-    return { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) };
+    return { input: r.input, name: r.id + ' | ' + t([r.en, r.zh]) };
   }
   /* connected-design model shared with the knowledge-document generators (assets/js/connect.js) */
   var CN = g.DCConnect, applyChg = CN.applyChg, metrics = CN.metrics, designParams = CN.params;
@@ -664,7 +664,7 @@
     var key = ST.basis._all || card.basis, bi = basisInput(card, key), str = JSON.stringify(bi.input), chg = ST.chg[key] || {}, fell = false, ckey = key;
     var x = resolveWith(str, chg);
     if (card.basisOk && !card.basisOk(x)) {
-      fell = true; ckey = card.basis; var r = E.find(DB.references, card.basis); bi = { input: r.input, name: r.id + ' · ' + t([r.en, r.zh]) }; str = JSON.stringify(r.input);
+      fell = true; ckey = card.basis; var r = E.find(DB.references, card.basis); bi = { input: r.input, name: r.id + ' | ' + t([r.en, r.zh]) }; str = JSON.stringify(r.input);
       chg = ST.chg[ckey] || {}; x = resolveWith(str, chg);
       if (!card.basisOk(x)) { chg = {}; x = baseline(str); }
     }
@@ -720,7 +720,7 @@
 
   function basisSelect(card) {
     var cur = ST.basis._all || card.basis;
-    var opts = archList().map(function (r) { return '<option value="' + r.id + '"' + (r.id === cur ? ' selected' : '') + '>' + e(r.id + ' · ' + t([r.en, r.zh])) + '</option>'; }).join('');
+    var opts = archList().map(function (r) { return '<option value="' + r.id + '"' + (r.id === cur ? ' selected' : '') + '>' + e(r.id + ' | ' + t([r.en, r.zh])) + '</option>'; }).join('');
     if (g.DCApp && g.DCApp.activeName && g.DCApp.activeName()) opts = '<option value="ACTIVE"' + (cur === 'ACTIVE' ? ' selected' : '') + '>' + e(t(['Active project', '当前项目']) + ': ' + g.DCApp.activeName()) + '</option>' + opts;
     return '<select data-basis aria-label="' + te(UI.basis) + '">' + opts + '</select>';
   }

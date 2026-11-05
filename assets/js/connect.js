@@ -23,47 +23,47 @@
   }
   /* results compared before / after a change (grouped by system) */
   function usd(v) { return v >= 1e9 ? 'USD ' + F(v / 1e9, 2) + ' B' : (v >= 1e6 ? 'USD ' + F(v / 1e6, 1) + ' M' : 'USD ' + F(v / 1e3, 0) + ' k'); }
-  var MG = { P: ['Power path', '供电路径'], W: ['White space & IT', '白区与IT'], C: ['Cooling', '制冷'], F: ['Fire · security · monitoring', '消防·安防·监控'], B: ['Building, cost & schedule', '建筑、投资与工期'] };
+  var MG = { P: ['Power path', '供电路径'], W: ['White space & IT', '白区与IT'], C: ['Cooling', '制冷'], F: ['Fire | security | monitoring', '消防·安防·监控'], B: ['Building, cost & schedule', '建筑、投资与工期'] };
   function metrics(x) {
     var R = x.R, p = x.p, el = R.el, hv = el.hv, me = R.me, sp = R.sp, c = R.cap, fs = R.fs, M = [];
     function m(g, id, l, v) { M.push({ g: g, id: id, l: l, v: v }); }
-    m('P', 'md', ['Maximum demand', '最大需量'], F(el.mva, 1) + ' MVA · ' + F(el.demandKW) + ' kW');
-    m('P', 'conn', ['PLN connection', 'PLN接入'], [hv.name + ' · ' + hv.circ + ' circuit(s)', hv.name + ' · ' + hv.circ + '回进线']);
-    m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.name + ' GIS (Ur ' + hv.ur + ' kV) · ' + hv.ik + ' kA · ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
-    m('P', 'pcc', ['Fault level at the connection point · Isc/IL', '接入点短路水平 · Isc/IL'], F(hv.pccIk, 1) + ' kA · ' + F(hv.ssc) + ' MVA · ' + F(R.gimp ? R.gimp.scr : 0));
+    m('P', 'md', ['Maximum demand', '最大需量'], F(el.mva, 1) + ' MVA | ' + F(el.demandKW) + ' kW');
+    m('P', 'conn', ['PLN connection', 'PLN接入'], [hv.name + ' | ' + hv.circ + ' circuit(s)', hv.name + ' | ' + hv.circ + '回进线']);
+    m('P', 'gis', ['HV substation', '高压变电站'], hv.gis ? hv.name + ' GIS (Ur ' + hv.ur + ' kV) | ' + hv.ik + ' kA | ' + F(hv.busA) + ' A' : ['none (20 kV supply)', '无（20 kV供电）']);
+    m('P', 'pcc', ['Fault level at the connection point | Isc/IL', '接入点短路水平 | Isc/IL'], F(hv.pccIk, 1) + ' kA | ' + F(hv.ssc) + ' MVA | ' + F(R.gimp ? R.gimp.scr : 0));
     m('P', 'ibt', ['EHV/HV transformers', '超高压/高压联络变压器'], hv.ibt ? hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio : '–');
-    m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' · uk ' + hv.ht.uk + ' %' : '–');
-    m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A · ' + hv.mv.ik + ' kA');
+    m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' | uk ' + hv.ht.uk + ' %' : '–');
+    m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A | ' + hv.mv.ik + ' kA');
     m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')');
-    m('P', 'lv', ['LV main breaker · fault level', '低压主断路器 · 短路水平'], F(el.lv.acb) + ' A · ' + el.lv.icw + ' kA');
-    m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · ' + (el.genV === 'MV' ? '20 kV' : '400 V'));
-    m('P', 'fuel', ['Fuel storage', '燃油储存'], F(el.fuelL / 1000) + ' m³ · ' + el.tanks + ' × ' + el.tankSize + ' m³ · ' + p.fuelH + ' h');
+    m('P', 'lv', ['LV main breaker | fault level', '低压主断路器 | 短路水平'], F(el.lv.acb) + ' A | ' + el.lv.icw + ' kA');
+    m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + (el.genV === 'MV' ? '20 kV' : '400 V'));
+    m('P', 'fuel', ['Fuel storage', '燃油储存'], F(el.fuelL / 1000) + ' m³ | ' + el.tanks + ' × ' + el.tankSize + ' m³ | ' + p.fuelH + ' h');
     m('P', 'ups', ['UPS', 'UPS'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')');
-    m('P', 'batt', ['Batteries', '蓄电池'], F(el.battKWh) + ' kWh · ' + p.upsMin + ' min · ' + (p.battery === 'LI' ? 'LFP' : 'VRLA'));
+    m('P', 'batt', ['Batteries', '蓄电池'], F(el.battKWh) + ' kWh | ' + p.upsMin + ' min | ' + (p.battery === 'LI' ? 'LFP' : 'VRLA'));
     m('P', 'bess', ['BESS', '储能'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : '–');
-    m('P', 'pq', ['Grid impact: harmonic TDD · AI voltage step', '电网影响：谐波TDD · AI电压阶跃'], R.gimp ? F(R.gimp.tdd, 1) + ' % / ' + F(R.gimp.tddLimit, 1) + ' % · ' + F(R.gimp.dvAi, 2) + ' %' + (R.gimp.ahf ? ' · AHF' : '') : '–');
-    m('P', 'tar', ['PLN tariff', 'PLN电价'], 'Rp ' + F(p.tariffIDR, 1) + '/kWh · ' + (el.vclass === 'TT' ? 'I-4 TT' : 'TM'));
+    m('P', 'pq', ['Grid impact: harmonic TDD | AI voltage step', '电网影响：谐波TDD | AI电压阶跃'], R.gimp ? F(R.gimp.tdd, 1) + ' % / ' + F(R.gimp.tddLimit, 1) + ' % | ' + F(R.gimp.dvAi, 2) + ' %' + (R.gimp.ahf ? ' | AHF' : '') : '–');
+    m('P', 'tar', ['PLN tariff', 'PLN电价'], 'Rp ' + F(p.tariffIDR, 1) + '/kWh | ' + (el.vclass === 'TT' ? 'I-4 TT' : 'TM'));
     m('W', 'it', ['IT load', 'IT负载'], F(c.itMW, 2) + ' MW');
     m('W', 'racks', ['Racks (standard + high-density)', '机柜（标准+高密度）'], F(c.racks) + ' (' + F(c.stdR) + ' + ' + F(c.hdR) + ')');
     m('W', 'dens', ['Rack density average / maximum', '机柜密度 平均/最大'], F(c.avgDens, 1) + ' / ' + F(c.maxDens, 0) + ' kW');
-    m('W', 'rows', ['Rows · IT distribution', '列数 · IT配电'], el.rows + ' · ' + (el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / ' + el.bwHdA + ' A' : '') : el.pdus + ' PDU'));
+    m('W', 'rows', ['Rows | IT distribution', '列数 | IT配电'], el.rows + ' | ' + (el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / ' + el.bwHdA + ' A' : '') : el.pdus + ' PDU'));
     m('W', 'rpdu', ['Rack PDUs', '机柜PDU'], F(el.rpdus));
-    m('W', 'ws', ['White space · halls', '白区 · 机房'], F(sp.ws) + ' m² · ' + sp.halls);
+    m('W', 'ws', ['White space | halls', '白区 | 机房'], F(sp.ws) + ' m² | ' + sp.halls);
     m('C', 'pue', ['PUE annual / design day', 'PUE 年均/设计日'], F(R.eff.pue, 2) + ' / ' + F(R.eff.puePeak, 2));
     m('C', 'cool', ['Cooling system', '制冷系统'], [R.cool.obj.en, R.cool.obj.zh]);
-    m('C', 'cop', ['Chiller COP · free cooling', '冷机COP · 自然冷却'], me.model && me.model.cop ? F(me.model.cop, 2) + ' · ' + F(me.model.free * 100) + ' %' : '–');
-    m('C', 'ch', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW · ' + F(me.chwLoad) + ' kW' : '–');
-    m('C', 'ct', ['Cooling towers', '冷却塔'], me.ctN ? (me.ctN + me.ctR) + ' · ' + F(me.rejKW) + ' kW' : '–');
-    m('C', 'tes', ['Thermal storage', '蓄冷'], me.tesM3 ? F(me.tesM3) + ' m³ · ' + F(me.tesS / 60) + ' min' : '–');
+    m('C', 'cop', ['Chiller COP | free cooling', '冷机COP | 自然冷却'], me.model && me.model.cop ? F(me.model.cop, 2) + ' | ' + F(me.model.free * 100) + ' %' : '–');
+    m('C', 'ch', ['Chillers', '冷水机组'], me.chN ? (me.chN + me.chR) + ' × ' + F(me.chSize) + ' kW | ' + F(me.chwLoad) + ' kW' : '–');
+    m('C', 'ct', ['Cooling towers', '冷却塔'], me.ctN ? (me.ctN + me.ctR) + ' | ' + F(me.rejKW) + ' kW' : '–');
+    m('C', 'tes', ['Thermal storage', '蓄冷'], me.tesM3 ? F(me.tesM3) + ' m³ | ' + F(me.tesS / 60) + ' min' : '–');
     m('C', 'term', ['Air terminals', '末端空调'], me.term ? (me.term.n + me.term.r) + ' × ' + (me.term.cap || me.term.size) + ' kW' : (me.cracN ? (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW' : (me.iecN ? (me.iecN + me.iecR) + ' × 400 kW' : '–')));
-    m('C', 'cdu', ['CDUs · dry coolers', 'CDU · 干冷器'], me.cduN ? (me.cduN + me.cduR) + ' × ' + F(me.cduSize) + ' kW · ' + (me.dcN + me.dcR) : '–');
-    m('C', 'water', ['WUE · make-up water', 'WUE · 补水量'], F(R.eff.wue, 2) + ' L/kWh · ' + F(me.waterDay) + ' m³/d');
-    m('F', 'gas', ['Gas zones · agent', '气体分区 · 灭火剂'], fs.gasZones ? fs.gasZones + ' · ' + F(fs.agentKg) + ' kg' : ['pre-action sprinklers', '预作用喷淋']);
+    m('C', 'cdu', ['CDUs | dry coolers', 'CDU | 干冷器'], me.cduN ? (me.cduN + me.cduR) + ' × ' + F(me.cduSize) + ' kW | ' + (me.dcN + me.dcR) : '–');
+    m('C', 'water', ['WUE | make-up water', 'WUE | 补水量'], F(R.eff.wue, 2) + ' L/kWh | ' + F(me.waterDay) + ' m³/d');
+    m('F', 'gas', ['Gas zones | agent', '气体分区 | 灭火剂'], fs.gasZones ? fs.gasZones + ' | ' + F(fs.agentKg) + ' kg' : ['pre-action sprinklers', '预作用喷淋']);
     m('F', 'asd', ['Aspirating detectors', '吸气式探测器'], F(fs.asd));
-    m('F', 'cams', ['Cameras · access doors', '摄像机 · 门禁'], F(fs.cams) + ' · ' + F(fs.readers));
-    m('F', 'pts', ['BMS points · EPMS meters', 'BMS点 · EPMS电表'], F(fs.bmsPts) + ' · ' + F(fs.meters));
-    m('B', 'gfa', ['GFA · storeys', '建筑面积 · 层数'], F(sp.gfa) + ' m² · ' + p.floors);
-    m('B', 'site', ['Site area · floor load', '用地 · 楼面荷载'], F(sp.siteNeed / 1e4, 2) + ' ha · ' + sp.floorLoad + ' kN/m²');
+    m('F', 'cams', ['Cameras | access doors', '摄像机 | 门禁'], F(fs.cams) + ' | ' + F(fs.readers));
+    m('F', 'pts', ['BMS points | EPMS meters', 'BMS点 | EPMS电表'], F(fs.bmsPts) + ' | ' + F(fs.meters));
+    m('B', 'gfa', ['GFA | storeys', '建筑面积 | 层数'], F(sp.gfa) + ' m² | ' + p.floors);
+    m('B', 'site', ['Site area | floor load', '用地 | 楼面荷载'], F(sp.siteNeed / 1e4, 2) + ' ha | ' + sp.floorLoad + ' kN/m²');
     m('B', 'capex', ['CAPEX (facility, PLN connection, contingency)', '投资（设施、PLN接入、不可预见）'], usd(R.capex.facility + R.capex.utility + R.capex.cont));
     m('B', 'util', ['PLN connection cost', 'PLN接入投资'], usd(R.capex.utility));
     m('B', 'en', ['Energy cost per year', '年电费'], usd(R.opex.energy));
@@ -78,10 +78,10 @@
   function kOpts(list, unit) { return list.map(function (v) { return [v, F(v) + ' ' + unit]; }); }
   function designParams(x) {
     var R = x.R, p = x.p, pr = x.prop || {}, el = R.el, hv = el.hv, me = R.me, c = R.cap, K = E.K, yn = [[true, ['Yes', '是']], [false, ['No', '否']]];
-    var plats = DB.platforms.map(function (q) { return [q.id, [q.en + ' · ' + q.kw + ' kW', q.zh + ' · ' + q.kw + ' kW']]; });
+    var plats = DB.platforms.map(function (q) { return [q.id, [q.en + ' | ' + q.kw + ' kW', q.zh + ' | ' + q.kw + ' kW']]; });
     var kvO = E.KV.map(function (o) { var a = hv.opts.filter(function (z) { return z.kv === o.kv; })[0] || {}; return [o.kv, [o.en + (a.rule ? ' — recommended' : (o.intl ? '' : (a.avail === 3 ? ' — planned' : (a.avail ? '' : ' — not in this grid')))), o.zh + (a.rule ? '——建议' : (o.intl ? '' : (a.avail === 3 ? '——规划中' : (a.avail ? '' : '——本电网无'))))]]; });
     return [
-      { g: 'S', k: 'loc', l: ['Location (PLN system, climate, land)', '地点（PLN电网、气候、地价）'], o: DB.idLocs.map(function (L) { return [L.id, [L.en + ' · ' + L.provEn, L.zh + ' · ' + L.provZh]]; }), v: p.loc },
+      { g: 'S', k: 'loc', l: ['Location (PLN system, climate, land)', '地点（PLN电网、气候、地价）'], o: DB.idLocs.map(function (L) { return [L.id, [L.en + ' | ' + L.provEn, L.zh + ' | ' + L.provZh]]; }), v: p.loc },
       { g: 'S', k: 'itMW', l: ['IT load', 'IT负载'], u: 'MW', min: 0.05, max: 3000, st: 0.05, v: c.itMW },
       { g: 'S', k: 'tier', l: ['Resilience (Uptime Tier)', '韧性等级（Uptime Tier）'], o: [[1, 'Tier I'], [2, 'Tier II'], [3, 'Tier III'], [4, 'Tier IV']], v: p.tier, r: pr.tier },
       { g: 'W', k: 'stdPlat', l: ['Standard IT platform', '标准IT平台'], o: plats, v: p.stdPlat, r: pr.stdPlat },
@@ -95,9 +95,10 @@
       { g: 'P', k: 'mdKVA', l: ['Maximum demand', '最大需量'], u: 'kVA', min: 10, max: 5000000, st: 10, v: Math.round(el.demandKVA), r: Math.round(el.demandRule) },
       { g: 'P', k: 'ikPCC', l: ['Fault level at the connection point', '接入点短路电流'], u: 'kA', min: 5, max: 80, st: 0.5, v: hv.pccIk, r: hv.pccRule },
       { g: 'P', k: 'hvKm', l: ['HV connection cable route length', '高压接入电缆路径长度'], u: 'km', min: 0, max: 60, st: 0.1, v: R.gimp ? R.gimp.km : 5, r: hv.kv <= 150 ? 5 : 1, off: hv.kv <= 20 },
-      { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], o: kOpts(E.HT_STD, 'MVA'), v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
-      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating', '中/低压变压器容量'], o: kOpts([315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150, 4000], 'kVA'), v: el.txSize, r: el.txRule },
-      { g: 'P', k: 'txArch', l: ['MV/LV redundancy architecture', '中/低压变压器冗余架构'], o: [['N1', ['N+1 per group of six (block redundant)', '每6台加1台备用（块冗余）']], ['DR', ['Distributed redundant 3-make-2', '分布式冗余（3用2）']], ['2N', ['2N (A / B)', '2N（A/B）']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
+      { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], u: 'MVA', min: 10, max: 500, st: 1, v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
+      { g: 'P', k: 'htUk', l: ['HV/MV transformer impedance', '主变短路阻抗'], u: '%', min: 6, max: 30, st: 0.5, v: hv.ht ? hv.ht.uk : 12.5, r: hv.ht ? hv.ht.ukRule : null, off: !hv.ht },
+      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating (20/0.4 kV)', '中/低压变压器容量（20/0.4 kV）'], u: 'kVA', min: 100, max: 6300, st: 5, v: el.txSize, r: el.txRule },
+      { g: 'P', k: 'txArch', l: ['MV/LV redundancy architecture', '中/低压变压器冗余架构'], o: [['N1', ['Block redundant N+1 (a reserve unit in every block)', '块冗余N+1（每块设一台备用）']], ['DR', ['Distributed redundant 3N/2 (any two of three carry the load)', '分布式冗余3N/2（三台中任意两台可承担负荷）']], ['2N', ['2N (A / B)', '2N（A/B）']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
       { g: 'P', k: 'chV', l: ['Chiller supply voltage', '冷机供电电压'], o: [['LV', ['400 V chillers', '400 V冷机']], ['MV', ['6.6 kV chillers via 20/6.6 kV transformers', '经20/6.6 kV变压器的6.6 kV冷机']]], v: el.chV, r: el.chVRule, off: !(el.chKWe > 0) },
       { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
       { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
@@ -147,6 +148,7 @@
     hvKV: ['Circuits, GIS rating and busbar scheme, interbus and HV/MV transformers, 20 kV switchgear, tariff class, connection cost, lead time, substation area', '进线回路、GIS额定及接线、联络及高/中压变压器、20 kV开关柜、电价类别、接入投资、工期、变电站用地'],
     pkPUE: ['Maximum demand → connection, transformers, generators, fuel', '最大需量→接入、变压器、发电机、燃油'],
     mdKVA: ['Connection voltage, transformers, switchgear, generators, fuel, tariff class', '接入电压、变压器、开关设备、发电机、燃油、电价类别'],
+    htUk: ['20 kV fault level and board rating (25 / 31.5 / 40 kA), voltage regulation, MV generator paralleling', '20 kV短路电流及开关柜额定（25/31.5/40 kA）、电压调整率、中压发电机并网'],
     htMVA: ['Number of HV/MV transformers, split winding, impedance, 20 kV boards and their current and fault rating, neutral earthing resistors', '高/中压主变台数、分裂绕组、阻抗、20 kV开关柜段数及其电流与短路额定、中性点接地电阻'],
     ikPCC: ['GIS short-time rating, 20 kV fault level and board rating, short-circuit ratio, harmonic limits and voltage steps (grid impact)', 'GIS短时耐受电流、20 kV短路电流及开关柜额定、短路比、谐波限值及电压阶跃（电网影响）'],
     upsThd: ['Harmonic current of the UPS / IT load → TDD and voltage distortion at the connection point, AFE UPS or input filters (Deltamas study: 12-pulse sources exceed the limits)', 'UPS/IT负荷谐波电流→接入点TDD及电压畸变、有源前端UPS或输入滤波器（德尔塔马斯研究：12脉波谐波源超限）'],

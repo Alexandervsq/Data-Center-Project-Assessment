@@ -18,7 +18,7 @@
     });
     var center = opt.center ? '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="16" font-weight="700" fill="#17153f">' + e(opt.center) + '</text>' +
       '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="11" fill="#5d6280">' + e(opt.centerSub || '') + '</text>' : '';
-    var legend = '<div class="legend">' + items.map(function (it) { return '<span><i style="background:' + it.color + '"></i>' + (it.html || e(it.label)) + ' · ' + F(it.value / total * 100, 0) + '%</span>'; }).join('') + '</div>';
+    var legend = '<div class="legend">' + items.map(function (it) { return '<span><i style="background:' + it.color + '"></i>' + (it.html || e(it.label)) + ' | ' + F(it.value / total * 100, 0) + '%</span>'; }).join('') + '</div>';
     return '<svg class="chart" viewBox="0 0 ' + size + ' ' + size + '" style="max-width:' + size + 'px;margin:0 auto">' + out + center + '</svg>' + legend;
   }
 
@@ -32,7 +32,7 @@
       if (w > 46) out += '<text x="' + (x + w / 2) + '" y="' + (H / 2 + 4) + '" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">' + F(s.value / total * 100, 0) + '%</text>';
       x += w;
     });
-    var legend = '<div class="legend">' + segs.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + (s.html || e(s.label)) + ' · ' + F(s.value, opt.dec || 0) + (opt.unit || '') + '</span>'; }).join('') + '</div>';
+    var legend = '<div class="legend">' + segs.map(function (s) { return '<span><i style="background:' + s.color + '"></i>' + (s.html || e(s.label)) + ' | ' + F(s.value, opt.dec || 0) + (opt.unit || '') + '</span>'; }).join('') + '</div>';
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" style="height:' + H + 'px;border-radius:8px">' + out + '</svg>' + legend;
   }
 

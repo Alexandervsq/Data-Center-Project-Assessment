@@ -1,6 +1,6 @@
 /* IT rack platform & cabinet reference database.
  * kw = design (nominal) kW per rack used for planning; kwPeak = peak / provisioning value.
- * cool: AIR · RDHX (air + rear-door HX) · DLC (direct-to-chip liquid) · IMM (immersion)
+ * cool: AIR | RDHX (air + rear-door HX) | DLC (direct-to-chip liquid) | IMM (immersion)
  * liq = share of heat to liquid. Figures from OEM / vendor documentation and trade press —
  * confirm with the IT vendor's site-readiness guide before freezing the design. */
 (function (g) {

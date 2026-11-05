@@ -55,9 +55,9 @@
       s += '<path d="M20 98Q60 100 106 70M64 98Q90 100 120 70M20 98Q70 140 106 178M64 98Q96 150 120 178" fill="none" stroke="#D58A12" stroke-width="1.4"/>';
       s += tx(154, 84, ['Substation 1', '变电站1'], 'start', 'font-weight:700') + tx(154, 192, ['Substation 2', '变电站2'], 'start', 'font-weight:700');
       s += L.pipe('M154 104H418', 'mv', 6) + L.pipe('M154 212H418', 'mv', 6);
-      s += txb(286, 124, tt ? ['Line A · ' + el.hv.name, 'A线 · ' + el.hv.name] : ['Feeder A · 20 kV', 'A路馈线 · 20 kV'], 'middle', C.amD) + txb(286, 232, tt ? ['Line B · ' + el.hv.name, 'B线 · ' + el.hv.name] : ['Feeder B · 20 kV', 'B路馈线 · 20 kV'], 'middle', C.amD);
+      s += txb(286, 124, tt ? ['Line A | ' + el.hv.name, 'A线 | ' + el.hv.name] : ['Feeder A | 20 kV', 'A路馈线 | 20 kV'], 'middle', C.amD) + txb(286, 232, tt ? ['Line B | ' + el.hv.name, 'B线 | ' + el.hv.name] : ['Feeder B | 20 kV', 'B路馈线 | 20 kV'], 'middle', C.amD);
       s += L.switchgear(420, 80, 3, 96, 150) + txb(468, 70, tt ? ['On-site substation', '场内变电站'] : ['Site MV switchgear', '场地中压开关柜'], 'middle');
-      return svg(s + foot([el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + ' circuit(s)' + (el.hv.gis ? ' · GIS Ur ' + el.hv.ur + ' kV' : ''), el.hv.name + ' · ' + F(el.mva, 1) + ' MVA · ' + el.hv.circ + '回进线' + (el.hv.gis ? ' · GIS Ur ' + el.hv.ur + ' kV' : '')]));
+      return svg(s + foot([el.hv.name + ' | ' + F(el.mva, 1) + ' MVA | ' + el.hv.circ + ' circuit(s)' + (el.hv.gis ? ' | GIS Ur ' + el.hv.ur + ' kV' : ''), el.hv.name + ' | ' + F(el.mva, 1) + ' MVA | ' + el.hv.circ + '回进线' + (el.hv.gis ? ' | GIS Ur ' + el.hv.ur + ' kV' : '')]));
     },
     mvsg: function (c) {
       var s = ttl(['MV switchboard — single-line view', '中压开关柜——单线图']);
@@ -66,12 +66,12 @@
       s += ln('M50 100H250', C.am, 6) + ln('M280 100H480', C.am, 6) + ln('M250 100H258', C.am, 3) + brk(265, 100) + ln('M272 100H280', C.am, 3) + tx(265, 126, ['Bus coupler', '母联'], 'middle', 'font-weight:700');
       [80, 170, 360, 450].forEach(function (x) { s += ln('M' + x + ' 100V150', C.am, 3) + brk(x, 124) + '<circle cx="' + x + '" cy="164" r="10" fill="none" stroke="' + C.deep + '" stroke-width="2"/><circle cx="' + x + '" cy="178" r="10" fill="none" stroke="' + C.deep + '" stroke-width="2"/>' + tx(x, 204, 'TX', 'middle', 'font-weight:700'); });
       s += txb(125, 226, ['Bus section A', 'A段母线'], 'middle', C.ind) + txb(405, 226, ['Bus section B', 'B段母线'], 'middle', C.ind);
-      return svg(s + foot([c.R.el.feeds + ' incomers · arc-resistant (IAC AFLR) · vacuum breakers', c.R.el.feeds + '路进线 · 内部燃弧分级（IAC AFLR）· 真空断路器']));
+      return svg(s + foot([c.R.el.feeds + ' incomers | arc-resistant (IAC AFLR) | vacuum breakers', c.R.el.feeds + '路进线 | 内部燃弧分级（IAC AFLR）· 真空断路器']));
     },
     tx: function (c) {
       var el = c.R.el, pct = Math.min(1, (el.lvKVA || el.demandKVA) / (el.txTotal * el.txSize)), s = ttl(['Cast-resin dry-type transformer (cut-away)', '环氧树脂浇注干式变压器（剖视）']);
       s += L.dryTx(40, 40, 230, 190);
-      s += co(100, 130, 300, 70, ['HV winding · 20 kV', '高压绕组 · 20 kV']) + co(170, 170, 300, 104, ['LV winding · 0.4 kV', '低压绕组 · 0.4 kV']) + co(240, 60, 300, 138, ['Terminals & busbar', '端子与母排']) + co(262, 214, 300, 172, ['Enclosure + PT100', '外壳 + PT100测温']);
+      s += co(100, 130, 300, 70, ['HV winding | 20 kV', '高压绕组 | 20 kV']) + co(170, 170, 300, 104, ['LV winding | 0.4 kV', '低压绕组 | 0.4 kV']) + co(240, 60, 300, 138, ['Terminals & busbar', '端子与母排']) + co(262, 214, 300, 172, ['Enclosure + PT100', '外壳 + PT100测温']);
       s += tx(300, 204, ['Normal loading per unit', '单台正常负载率'], 'start', 'font-weight:700') + L.R(300, 212, 200, 12, '#E6E8F3', ' rx="6"') + L.R(300, 212, 200 * pct, 12, C.am, ' rx="6"') + txb(505, 222, Math.round(pct * 100) + ' %', 'end');
       return svg(s + foot([el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '）']));
     },
@@ -92,11 +92,11 @@
       s += L.R(400, 92, 84, 106, 'url(#tcLouvre)', ' rx="4"') + L.fan(442, 145, 26, 1.4, true) + tx(442, 86, ['Radiator', '散热器'], 'middle', 'font-weight:700');
       s += ln('M110 98V58H72V44', '#5E6484', 8) + L.R(30, 30, 84, 18, '#5E6484', ' rx="9"') + tx(124, 44, ['Exhaust & silencer', '排气与消声器'], 'start', 'font-weight:700');
       s += L.R(300, 40, 84, 50, C.deep, ' rx="4"') + L.R(308, 48, 40, 14, C.cyD, ' rx="2"') + tx(342, 104, ['Controller', '控制器'], 'middle', 'font-weight:700');
-      return svg(s + foot([el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') · continuous rating · ' + c.p.fuelH + ' h fuel', el.genTotal + ' × ' + F(el.genSize) + ' kWe（' + el.genLabel + '）· 持续功率 · 燃油' + c.p.fuelH + ' h']));
+      return svg(s + foot([el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | continuous rating | ' + c.p.fuelH + ' h fuel', el.genTotal + ' × ' + F(el.genSize) + ' kWe（' + el.genLabel + '）· 持续功率 | 燃油' + c.p.fuelH + ' h']));
     },
     batt: function (c) {
       var s = ttl(['LFP battery: cell → module → rack', '磷酸铁锂电池：电芯→模组→电池柜']);
-      s += L.R(30, 94, 46, 80, '#4F55A0', ' rx="6"') + L.R(38, 86, 10, 8, '#9AA0BC') + L.R(58, 86, 10, 8, '#9AA0BC') + tx(53, 194, ['Cell · 3.2 V', '电芯 · 3.2 V'], 'middle', 'font-weight:700');
+      s += L.R(30, 94, 46, 80, '#4F55A0', ' rx="6"') + L.R(38, 86, 10, 8, '#9AA0BC') + L.R(58, 86, 10, 8, '#9AA0BC') + tx(53, 194, ['Cell | 3.2 V', '电芯 | 3.2 V'], 'middle', 'font-weight:700');
       s += ar('M88 134H128', C.sl) + L.R(138, 80, 140, 104, '#3A3F63', ' rx="8"');
       for (var i = 0; i < 4; i++) for (var j = 0; j < 2; j++) s += L.R(148 + i * 32, 90 + j * 46, 26, 40, '#4F55A0', ' rx="4"');
       s += tx(208, 204, ['Module + cell monitoring', '模组 + 电芯监测'], 'middle', 'font-weight:700') + ar('M290 134H330', C.sl);
@@ -110,7 +110,7 @@
         var x = 82 + i * 92;
         s += L.R(x - 14, 62, 16, 14, '#3A3F63', ' rx="2"') + L.R(x + 4, 90, 16, 14, '#3A3F63', ' rx="2"') + ln('M' + (x - 6) + ' 76V130', C.am, 2) + ln('M' + (x + 12) + ' 104V130', C.ind, 2) + L.rack(x - 22, 130, 46, 100);
       }
-      return svg(s + foot([(el.useBusway ? el.busways + ' runs × ' + el.bwA + ' A' : el.pdus + ' PDUs') + ' · every rack fed from A and B', (el.useBusway ? el.busways + '条 × ' + el.bwA + ' A' : el.pdus + '台PDU') + ' · 每个机柜由A、B两路供电']));
+      return svg(s + foot([(el.useBusway ? el.busways + ' runs × ' + el.bwA + ' A' : el.pdus + ' PDUs') + ' | every rack fed from A and B', (el.useBusway ? el.busways + '条 × ' + el.bwA + ' A' : el.pdus + '台PDU') + ' | 每个机柜由A、B两路供电']));
     },
     rpdu: function (c) {
       var s = ttl(['Rack PDUs A and B feeding dual-corded servers', 'A、B路机柜PDU为双电源服务器供电']);
@@ -121,7 +121,7 @@
         s += ln('M320 ' + (y + 18) + 'Q260 ' + (y + 28) + ' 180 ' + (y + 14), C.am, 1.6) + ln('M332 ' + (y + 18) + 'Q345 ' + (y + 24) + ' 350 ' + (y + 14), C.ind, 1.6);
       }
       s += tx(142, 70, ['PDU A (metered)', 'A路PDU（计量）'], 'end', 'font-weight:700;fill:#B8740B') + tx(388, 70, ['PDU B', 'B路PDU'], 'start', 'font-weight:700;fill:#3F3CBB') + tx(388, 150, ['dual power supplies', '双电源模块'], 'start');
-      return svg(s + foot([F(c.R.el.rpdus) + ' rack PDUs · ' + c.R.el.rStd[0], F(c.R.el.rpdus) + '个机柜PDU · ' + c.R.el.rStd[1]]));
+      return svg(s + foot([F(c.R.el.rpdus) + ' rack PDUs | ' + c.R.el.rStd[0], F(c.R.el.rpdus) + '个机柜PDU | ' + c.R.el.rStd[1]]));
     },
     bess: function (c) {
       var b = c.R.el.bess, s = ttl(['BESS container: batteries, PCS and protection', '储能集装箱：电池、变流器与保护']);
@@ -129,7 +129,7 @@
       s += L.smokeDet(90, 70) + L.smokeDet(190, 70) + L.R(366, 90, 24, 70, '#5E6484', ' rx="3"') + tx(378, 82, 'HVAC', 'middle', 'font-weight:700');
       s += L.pipe('M350 136H420', 'mv', 4) + L.powerTx(410, 214, .62) + tx(452, 232, ['MV transformer', '中压变压器'], 'middle', 'font-weight:700');
       s += tx(140, 234, ['LFP racks', 'LFP电池架'], 'middle', 'font-weight:700') + tx(140, 50, ['off-gas detection', '逸出气体探测'], 'middle');
-      return svg(s + foot(b ? [F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh · ' + b.containers + ' containers — buffers GPU swings, shaves PLN peaks', F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh · ' + b.containers + '个集装箱——缓冲GPU波动、削减PLN峰值'] : ['Buffers GPU load swings and shaves PLN peaks; does not replace UPS or generators.', '缓冲GPU负荷波动并削减PLN峰值；不替代UPS或发电机。']));
+      return svg(s + foot(b ? [F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh | ' + b.containers + ' containers — buffers GPU swings, shaves PLN peaks', F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh | ' + b.containers + '个集装箱——缓冲GPU波动、削减PLN峰值'] : ['Buffers GPU load swings and shaves PLN peaks; does not replace UPS or generators.', '缓冲GPU负荷波动并削减PLN峰值；不替代UPS或发电机。']));
     },
     fuel: function (c) {
       var el = c.R.el, s = ttl(['Fuel system: bulk storage to day tanks', '燃油系统：主储罐至日用油箱']);
@@ -138,8 +138,8 @@
       s += L.pipe('M220 186V138H250', 'fuel', 4) + L.pump(250, 150, .62) + L.pump(310, 150, .62) + tx(290, 106, ['duplicate transfer pumps', '双套输油泵'], 'middle', 'font-weight:700');
       s += L.pipe('M356 120H380V82H396', 'fuel', 3) + L.pipe('M356 128H380V138H396', 'fuel', 3);
       s += L.R(396, 66, 28, 32, '#9AA0BC', ' rx="3"') + L.R(396, 122, 28, 32, '#9AA0BC', ' rx="3"') + bx(432, 62, 86, 40, C.ind, ['Gen-set 1', '机组1']) + bx(432, 118, 86, 40, C.ind, ['Gen-set 2', '机组2']) + tx(410, 58, ['day tanks', '日用油箱'], 'middle');
-      s += '<circle cx="130" cy="158" r="5" fill="' + C.am + '"/>' + tx(140, 162, ['level · leak · water sensors', '液位·泄漏·水分传感器'], 'start');
-      return svg(s + foot([el.tanks + ' × ' + el.tankSize + ' m³ · ' + F(el.fuelLph) + ' L/h at full load · ' + c.p.fuelH + ' h', el.tanks + ' × ' + el.tankSize + ' m³ · 满载' + F(el.fuelLph) + ' L/h · ' + c.p.fuelH + ' h']));
+      s += '<circle cx="130" cy="158" r="5" fill="' + C.am + '"/>' + tx(140, 162, ['level | leak | water sensors', '液位·泄漏·水分传感器'], 'start');
+      return svg(s + foot([el.tanks + ' × ' + el.tankSize + ' m³ | ' + F(el.fuelLph) + ' L/h at full load | ' + c.p.fuelH + ' h', el.tanks + ' × ' + el.tankSize + ' m³ | 满载' + F(el.fuelLph) + ' L/h | ' + c.p.fuelH + ' h']));
     },
     earth: function () {
       var s = ttl(['Earthing, bonding and lightning protection', '接地、等电位联结与防雷']);
@@ -153,7 +153,7 @@
       s += txb(454, 214, ['Earth ≤ 1 Ω', '接地电阻≤1 Ω'], 'middle', C.indD) + tx(454, 232, ['very high lightning density', '雷暴密度极高'], 'middle');
       return svg(s);
     },
-    epms: function (c) { return arch({ title: ['EPMS: from meters to dashboards', '电力监控：从电表到仪表盘'], devices: [['MV', '中压'], ['TX', '变压器'], ['LV', '低压'], ['UPS', 'UPS'], ['Busway', '母线']], bus: 'Modbus · IEC 61850', mid: ['Gateways · time-synchronised', '网关 · 时钟同步'], top: ['EPMS server', '电力监控服务器'], topSub: ['PUE · waveforms · events', 'PUE · 波形 · 事件'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.meters) + ' meters in this basis', '本基准约' + F(c.R.fs.meters) + '块电表'] }); },
+    epms: function (c) { return arch({ title: ['EPMS: from meters to dashboards', '电力监控：从电表到仪表盘'], devices: [['MV', '中压'], ['TX', '变压器'], ['LV', '低压'], ['UPS', 'UPS'], ['Busway', '母线']], bus: 'Modbus | IEC 61850', mid: ['Gateways | time-synchronised', '网关 | 时钟同步'], top: ['EPMS server', '电力监控服务器'], topSub: ['PUE | waveforms | events', 'PUE | 波形 | 事件'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.meters) + ' meters in this basis', '本基准约' + F(c.R.fs.meters) + '块电表'] }); },
     harm: function () {
       var s = ttl(['Active harmonic filter', '有源谐波滤波器']), fD = function (x) { return Math.sin(x) + .32 * Math.sin(5 * x) + .2 * Math.sin(7 * x); }, fF = function (x) { return -(.32 * Math.sin(5 * x) + .2 * Math.sin(7 * x)); };
       [[20, fD, C.co, ['Load current (distorted)', '负载电流（畸变）']], [190, fF, C.vi, ['Filter injects', '滤波器注入']], [360, Math.sin, C.cyD, ['Supply current (clean)', '电源电流（纯净）']]].forEach(function (p) {
@@ -167,7 +167,7 @@
       s += L.lvBoard(26, 70, 3, 90, 150) + L.pipe('M116 150H196', 'lv', 6) + L.R(196, 78, 160, 132, '#E9EBF4', ' rx="6" stroke="#17153F" stroke-opacity=".35"');
       for (var i = 0; i < 5; i++) s += ln('M212 ' + (100 + i * 20) + 'l12 -8 12 8 12 -8 12 8 12 -8 12 8 12 -8', C.co, 2);
       s += L.fan(326, 144, 18, 1.2, true) + ln('M226 70c6 -10 -6 -16 0 -26M262 70c6 -10 -6 -16 0 -26M298 70c6 -10 -6 -16 0 -26', C.co, 2) + tx(276, 230, ['Resistive load bank', '电阻负载箱'], 'middle', 'font-weight:700');
-      s += bx(380, 64, 138, 34, C.ind, ['L4 · functional tests', 'L4 · 功能测试']) + bx(380, 110, 138, 34, C.indD, ['L5 · integrated test', 'L5 · 综合测试']) + bx(380, 156, 138, 34, C.am, ['Yearly gen-set ≥ 80 %', '年度机组测试≥80%']);
+      s += bx(380, 64, 138, 34, C.ind, ['L4 | functional tests', 'L4 | 功能测试']) + bx(380, 110, 138, 34, C.indD, ['L5 | integrated test', 'L5 | 综合测试']) + bx(380, 156, 138, 34, C.am, ['Yearly gen-set ≥ 80 %', '年度机组测试≥80%']);
       return svg(s + foot(['Proves generators, UPS, cooling and controls at full load before go-live.', '在投运前以满负荷验证发电机、UPS、制冷及控制系统。']));
     },
     cable: function () {
@@ -189,14 +189,14 @@
       for (var i = 0; i < 7; i++) s += '<path d="M' + (130 + i * 36) + ' 104l-6 10h12z" fill="' + C.co + '"/>';
       s += L.bubbles(122, 112, 236, 18, 10, 4, '#7FD0EA', .9, true, 1.5, 2.5) + L.R(120, 130, 240, 60, 'url(#tcGrid)', ' stroke="#9AA0BC"');
       s += L.R(92, 192, 26, 34, 'url(#tcLouvre)') + L.R(362, 192, 26, 34, 'url(#tcLouvre)') + L.air('M24 210H88', false, 4) + L.air('M456 210H394', false, 4) + L.R(96, 226, 288, 12, 'url(#tcWater)');
-      s += co(370, 102, 400, 102, ['Hot water in · 37 °C', '热水进 · 37 °C']) + co(360, 82, 400, 74, ['Drift eliminators', '收水器']) + co(350, 160, 400, 160, ['Fill', '填料']) + co(380, 230, 400, 222, ['Basin · 32 °C', '集水盘 · 32 °C']) + tx(24, 198, ['air in · WB ' + wb + ' °C', '进风 · 湿球 ' + wb + ' °C'], 'start', 'font-weight:700;fill:#0B7F99');
-      return svg(s + foot(me.ctN ? ['≈ 1.5 L evaporated per kWh of heat · ' + (me.ctN + me.ctR) + ' cells in this basis', '每kWh热量约蒸发1.5 L · 本基准' + (me.ctN + me.ctR) + '格'] : ['≈ 1.5 L evaporated per kWh of heat rejected', '每散热1 kWh约蒸发1.5 L']));
+      s += co(370, 102, 400, 102, ['Hot water in | 37 °C', '热水进 | 37 °C']) + co(360, 82, 400, 74, ['Drift eliminators', '收水器']) + co(350, 160, 400, 160, ['Fill', '填料']) + co(380, 230, 400, 222, ['Basin | 32 °C', '集水盘 | 32 °C']) + tx(24, 198, ['air in | WB ' + wb + ' °C', '进风 | 湿球 ' + wb + ' °C'], 'start', 'font-weight:700;fill:#0B7F99');
+      return svg(s + foot(me.ctN ? ['≈ 1.5 L evaporated per kWh of heat | ' + (me.ctN + me.ctR) + ' cells in this basis', '每kWh热量约蒸发1.5 L | 本基准' + (me.ctN + me.ctR) + '格'] : ['≈ 1.5 L evaporated per kWh of heat rejected', '每散热1 kWh约蒸发1.5 L']));
     },
     pumps: function (c) {
       var s = ttl(['Variable-speed pumps follow the cube law', '变频水泵遵循立方定律']);
       s += L.pump(26, 206, 2.1, C.cy) + bx(40, 52, 70, 34, C.deep, 'VFD') + ln('M75 86V100H128V132', C.deep, 2);
       s += cube(250, 50, 260, 150, ['speed → power', '转速 → 功率']);
-      return svg(s + foot([(c.R.me.pumps || '–') + ' pumps in this basis · 80 % speed needs ≈ 51 % power', '本基准' + (c.R.me.pumps || '–') + '台水泵 · 80%转速约需51%功率']));
+      return svg(s + foot([(c.R.me.pumps || '–') + ' pumps in this basis | 80 % speed needs ≈ 51 % power', '本基准' + (c.R.me.pumps || '–') + '台水泵 | 80%转速约需51%功率']));
     },
     phe: function () {
       var s = ttl(['Plate heat exchanger (economiser)', '板式换热器（节能器）']);
@@ -248,7 +248,7 @@
       s += bx(16, 50, 128, 34, C.cy, ['PDAM mains', '市政供水']) + bx(16, 100, 128, 34, '#1E8FC0', ['Groundwater well', '地下水井']) + bx(16, 150, 128, 34, C.sl, ['Rainwater', '雨水收集']);
       s += ar('M144 67H210', C.cy) + ar('M144 117H210', C.cy) + ar('M144 167H210', C.cy) + L.storageTank(214, 80, 96, 132, C.cy) + tx(262, 236, ['storage tanks', '储水箱'], 'middle', 'font-weight:700');
       s += L.pump(320, 214, .7) + ar('M372 196H400', C.cy) + L.coolingTower(410, 136, 92, 78, false) + tx(456, 236, ['towers', '冷却塔'], 'middle', 'font-weight:700');
-      return svg(s + foot([F(me.waterStore) + ' m³ stored · ' + F(me.waterDay) + ' m³/day · ' + c.p.fuelH + ' h autonomy', '储水' + F(me.waterStore) + ' m³ · 每日' + F(me.waterDay) + ' m³ · 自持' + c.p.fuelH + ' h']));
+      return svg(s + foot([F(me.waterStore) + ' m³ stored | ' + F(me.waterDay) + ' m³/day | ' + c.p.fuelH + ' h autonomy', '储水' + F(me.waterStore) + ' m³ | 每日' + F(me.waterDay) + ' m³ | 自持' + c.p.fuelH + ' h']));
     },
     vfd: function () {
       var s = ttl(['Variable frequency drives: speed sets the power', '变频器：转速决定功率']);
@@ -256,7 +256,7 @@
       s += cube(230, 50, 270, 150, ['fan & pump speed → power', '风机水泵转速 → 功率']);
       return svg(s);
     },
-    bms: function (c) { return arch({ title: ['BMS: field devices to the operators', 'BMS：从现场设备到值班人员'], devices: [['Chillers', '冷机'], ['Pumps', '水泵'], ['Fan walls', '风墙'], ['Valves', '阀门'], ['Sensors', '传感器']], bus: 'BACnet/IP', mid: ['DDC controllers (redundant)', 'DDC控制器（冗余）'], top: ['BMS servers', 'BMS服务器'], topSub: ['sequences · alarms · trends', '运行逻辑 · 报警 · 趋势'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points in this basis', '本基准约' + F(c.R.fs.bmsPts) + '个BMS点位'] }); },
+    bms: function (c) { return arch({ title: ['BMS: field devices to the operators', 'BMS：从现场设备到值班人员'], devices: [['Chillers', '冷机'], ['Pumps', '水泵'], ['Fan walls', '风墙'], ['Valves', '阀门'], ['Sensors', '传感器']], bus: 'BACnet/IP', mid: ['DDC controllers (redundant)', 'DDC控制器（冗余）'], top: ['BMS servers', 'BMS服务器'], topSub: ['sequences | alarms | trends', '运行逻辑 | 报警 | 趋势'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points in this basis', '本基准约' + F(c.R.fs.bmsPts) + '个BMS点位'] }); },
     pipes: function () {
       var s = ttl(['Ring header with isolation valves', '带隔离阀的环形干管']);
       s += ln('M110 60H430V210H110Z', C.cy, 8) + ln('M430 100V170', '#C9CDE0', 9) + tx(430, 232, ['section isolated for maintenance', '管段隔离维护'], 'middle', 'font-weight:700');
@@ -272,7 +272,7 @@
       function blk(n, h, col) { for (var i = 0; i < n; i++) { s += L.R(180, y, 130, h - 2, col, ' rx="1.5"'); y += h; } }
       blk(2, 7, C.am); var y1 = y; blk(9, 8, '#3A3F6E'); var y2 = y; blk(4, 8, C.indD); var y3 = y; blk(8, 8, '#3A3F6E'); blk(2, 7, C.am);
       s += co(310, 40, 340, 44, ['Power shelves', '电源架']) + co(310, (y1 + y2) / 2, 340, y1 + 20, ['Compute trays (cold plates)', '计算托盘（冷板）']) + co(310, (y2 + y3) / 2, 340, (y2 + y3) / 2 + 4, ['NVLink switch trays', 'NVLink交换托盘']) + co(326, 196, 340, 210, ['Supply / return manifolds', '供/回分液器']);
-      return svg(s + foot([hp.kw + ' kW · ≈ ' + F(hp.kg) + ' kg · ' + hp.w + ' × ' + hp.d + ' mm · ' + (hp.gpu || '–') + ' GPUs', hp.kw + ' kW · 约' + F(hp.kg) + ' kg · ' + hp.w + ' × ' + hp.d + ' mm · ' + (hp.gpu || '–') + '颗GPU']));
+      return svg(s + foot([hp.kw + ' kW | ≈ ' + F(hp.kg) + ' kg | ' + hp.w + ' × ' + hp.d + ' mm | ' + (hp.gpu || '–') + ' GPUs', hp.kw + ' kW | 约' + F(hp.kg) + ' kg | ' + hp.w + ' × ' + hp.d + ' mm | ' + (hp.gpu || '–') + '颗GPU']));
     },
     manifold: function () {
       var s = ttl(['Rack manifold and dripless quick disconnects', '机柜分液器与无滴漏快插接头']);
@@ -291,7 +291,7 @@
       s += L.cduCab(20, 90, 64, 100) + L.cduCab(94, 90, 64, 100) + L.pump(196, 198, .8) + L.dryCooler(320, 120, 190, 60, 3);
       s += L.pipe('M158 120H190V96H330V120', 'fwr', 5) + L.pipe('M330 190V214H120V190', 'fws', 5) + valve(250, 96) + valve(250, 214);
       s += tx(260, 84, ['warm return ≈ 45 °C', '回水约45 °C'], 'middle', 'font-weight:700;fill:#B0302A') + tx(260, 236, ['supply ≈ 35–40 °C', '供水约35–40 °C'], 'middle', 'font-weight:700;fill:#0B7F99');
-      return svg(s + foot(me.cduN ? [(me.cduN + me.cduR) + ' CDUs · ' + (me.dcN + me.dcR) + ' dry coolers in this basis', '本基准' + (me.cduN + me.cduR) + '台CDU · ' + (me.dcN + me.dcR) + '台干冷器'] : ['closed loop · no evaporation with dry coolers', '闭式环路 · 干冷器无蒸发']));
+      return svg(s + foot(me.cduN ? [(me.cduN + me.cduR) + ' CDUs | ' + (me.dcN + me.dcR) + ' dry coolers in this basis', '本基准' + (me.cduN + me.cduR) + '台CDU | ' + (me.dcN + me.dcR) + '台干冷器'] : ['closed loop | no evaporation with dry coolers', '闭式环路 | 干冷器无蒸发']));
     },
     dry: function (c) {
       var db = c.R.L.db, s = ttl(['Adiabatic dry cooler (section)', '绝热干冷器（剖面）']);
@@ -306,7 +306,7 @@
       var s = ttl(['Leak detection under liquid-cooling equipment', '液冷设备下方的漏水检测']);
       s += L.cduCab(50, 60, 76, 132) + L.R(170, 52, 70, 140, '#2B2E4E', ' rx="4"') + L.R(246, 52, 70, 140, '#2B2E4E', ' rx="4"') + L.R(36, 196, 300, 12, '#DDE0EC', ' rx="3"');
       s += ln('M36 214H336', C.am, 3, '3 3') + '<path d="M254 194c4 -8 8 -12 8 -16a8 8 0 0 0 -16 0c0 4 4 8 8 16z" fill="#2F8FD0"/>' + tx(186, 236, ['sensing cable in the drip tray', '接水盘内的感应线缆'], 'middle', 'font-weight:700');
-      s += bx(370, 70, 144, 74, C.deep, ['LEAK at 23.4 m', '漏水位置 23.4 m'], ['zone 2 · alarm to BMS', '2区 · 报警至BMS']) + ar('M336 214H360V146', C.am);
+      s += bx(370, 70, 144, 74, C.deep, ['LEAK at 23.4 m', '漏水位置 23.4 m'], ['zone 2 | alarm to BMS', '2区 | 报警至BMS']) + ar('M336 214H360V146', C.am);
       return svg(s + foot(['Detects within seconds and locates the leak along the cable.', '数秒内报警并沿线缆定位漏点。']));
     },
     coolant: function () {
@@ -331,7 +331,7 @@
       s += L.R(170, 110, 120, 124, '#1A1C33', ' rx="6"') + L.R(180, 118, 100, 14, C.am, ' rx="2"') + L.R(180, 136, 100, 14, C.am, ' rx="2"');
       for (var i = 0; i < 5; i++) s += L.R(180, 156 + i * 14, 100, 11, '#3A3F6E', ' rx="1.5"');
       s += ln('M286 124V226', C.am, 4) + co(280, 126, 320, 124, ['power shelves (AC → DC)', '电源架（交流→直流）']) + co(286, 200, 320, 200, ['DC busbar to the trays', '直流母排至托盘']);
-      return svg(s + foot([c.R.el.bwA + ' A busway per row · A + B · tap-offs sized for the rack', '每排' + c.R.el.bwA + ' A母线 · A+B · 插接箱按机柜选型']));
+      return svg(s + foot([c.R.el.bwA + ' A busway per row | A + B | tap-offs sized for the rack', '每排' + c.R.el.bwA + ' A母线 | A+B | 插接箱按机柜选型']));
     },
     /* ------------------------------------------------------------------ building, network, operations */
     hall: function () {
@@ -354,10 +354,10 @@
     bldg: function (c) {
       var sp = c.R.sp, s = ttl(['Building section', '建筑剖面']);
       s += L.R(10, 222, 510, 8, '#C9CDE0') + L.R(60, 70, 300, 152, '#F4F5FA', ' stroke="#17153F" stroke-opacity=".35"') + ln('M60 120H360M60 172H360', '#B9BED2', 2);
-      s += tx(210, 100, ['Data halls · level 2', '数据机房 · 2层'], 'middle', 'font-weight:700') + tx(210, 152, ['Data halls · level 1', '数据机房 · 1层'], 'middle', 'font-weight:700') + tx(210, 204, ['Electrical rooms · UPS · batteries · dock', '电气室 · UPS · 电池 · 卸货区'], 'middle', 'font-weight:700');
+      s += tx(210, 100, ['Data halls | level 2', '数据机房 | 2层'], 'middle', 'font-weight:700') + tx(210, 152, ['Data halls | level 1', '数据机房 | 1层'], 'middle', 'font-weight:700') + tx(210, 204, ['Electrical rooms | UPS | batteries | dock', '电气室 | UPS | 电池 | 卸货区'], 'middle', 'font-weight:700');
       s += L.coolingTower(90, 44, 50, 26, false) + L.coolingTower(150, 44, 50, 26, false) + L.chiller(230, 46, 100, 24) + tx(338, 64, ['roof plant', '屋面设备'], 'start', 'font-weight:700');
       s += L.genset(380, 176, 120, 46) + L.powerTx(400, 222, .45) + tx(450, 160, ['yards', '室外场地'], 'middle', 'font-weight:700');
-      return svg(s + foot([F(sp.gfa) + ' m² GFA · ' + c.p.floors + ' storey(s) · floor ≥ ' + sp.floorLoad + ' kN/m² · clear height ' + sp.clearH, '建筑面积' + F(sp.gfa) + ' m² · ' + c.p.floors + '层 · 楼面≥' + sp.floorLoad + ' kN/m² · 净高' + sp.clearHzh]));
+      return svg(s + foot([F(sp.gfa) + ' m² GFA | ' + c.p.floors + ' storey(s) | floor ≥ ' + sp.floorLoad + ' kN/m² | clear height ' + sp.clearH, '建筑面积' + F(sp.gfa) + ' m² | ' + c.p.floors + '层 | 楼面≥' + sp.floorLoad + ' kN/m² | 净高' + sp.clearHzh]));
     },
     ops: function () {
       var s = ttl(['Commissioning levels L1–L5', '调试等级L1–L5']), cols = ['#B9BCE6', '#8F8CE0', '#6E6BE0', '#3F3CBB', '#2A2785'];
@@ -372,13 +372,13 @@
       var s = ttl(['Perimeter: fence, intrusion detection, cameras', '周界：围栏、入侵探测与摄像机']);
       s += L.R(10, 200, 510, 30, '#E7E1D3') + L.fence(20, 200, 440, 110) + L.R(470, 70, 6, 130, '#5E6484') + L.camera(476, 76, 1.3, true);
       [['Z1', 90], ['Z2', 240], ['Z3', 390]].forEach(function (z) { s += bx(z[1] - 18, 214, 36, 18, C.co, z[0]); });
-      s += tx(240, 72, ['anti-climb mesh · sensor cable on the fence', '防攀爬网 · 围栏感应线缆'], 'middle', 'font-weight:700');
+      s += tx(240, 72, ['anti-climb mesh | sensor cable on the fence', '防攀爬网 | 围栏感应线缆'], 'middle', 'font-weight:700');
       return svg(s + foot(['Every alarm zone is verified on video before guards respond.', '每个报警防区先经视频确认再由保安响应。']));
     },
     gate: function () {
       var s = ttl(['Vehicle entrance: guardhouse, barrier, bollards', '车辆入口：门卫室、道闸、防撞柱']);
       s += L.R(10, 210, 510, 20, '#D5D8E6') + L.building(30, 140, 120, 70, '#5D6280') + L.barrier(180, 210, 170) + L.bollards(380, 210, 7);
-      s += tx(90, 236, ['guardhouse · ID check', '门卫室 · 身份核验'], 'middle', 'font-weight:700') + tx(270, 236, ['barrier', '道闸'], 'middle', 'font-weight:700') + tx(430, 236, ['crash-rated bollards', '防冲撞柱'], 'middle', 'font-weight:700');
+      s += tx(90, 236, ['guardhouse | ID check', '门卫室 | 身份核验'], 'middle', 'font-weight:700') + tx(270, 236, ['barrier', '道闸'], 'middle', 'font-weight:700') + tx(430, 236, ['crash-rated bollards', '防冲撞柱'], 'middle', 'font-weight:700');
       return svg(s + foot(['Crash rating per ASTM F2656 / IWA 14; delivery bookings and vehicle search.', '防冲撞等级按ASTM F2656/IWA 14；送货预约及车辆检查。']));
     },
     mantrap: function () {
@@ -390,10 +390,10 @@
     access: function (c) {
       var s = ttl(['Two-factor access control', '双因素门禁']);
       s += L.R(30, 50, 90, 180, '#E9EBF4', ' rx="3" stroke="#5E6484" stroke-width="2"') + '<g transform="translate(132,100) scale(2)">' + L.reader(0, 0) + '</g>';
-      s += ar('M172 120H218', C.sl) + bx(220, 100, 120, 42, C.deep, ['Door controller', '门禁控制器']) + ar('M340 121H378', C.sl) + bx(380, 100, 130, 42, C.ind, ['Access server', '门禁服务器'], ['rights · logs', '权限 · 日志']);
+      s += ar('M172 120H218', C.sl) + bx(220, 100, 120, 42, C.deep, ['Door controller', '门禁控制器']) + ar('M340 121H378', C.sl) + bx(380, 100, 130, 42, C.ind, ['Access server', '门禁服务器'], ['rights | logs', '权限 | 日志']);
       s += bx(380, 170, 130, 36, C.sl, ['CCTV event link', '视频联动']) + ln('M445 142V170', C.sl, 2);
       s += tx(165, 210, ['card + fingerprint / PIN', '卡+指纹/密码'], 'middle', 'font-weight:700');
-      return svg(s + foot(['≈ ' + F(c.R.fs.readers) + ' controlled doors · least privilege · two-person rule for critical rooms', '约' + F(c.R.fs.readers) + '个门禁点 · 最小授权 · 关键房间双人规则']));
+      return svg(s + foot(['≈ ' + F(c.R.fs.readers) + ' controlled doors | least privilege | two-person rule for critical rooms', '约' + F(c.R.fs.readers) + '个门禁点 | 最小授权 | 关键房间双人规则']));
     },
     cctv: function (c) {
       var n = c.R.fs.cams, tb = n * 4 * 86400 / 8 / 1e6 * 90 * 1.25, s = ttl(['Camera coverage and recording', '摄像机覆盖与录像']);
@@ -410,7 +410,7 @@
     },
     preact: function () {
       var s = ttl(['Pre-action sprinkler: double interlock', '预作用喷淋：双重连锁']);
-      [[['1 · Normal: pipes hold air', '1 · 平时：管内为空气'], '#C9CDE0', false], [['2 · Alarm: valve opens, pipes fill', '2 · 报警：阀开启，管道充水'], '#2F8FD0', false], [['3 · Head opens: water only there', '3 · 喷头开启：仅该处出水'], '#2F8FD0', true]].forEach(function (st, i) {
+      [[['1 | Normal: pipes hold air', '1 | 平时：管内为空气'], '#C9CDE0', false], [['2 | Alarm: valve opens, pipes fill', '2 | 报警：阀开启，管道充水'], '#2F8FD0', false], [['3 | Head opens: water only there', '3 | 喷头开启：仅该处出水'], '#2F8FD0', true]].forEach(function (st, i) {
         var y = 52 + i * 68;
         s += ln('M30 ' + y + 'H270', st[1], 6) + L.R(290, y - 20, 230, 40, i === 2 ? C.co : (i ? C.ind : C.sl), ' rx="8"') + L.text(405, y + 4, st[0], 'tc-lw', ' text-anchor="middle" style="font-size:11px"');
         for (var k = 0; k < 5; k++) { var x = 50 + k * 52; s += L.R(x - 1.5, y, 3, 8, '#8E95AE') + ln('M' + (x - 5) + ' ' + (y + 10) + 'h10', '#8E95AE', 2); }
@@ -426,7 +426,7 @@
       return svg(s);
     },
     liion: function () {
-      var s = ttl(['Lithium-ion thermal runaway: detect early', '锂电热失控：尽早探测']), st = [['Abuse', '滥用'], ['heat · overcharge', '过热·过充'], '#F2C46A'], st2 = [['Off-gas', '气体逸出'], ['detect · isolate', '探测·隔离'], '#E39B1B'], st3 = [['Smoke', '冒烟'], ['ASD alarm', '吸气式报警'], '#E5534B'], st4 = [['Fire', '起火'], ['suppression', '灭火'], '#8E1F1A'];
+      var s = ttl(['Lithium-ion thermal runaway: detect early', '锂电热失控：尽早探测']), st = [['Abuse', '滥用'], ['heat | overcharge', '过热·过充'], '#F2C46A'], st2 = [['Off-gas', '气体逸出'], ['detect | isolate', '探测·隔离'], '#E39B1B'], st3 = [['Smoke', '冒烟'], ['ASD alarm', '吸气式报警'], '#E5534B'], st4 = [['Fire', '起火'], ['suppression', '灭火'], '#8E1F1A'];
       [st, st2, st3, st4].forEach(function (x, i) { s += bx(14 + i * 128, 70, 116, 70, x[2], x[0], x[1]); if (i < 3) s += ar('M' + (130 + i * 128) + ' 105H' + (140 + i * 128), C.sl); });
       s += ar('M72 180H458', C.sl) + tx(265, 172, ['minutes', '数分钟'], 'middle', 'font-weight:700') + bx(140, 196, 250, 34, C.gr, ['Best point to act: off-gas detection', '最佳处置时机：逸出气体探测']);
       return svg(s + foot(['Separation and suppression per NFPA 855 and UL 9540A test data.', '间距与灭火依据NFPA 855及UL 9540A试验数据。']));
@@ -438,14 +438,14 @@
       s += L.pipe('M180 150H500', 'fire', 6) + ln('M226 176V150M316 176V150M402 192V150', '#C93A33', 4) + bx(420, 70, 96, 36, C.co, ['Hydrants', '消火栓']) + bx(310, 70, 100, 36, C.coD, ['Sprinklers', '喷淋系统']) + ln('M468 106V150M360 106V150', '#C93A33', 4);
       return svg(s);
     },
-    dcim: function (c) { return arch({ title: ['DCIM: one model of assets, space, power and cooling', 'DCIM：资产、空间、电力与制冷的统一模型'], devices: [['BMS', 'BMS'], ['EPMS', 'EPMS'], ['Rack PDUs', '机柜PDU'], ['Sensors', '传感器'], ['Assets', '资产']], bus: 'BACnet · Modbus · SNMP · API', mid: ['Integration & data model', '集成与数据模型'], top: ['DCIM', 'DCIM'], topSub: ['capacity · PUE · change planning', '容量 · PUE · 变更规划'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points · ≈ ' + F(c.R.fs.meters) + ' meters · ' + F(c.R.cap.racks) + ' racks', '约' + F(c.R.fs.bmsPts) + '个BMS点 · 约' + F(c.R.fs.meters) + '块电表 · ' + F(c.R.cap.racks) + '个机柜'] }); },
+    dcim: function (c) { return arch({ title: ['DCIM: one model of assets, space, power and cooling', 'DCIM：资产、空间、电力与制冷的统一模型'], devices: [['BMS', 'BMS'], ['EPMS', 'EPMS'], ['Rack PDUs', '机柜PDU'], ['Sensors', '传感器'], ['Assets', '资产']], bus: 'BACnet | Modbus | SNMP | API', mid: ['Integration & data model', '集成与数据模型'], top: ['DCIM', 'DCIM'], topSub: ['capacity | PUE | change planning', '容量 | PUE | 变更规划'], side: ['NOC', 'NOC'], foot: ['≈ ' + F(c.R.fs.bmsPts) + ' BMS points | ≈ ' + F(c.R.fs.meters) + ' meters | ' + F(c.R.cap.racks) + ' racks', '约' + F(c.R.fs.bmsPts) + '个BMS点 | 约' + F(c.R.fs.meters) + '块电表 | ' + F(c.R.cap.racks) + '个机柜'] }); },
     noc: function (c) {
       var s = ttl(['24/7 network & operations centre', '7×24网络运营中心']) + L.nocWall(130, 40, 270, 190);
       [['BMS', 30, 70], ['EPMS', 30, 130], ['DCIM', 30, 190], [['Fire', '消防'], 430, 70], [['Security', '安防'], 430, 130], [['Leaks', '漏水'], 430, 190]].forEach(function (x) { s += bx(x[1], x[2] - 18, 76, 30, x[1] < 100 ? C.ind : C.co, x[0]) + ln(x[1] < 100 ? 'M106 ' + (x[2] - 3) + 'H130' : 'M400 ' + (x[2] - 3) + 'H430', C.sl, 2); });
-      return svg(s + foot([c.R.staff.fte + ' FTE in 24/7 shifts · emergency procedures (EOP) for every alarm', '7×24轮班共' + c.R.staff.fte + '人 · 每类报警均有应急程序（EOP）']));
+      return svg(s + foot([c.R.staff.fte + ' FTE in 24/7 shifts | emergency procedures (EOP) for every alarm', '7×24轮班共' + c.R.staff.fte + '人 | 每类报警均有应急程序（EOP）']));
     },
     firezone: function () {
-      var s = ttl(['Fire protection chain', '消防链条']), st = [[['Detect', '探测'], ['aspirating + point', '吸气式+点型'], C.am], [['Decide', '判断'], ['fire alarm panel', '火灾报警控制器'], C.co], [['Suppress', '灭火'], ['gas or pre-action', '气体或预作用'], C.coD], [['Notify', '通知'], ['NOC · Damkar', 'NOC · 消防局'], C.ind]];
+      var s = ttl(['Fire protection chain', '消防链条']), st = [[['Detect', '探测'], ['aspirating + point', '吸气式+点型'], C.am], [['Decide', '判断'], ['fire alarm panel', '火灾报警控制器'], C.co], [['Suppress', '灭火'], ['gas or pre-action', '气体或预作用'], C.coD], [['Notify', '通知'], ['NOC | Damkar', 'NOC | 消防局'], C.ind]];
       st.forEach(function (x, i) { s += bx(14 + i * 128, 90, 116, 76, x[2], x[0], x[1]); if (i < 3) s += ar('M' + (130 + i * 128) + ' 128H' + (140 + i * 128), C.sl); });
       return svg(s + foot(['Lithium-ion rooms add off-gas detection; leak detection protects liquid-cooled halls.', '锂电池室增设逸出气体探测；漏水检测保护液冷机房。']));
     }
@@ -461,7 +461,7 @@
       var y = 44 + i * 38, w = Math.max(4, b[1] / mx * 250);
       s += tx(14, y + 16, b[0], 'start', 'font-weight:700') + L.R(196, y, w, 22, b[2], ' rx="5"') + txb(200 + w, y + 16, F(b[1]), 'start');
     });
-    return svg(s + foot([F(el.mva, 1) + ' MVA · ' + t(el.volt), F(el.mva, 1) + ' MVA · ' + el.volt[1]]));
+    return svg(s + foot([F(el.mva, 1) + ' MVA | ' + t(el.volt), F(el.mva, 1) + ' MVA | ' + el.volt[1]]));
   }
   function spaceBars(c) {
     var sp = c.R.sp, mx = Math.max(sp.ws, sp.elecRoom, sp.mechRoom, sp.support), s = ttl(['Where the floor area goes', '建筑面积构成']);
@@ -469,7 +469,7 @@
       var y = 50 + i * 40, w = Math.max(4, b[1] / mx * 300);
       s += tx(14, y + 16, b[0], 'start', 'font-weight:700') + L.R(160, y, w, 24, b[2], ' rx="5"') + txb(164 + w, y + 17, F(b[1]) + ' m²', 'start');
     });
-    return svg(s + foot([F(sp.gfa) + ' m² GFA · site ≈ ' + F(sp.siteNeed / 1e4, 2) + ' ha', '建筑面积' + F(sp.gfa) + ' m² · 用地约' + F(sp.siteNeed / 1e4, 2) + ' ha']));
+    return svg(s + foot([F(sp.gfa) + ' m² GFA | site ≈ ' + F(sp.siteNeed / 1e4, 2) + ' ha', '建筑面积' + F(sp.gfa) + ' m² | 用地约' + F(sp.siteNeed / 1e4, 2) + ' ha']));
   }
   function apprLadder(c) {
     var db = c.R.L.db, fws = db + 7, tcs = fws + 3, sc = function (v) { return 230 - (v - 15) * 5.2; }, s = ttl(['Temperature ladder: outdoor air to the chips', '温度阶梯：从室外空气到芯片']);
