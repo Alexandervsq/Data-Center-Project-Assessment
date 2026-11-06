@@ -727,6 +727,7 @@
   var BTN_EXPAND = '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
   var BTN_ROT = '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>';
   var BTN_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var SLD_SVG = '<svg viewBox="0 0 24 24"><path d="M12 2v4M7 6h10M12 6v3"/><path d="m10.5 9 3 3M12 12v3"/><circle cx="12" cy="16.5" r="1.5"/><path d="M4 21h16M8 18v3M16 18v3M12 18v3"/></svg>';
   var LINK_SVG = '<svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>';
   var PREV_X = null, DIFF = null, LAST_SRC = null;
   /* apply one design change (engine key → value; null removes it), re-run every system and keep the reader's place */
@@ -739,6 +740,22 @@
     PREV_X = CTX.x; LAST_SRC = src || null;
     save(); rerender();
   }
+  /* single-line diagram of the simulated design (base design + the reader's changes), shown in a modal (assets/js/sld.js) */
+  function sldOpt() { var n = Object.keys(CTX.chg || {}).length; return { name: CTX.name + (n ? ' — ' + t(['modified', '已修改']) + ' (' + n + ')' : ''), basis: t(['Simulation', '模拟']), code: (CTX.key === 'ACTIVE' ? 'PRJ' : CTX.key) + (n ? '-M' + n : '') }; }
+  /* the integrated SLD of the simulated design, drawn live under the slide: redrawn whenever the design basis, a linked change or the language changes */
+  var SLD_KEY = null;
+  function renderSLD() {
+    var sec = VIEW && VIEW.querySelector('.tc-sld'); if (!sec || !g.DCSLD || !CTX) return;
+    var n = Object.keys(CTX.chg || {}).length, key = CTX.ckey + '|' + JSON.stringify(CTX.chg || {}) + '|' + lang();
+    if (!sec.querySelector('.tc-sld-host')) sec.innerHTML = '<div class="tc-sld-head"><h3></h3><div class="sub"></div></div><div class="tc-sld-host"></div>';
+    sec.querySelector('h3').textContent = t(['Single-line diagram of the simulated design', '模拟设计的单线图']);
+    sec.querySelector('.sub').textContent = CTX.name + (n ? ' — ' + t(['with your ', '含']) + n + t([' change(s)', '处修改']) : '') + ' | ' + t(['one integrated drawing from the PLN connection to the IT rack — HV, MV and LV; it follows every change in the simulation', '从PLN接入到IT机柜的一张综合图——高压、中压及低压；随模拟中的每处修改更新']);
+    if (key === SLD_KEY && sec.querySelector('.sld-view')) return;
+    SLD_KEY = key; var host = sec.querySelector('.tc-sld-host'), x = CTX.x, o = sldOpt();
+    if (!host.firstChild) host.textContent = t(['Drawing the single-line diagram…', '正在绘制单线图…']);
+    setTimeout(function () { try { g.DCSLD.mount(host, x, o); } catch (e) { console.error(e); host.textContent = String(e); } }, 0);
+  }
+  function openSLD() { var sec = VIEW && VIEW.querySelector('.tc-sld'); if (!sec) return; if (ST.focus) setFocus(false); renderSLD(); sec.scrollIntoView({ behavior: STILL ? 'auto' : 'smooth', block: 'start' }); }
   function resetAll() { var key = CTX.ckey; delete ST.chg[key]; delete ST.loc[key]; PREV_X = CTX.x; LAST_SRC = '*'; save(); rerender(); }
   function hotTexts() { var m = {}; if (VIEW) Array.prototype.forEach.call(VIEW.querySelectorAll('.tc-stage [data-tco]'), function (el, i) { m[el.getAttribute('data-tco') + '#' + i] = el.textContent; }); return m; }
   function rerender() {
@@ -782,14 +799,16 @@
     var bar = '<div class="tc-bar"><span>' + te(UI.basis) + ':</span>' + basisSelect(card) + (CTX.fell ? '<span style="color:#B0302A">' + te(card.fallNote || ['The selected design does not use this technology; the card shows its benchmark.', '所选设计未采用该技术；卡片显示其基准设计。']) + '</span>' : '') +
       (FALLFIX ? '<button type="button" class="tc-btn tc-fix" data-fallfix title="' + te(['Adds this change to the selected design: every card and panel follows', '将此修改加入所选设计：所有卡片及面板随之联动']) + '">' + LINK_SVG + te(FALLFIX.label) + '</button>' : '') +
       (nCh ? '<button type="button" class="tc-btn tc-rsall" data-resetall>↺ ' + te(UI.resetAll) + ' <b>' + nCh + '</b></button><button type="button" class="tc-chgk" data-tco="basis"><i></i>' + te(UI.chgKey) + '</button>' : '') +
+      (g.DCSLD ? '<button type="button" class="tc-btn" data-sld title="' + te(['Integrated single-line diagram of the simulated design, with your changes — shown below the slide, PDF download', '当前模拟设计（含修改）的综合单线图——显示于幻灯片下方，可下载PDF']) + '">' + SLD_SVG + te(['Single-line diagram', '单线图']) + '</button>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
-    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
+    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div><section class="tc-sld" aria-label="Single-line diagram"></section>';
     VIEW.querySelector('.tc-head').innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Project Technology Simulation', '项目技术模拟']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
       te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. All five systems share one design: choose a design basis, open any part of the slide and change a linked input (link symbol) in its calculator — every connected parameter in every other panel and card is re-sized at once by its code / standard rule, and what changed is outlined in amber. ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。五个系统共用同一设计：选择设计基准，点击幻灯片任意部分，在其计算器中修改带链接符号的输入——其他所有面板及卡片中的相关参数即按规范/标准规则同步重新选型，变化部分以琥珀色标示。← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
     var wrapEl = VIEW.querySelector('.tc-wrap'), stEl = VIEW.querySelector('.tc-stage');
     wrapEl.classList.toggle('tc-focus', !!ST.focus);
     stEl.setAttribute('aria-label', t(card.title)); stEl.innerHTML = stage; stEl.__s = null; markChanged(stEl, stage0);
     VIEW.querySelector('.tc-ctl').innerHTML = '<button type="button" data-unexpand title="' + te(UI.close) + '">' + BTN_X + '</button><button type="button" data-rot title="' + te(['Rotate view', '旋转视图']) + '">' + BTN_ROT + '</button>';
+    setTimeout(renderSLD, 0);
     VIEW.querySelector('.tc-hint').textContent = t(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library (links open in a new tab).', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库（链接在新标签页打开）。']);
     if (!DEFS_ADDED) { document.body.insertAdjacentHTML('beforeend', DEFS); DEFS_ADDED = true; }
     if (ST.focus) document.documentElement.style.overflow = 'hidden';
@@ -1059,6 +1078,7 @@
       if (tg.closest('[data-goassess]')) { closePanel(); if (ST.focus) setFocus(false); if (g.DCApp) g.DCApp.show('assess'); return; }
       if (tg.closest('[data-fallfix]')) { applyFallFix(); return; }
       if (tg.closest('[data-resetall]')) { resetAll(); return; }
+      if (tg.closest('[data-sld]')) { openSLD(); return; }
       var gr = tg.closest('[data-gr]'); if (gr) { ev.preventDefault(); commit(gr.getAttribute('data-gr'), null, 'basis'); return; }
       var op = tg.closest('[data-tco]'); if (op) { ev.preventDefault(); openPanel(op.getAttribute('data-tco')); return; }
       if (tg.closest('[data-x]')) { closePanel(); return; }

@@ -149,7 +149,7 @@
     pkPUE: ['Maximum demand → connection, transformers, generators, fuel', '最大需量→接入、变压器、发电机、燃油'],
     mdKVA: ['Connection voltage, transformers, switchgear, generators, fuel, tariff class', '接入电压、变压器、开关设备、发电机、燃油、电价类别'],
     htUk: ['20 kV fault level and board rating (25 / 31.5 / 40 kA), voltage regulation, MV generator paralleling', '20 kV短路电流及开关柜额定（25/31.5/40 kA）、电压调整率、中压发电机并网'],
-    htMVA: ['Number of HV/MV transformers, split winding, impedance, 20 kV boards and their current and fault rating, neutral earthing resistors', '高/中压主变台数、分裂绕组、阻抗、20 kV开关柜段数及其电流与短路额定、中性点接地电阻'],
+    htMVA: ['Number of HV/MV transformers, 20 kV board sections (two above 100 MVA), impedance, 20 kV boards and their current and fault rating, neutral earthing resistors', '高/中压主变台数、20 kV母线段数（100 MVA以上两段）、阻抗、20 kV开关柜段数及其电流与短路额定、中性点接地电阻'],
     ikPCC: ['GIS short-time rating, 20 kV fault level and board rating, short-circuit ratio, harmonic limits and voltage steps (grid impact)', 'GIS短时耐受电流、20 kV短路电流及开关柜额定、短路比、谐波限值及电压阶跃（电网影响）'],
     upsThd: ['Harmonic current of the UPS / IT load → TDD and voltage distortion at the connection point, AFE UPS or input filters (Deltamas study: 12-pulse sources exceed the limits)', 'UPS/IT负荷谐波电流→接入点TDD及电压畸变、有源前端UPS或输入滤波器（德尔塔马斯研究：12脉波谐波源超限）'],
     hvKm: ['Charging power of the HV cables, power factor at light load and shunt reactor, harmonic resonance order, 87L charging current', '高压电缆充电功率、轻载功率因数及并联电抗器、谐波谐振次数、87L充电电流'],

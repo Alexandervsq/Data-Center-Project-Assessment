@@ -28,7 +28,8 @@
     map: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
     coins: '<circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/>', calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
     alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4M12 17h.01"/>', sliders: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
-    cards: '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>'
+    cards: '<path d="M2 3h20"/><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"/><path d="m7 21 5-5 5 5"/>',
+    sld: '<path d="M12 2v4M7 6h10M12 6v3"/><path d="m10.5 9 3 3M12 12v3"/><circle cx="12" cy="16.5" r="1.5"/><path d="M4 21h16M8 18v3M16 18v3M12 18v3"/>'
   };
   function ic(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (IP[n] || '') + '</svg>'; }
   var SYS_IC = { EL: 'bolt', ME: 'snow', IT: 'server', FP: 'flame', SC: 'shield', MC: 'monitor', CS: 'building' };
@@ -261,15 +262,16 @@
     ['Cooling technology (proposed by the weighted decision matrix), the annual PUE target and the renewable share.', '制冷技术（由加权决策矩阵提出）、年均PUE目标及可再生能源占比。'],
     ['PLN tariff, exchange rate, business case, prices and the financial assumptions behind IRR / TCO.', 'PLN电价、汇率、商业模式、价格及IRR/TCO的财务假设。']
   ];
-  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['me', 'Cooling', '制冷'],
+  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['sld', 'Single-line diagram', '单线图'], ['me', 'Cooling', '制冷'],
                ['sp', 'Building & space', '建筑与空间'], ['fs', 'Fire | security | monitoring', '消防·安防·监控'], ['boq', 'Equipment list', '设备清单'], ['fin', 'Cost & finance', '投资与财务'],
                ['sch', 'Schedule & staffing', '进度与人员'], ['risk', 'Risks', '风险'], ['std', 'Permits & standards', '许可与标准'], ['reg', 'Parameter register', '参数登记']];
-  var RIC = { sum: 'gauge', site: 'map', it: 'server', el: 'bolt', me: 'snow', sp: 'building', fs: 'shield', boq: 'list', fin: 'coins', sch: 'calendar', risk: 'alert', std: 'scale', reg: 'sliders' };
+  var RIC = { sum: 'gauge', site: 'map', it: 'server', el: 'bolt', sld: 'sld', me: 'snow', sp: 'building', fs: 'shield', boq: 'list', fin: 'coins', sch: 'calendar', risk: 'alert', std: 'scale', reg: 'sliders' };
   var RDESC = {
     sum: ['Key figures, main requirements, top risks and similar reference projects.', '关键指标、主要要求、主要风险及相似参考项目。'],
     site: ['Location profile, utilities, costs, labour and the site-area check.', '地点概况、公用设施、成本、人工及用地核查。'],
     it: ['Rack platforms, densities, GPUs, cabinet selection and a platform comparison.', '机柜平台、功率密度、GPU、机柜选型及平台比较。'],
     el: ['Tier and standards, the critical power chain, electrical sizing, backup autonomy and BESS.', '等级与标准、关键供电链、电气容量、后备时间及储能。'],
+    sld: ['One integrated single-line diagram of this design — PLN connection, GIS bays or diameters, transformers, 20 kV sections, building boards, the typical LV block and the IT rack, with every rating; zoom here or download the PDF.', '本设计的一张综合单线图——PLN接入、GIS间隔或串、变压器、20 kV母线段、楼宇开关柜、典型低压模块及IT机柜，并标注各元件额定；可在此缩放或下载PDF。'],
     me: ['Cooling decision matrix, selected design and reasoning, plant sizing, PUE, WUE and renewables.', '制冷决策矩阵、选定方案及依据、设备容量、PUE、WUE及可再生能源。'],
     sp: ['Building areas, structure, floor loading and the site requirement.', '建筑面积、结构、楼面荷载及用地需求。'],
     fs: ['Fire protection and suppression, security layers and monitoring points.', '消防与灭火、安防层级及监控点位。'],
@@ -361,9 +363,24 @@
       else h = pageResult(s);
     } catch (e) { console.error(e); h = '<div class="card">' + esc(String(e)) + '</div>'; }
     el.innerHTML = h;
+    if (s === 'sld') mountSLD();
+  }
+  /* single-line diagram (assets/js/sld.js): drawn from the current design every time the page opens */
+  function sldOpt(r) { r = r || curRef(); return { name: r ? Lt(r.en, r.zh) : (curName() || 'Untitled'), basis: r ? r.id : Lt('Project', '项目'), code: r ? r.id : safeName(curName() || 'PRJ').slice(0, 12).toUpperCase() }; }
+  function mountSLD() { var host = $('#sldHost'); if (!host) return; if (!window.DCSLD) { host.textContent = Lt('SLD module not loaded', '单线图模块未加载'); return; } try { window.DCSLD.mount(host, S.x, sldOpt()); } catch (e) { console.error(e); host.textContent = String(e); } }
+  function pSLD(x) {
+    var el = x.R.el, hv = el.hv, mp = E.mvPlan(x.R), db = el.mvdb, it = [], nD = hv.ibt ? (hv.bays.diam || Math.ceil((hv.circ + hv.ibt.total) / 2)) : 0;
+    if (hv.ibt) it.push([hv.name + ' GIS, breaker-and-a-half: ' + nD + ' diameters, ' + hv.circ + ' lines, ' + hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA interbus transformers', hv.name + ' GIS一个半断路器：' + nD + '串，' + hv.circ + '回线路，' + hv.ibt.total + '台' + hv.ibt.mva + ' MVA联络变']);
+    if (hv.ht) it.push([(hv.ibt ? '150 kV' : hv.name) + ' GIS, ' + (hv.ibt ? 'double busbar' : hv.scheme[0].toLowerCase()) + ', ' + hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' ' + hv.ht.vg + ' transformers (' + hv.ht.lab + ')', (hv.ibt ? '150 kV' : hv.name) + ' GIS，' + (hv.ibt ? '双母线' : hv.scheme[1]) + '，' + hv.ht.total + '台' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' ' + hv.ht.vg + '主变（' + hv.ht.lab + '）']);
+    it.push(['20 kV switchgear: ' + hv.mv.boards + ' sections, ' + F(hv.mv.busA) + ' A, ' + hv.mv.ik + ' kA, ' + mp.panels + ' panels', '20 kV开关柜：' + hv.mv.boards + '段，' + F(hv.mv.busA) + ' A，' + hv.mv.ik + ' kA，' + mp.panels + '面']);
+    if (db) it.push([db.n + ' building 20 kV boards (main-tie-main), ' + db.txPer + ' transformers' + (db.genPer ? ' + ' + db.genPer + ' generators' : '') + ' each', db.n + '套楼宇20 kV开关柜（双进线+分段），每套' + db.txPer + '台变压器' + (db.genPer ? '+' + db.genPer + '台发电机' : '')]);
+    it.push(['Typical MV/LV block: ' + el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + '), UPS ' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW, generators ' + el.genTotal + ' × ' + F(el.genSize) + ' kWe', '典型中/低压模块：' + el.txTotal + '台' + F(el.txSize) + ' kVA（' + el.txLabel + '），UPS ' + el.upsTotal + '台' + F(el.upsSize) + ' kW，发电机' + el.genTotal + '台' + F(el.genSize) + ' kWe']);
+    return '<div class="card">' + ptitle('Drawing set', '图册内容') + '<ul class="small" style="margin:0 0 8px 18px;padding:0">' + it.map(function (q) { return '<li>' + L(q[0], q[1]) + '</li>'; }).join('') + '</ul>' +
+      '<div class="small muted">' + L('One drawing from HV to MV to LV (the building board and the MV/LV block are typical, repeated as listed). Drawn by the assessment engine from this design — every change to the inputs or in the simulation redraws it. Ratings follow IEC 62271 / 60076 / 61869 / 60099-4 and PLN practice; bilingual labels, colour by voltage level, zone frame and title block (AutoCAD drawing conventions).', '高压、中压、低压一张图（楼宇开关柜及中/低压模块为典型，按所列数量重复）。由评估引擎按本设计绘制——输入或模拟中的任何修改都会重新生成。额定参数按IEC 62271/60076/61869/60099-4及PLN惯例；双语标注、按电压等级着色、分区图框及标题栏（AutoCAD制图惯例）。') + '</div></div>' +
+      '<div class="card"><div id="sldHost" class="sldhost">' + L('Generating the drawing…', '正在生成图纸…') + '</div></div>';
   }
   function pageResult(id) {
-    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
+    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, sld: pSLD, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
     var ids = RTABS.map(function (t) { return t[0]; }), i = ids.indexOf(id), t = RTABS[i], prev = RTABS[i - 1], next = RTABS[i + 1];
     return phead(t[1], t[2], RDESC[id][0], RDESC[id][1], '<span class="pnum">' + (i + 1) + ' / ' + RTABS.length + '</span>') +
       '<div class="rpanel">' + panels[id](S.x) + '</div>' + pager(prev, next || ['export', 'Export proposal report', '导出项目建议书']);
@@ -423,6 +440,7 @@
     if (r) h += '<div class="whybox" style="margin-bottom:14px">' + L('This is a read-only example. Its report can be exported as it is; use it as a template to edit the values first.', '此为只读示例，可直接导出其报告；如需修改参数，请先用作模板。') + '</div>';
     h += '<div class="grid g3">' + [['file', '#2b579a', 'Word report (.docx)', 'Word报告（.docx）', 'Complete proposal with all sections, tables, diagrams and the parameter register — ready to edit.', '完整建议书，含全部章节、表格、图示及参数登记——可直接编辑。', 'docx'],
       ['grid', '#217346', 'Excel workbook (.xlsx)', 'Excel工作簿（.xlsx）', 'Summary, parameters, equipment, CAPEX / OPEX, cash flow, schedule and risks on separate sheets.', '摘要、参数、设备、投资/运营成本、现金流、进度及风险分表列示。', 'xlsx'],
+      ['sld', '#1B7F2A', 'Single-line diagram (.pdf)', '单线图（.pdf）', 'Integrated single-line diagram (A2–A0 by size of the design, HV → MV → LV) plus the A3 equipment and rating schedule.', '综合单线图（按设计规模A2–A0，高压→中压→低压）及A3设备与额定参数表。', 'sldpdf'],
       ['print', '#b42318', 'PDF (print)', 'PDF（打印）', 'Printable report in a new window — choose “Save as PDF” in the print dialog.', '在新窗口打开可打印报告——在打印对话框中选择“另存为PDF”。', 'pdf']].map(function (e) {
         return '<div class="card exp-card"><div class="ficon" style="background:' + e[1] + '">' + ic(e[0]) + '</div><h3>' + L(e[2], e[3]) + '</h3><div class="small muted">' + L(e[4], e[5]) + '</div><button type="button" class="btn" data-act="' + e[6] + '">' + ic('download') + L('Export', '导出') + '</button></div>'; }).join('') + '</div>';
     h += '<div class="grid g2"><div class="card">' + ptitle('Data files', '数据文件') + '<div class="row" style="gap:8px"><button type="button" class="btn ghost" data-act="json">' + ic('download') + L('Project file (.json)', '项目文件（.json）') + '</button><button type="button" class="btn ghost" data-act="csv">' + ic('download') + L('Equipment list (.csv)', '设备清单（.csv）') + '</button><button type="button" class="btn ghost" data-act="fincsv">' + ic('download') + L('Cash flow (.csv)', '现金流（.csv）') + '</button></div>' +
@@ -555,6 +573,8 @@
       if (a === 'pdf') { if (!RP.openPrint(S.x, ropt(), reportName())) toast(Lt('Allow pop-ups to open the printable report', '请允许弹出窗口以打开打印报告')); }
       if (a === 'docx') { toast(Lt('Building Word report…', '正在生成Word报告…')); RP.docx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Word export failed', 'Word导出失败')); }); }
       if (a === 'xlsx') { toast(Lt('Building Excel workbook…', '正在生成Excel…')); RP.xlsx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Excel export failed', 'Excel导出失败')); }); }
+      if (a === 'sldpdf' && window.DCSLD) { var so = sldOpt(); download(window.DCSLD.fileName(so), window.DCSLD.build(S.x, so).output(), 'application/pdf'); }
+      if (a === 'sldref' && window.DCSLD) { var rr = find(DB.references, id); window.DCSLD.open(resolveRef(rr), sldOpt(rr)); return; }
       if (a === 'csv') exportBOQ();
       if (a === 'fincsv') exportFin();
       if (a === 'eq') { S.eq.sel = id; S.eqTab = 'eq'; renderEquip(); show('equip'); }
@@ -920,7 +940,7 @@
     if (r.kind === 'arch') {
       var x = resolveRef(r), R = x.R, p = x.p, c = R.cap, el = R.el, me = R.me, f = R.fin;
       h += '<div class="refhead"><div style="min-width:0"><div class="row" style="gap:6px;margin-bottom:6px"><span class="chip ind">' + L('Benchmark design', '基准设计') + '</span><span class="chip">' + L(ty.en || r.type, ty.zh) + '</span><span class="chip cyan">' + ic('map') + Lp(r.loc) + '</span></div><h2>' + L(r.en, r.zh) + '</h2><p>' + Lp(r.d) + '</p></div>' +
-        '<div class="row no-print" style="gap:8px"><button type="button" class="btn cyan" data-act="prev" data-id="' + r.id + '">' + ic('play') + L('View the complete assessment', '查看完整评估') + '</button><button type="button" class="btn" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button></div></div>';
+        '<div class="row no-print" style="gap:8px"><button type="button" class="btn cyan" data-act="prev" data-id="' + r.id + '">' + ic('play') + L('View the complete assessment', '查看完整评估') + '</button><button type="button" class="btn ghost" data-act="sldref" data-id="' + r.id + '">' + ic('sld') + L('Single-line diagram (PDF)', '单线图（PDF）') + '</button><button type="button" class="btn" data-act="usetpl" data-id="' + r.id + '">' + ic('copy') + L('Use as template', '用作模板') + '</button></div></div>';
       h += '<div class="tiles">' + tile(F(c.itMW, 2), 'MW', 'IT capacity', 'IT容量', F(c.racks) + ' ' + L('racks | avg ', '柜·平均 ') + F(c.avgDens, 1) + ' kW') + tile(c.tier.en.split(' — ')[0], '', 'Resilience', '韧性等级', c.tier.avail + '% | ' + L(p.fuelH + ' h fuel', '燃油' + p.fuelH + ' h'), '#17153f') +
         tile(F(R.eff.pue, 2), '', 'Annual PUE', '年均PUE', 'WUE ' + F(R.eff.wue, 2), '#0ea5c6') + tile(F(el.mva, 1), 'MVA', 'PLN demand', 'PLN需量', L(el.volt[0], el.volt[1]), '#f2a93b') +
         tile(money(R.capex.total), '', 'Total CAPEX', '总投资', F(R.capex.perMW, 1) + ' USD M/MW', '#f0544f') + tile(money(R.opex.total), L('/yr', '/年'), 'OPEX', '运营成本', L('energy ', '电费 ') + Math.round(R.opex.energy / R.opex.total * 100) + '%', '#7c3aed') +
