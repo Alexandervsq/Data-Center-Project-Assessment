@@ -270,13 +270,13 @@
      3 × 150 MVA 150/20 kV (grid impact study Aug 2026), BIC Batam 2 × 120 and 4 × 220 MVA 230/20 kV (Jan 2026). Impedance ≥ IEC 60076-5 minimum and, for large
      units, high enough to keep the 20 kV fault level within the switchgear rating: 120 MVA 14.5 %, 150 MVA 20–24 %, 220 MVA 19.8 % in those projects.
      Two-winding units; above ≈ 100 MVA the 20 kV side feeds a board in two sections (each ≤ 2,500 A). */
-  var HT_STD = [20, 30, 45, 60, 80, 100, 120, 150, 200, 250];
+  var HT_STD = [20, 30, 45, 60, 80, 100, 120, 150, 200, 250, 265];
   /* design impedance of one project = max(typical value for the rating — SPLN 30 MVA 10 %, 60 MVA 12.5 %, IEC 60076-5 minimum 12.5 % above 63 MVA —,
      impedance that keeps the 20 kV fault level ≤ 90 % of the 20 kV switchgear rating with the actual upstream short-circuit power);
      25 kA boards (PLN standard) first, 31.5 / 40 kA boards when 25 kA would need more than ≈ 24 % */
   function htUk(sz, sscUp) {
     var base = sz <= 40 ? 10 : (sz <= 63 ? 12.5 : (sz <= 100 ? 12.5 : 13)), up = sscUp > 0 ? sz / sscUp : 0, uk = base;
-    for (var i = 0, RT = [25, 31.5, 40]; i < RT.length; i++) { var req = (sz * 1.05 / (0.9 * RT[i] * 1.732 * 20) - up) * 100; if (req <= 24) { uk = Math.max(base, Math.ceil(req * 2) / 2); break; } }
+    for (var i = 0, RT = sz >= 100 ? [31.5, 40] : [25, 31.5, 40]; i < RT.length; i++) { var req = (sz * 1.05 / (0.8 * RT[i] * 1.732 * 20) - up) * 100; if (req <= 24) { uk = Math.max(base, Math.ceil(req * 2) / 2); break; } }
     return uk;
   }
   /* planning fault level at the connection point (network short-circuit power for power-quality and voltage-step checks); PLN gives the actual value on request (Grid Code CCA1 2) */
@@ -308,23 +308,28 @@
     }
     if (kv > 20) {
       var lowHV = ibt ? 150 : kv;
-      var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : (mva <= 400 ? 100 : (mva <= 800 ? 150 : 250)))));
+      var htRule = lowHV === 70 ? (mva <= 20 ? 20 : 30) : (lowHV === 230 ? (mva <= 150 ? 60 : 100) : (mva <= 25 ? 30 : (mva <= 150 ? 60 : (mva <= 400 ? 100 : (mva <= 800 ? 150 : 265)))));
       /* 20 kV sections: each section's incomer and busbar ≤ 3,150 A (reference SLD: 265 MVA units → three 3,150 A sections); above 150 MVA two LV windings
          (reference: 265 / 180 / 85 MVA, 150/20/20 kV, YNd11-d11, Ud 21 % / 10.5 %) — each winding has its own earthing transformer and resistor,
          the impedance is taken HV–LV on the winding (half-rating) base and the 20 kV fault level is that of one winding */
       var hm = num(p.htMVA, 0) > 0 ? num(p.htMVA, 0) : htRule, hN = ceil(mva / hm), split = hm > 150, iLV = hm * 1000 / (1.732 * 20);
-      var sec = Math.max(split ? 2 : 1, ceil(iLV / 3150 - 0.05)), ukB = split ? hm / 2 : hm;
+      var sec = Math.max(split ? 2 : 1, ceil(iLV / 3150 - 0.05)), h1s = ceil(sec / 2), w1 = split ? Math.min(hm, ceil(hm * h1s / sec / 5) * 5) : hm, w2 = split ? hm - w1 : 0, ukB = w1;   /* reference 265 MVA: LV1 180 MVA (two sections), LV2 85 MVA (one section) */
       ht = { mva: hm, rule: htRule, n: hN, r: red(hN), ratio: lowHV + (split ? '/20/20 kV' : '/20 kV'), hv: lowHV, uk: num(p.htUk, 0) > 0 ? clamp(num(p.htUk, 0), 4, 30) : htUk(ukB, ssc150), ukRule: htUk(ukB, ssc150),
-             sec: sec, split: split, wind: split ? 2 : 1, vg: split ? 'YNd11-d11' : 'YNd11', onan: Math.round(hm * 0.7) };
+             sec: sec, split: split, wind: split ? 2 : 1, w1: w1, w2: w2, vg: split ? 'YNd11-d11' : 'YNd11', onan: Math.round(hm * 0.7), over: hm > 300 };
+      if (split) ht.uk2 = Math.max(6, Math.round(ht.uk * w2 / w1 * 2) / 2);   /* same fault level on every section: uk in proportion to the winding rating */
       /* RUPTL 2025–2034 loading criteria: normal ≤ 80 %, any one unit out ≤ 100 % (N-1) — add units until both hold */
       while (p.tier >= 3 && (mva / ((hN + ht.r) * hm) > 0.8 || (hN + ht.r > 1 && mva / ((hN + ht.r - 1) * hm) > 1))) ht.r++;
       ht.total = ht.n + ht.r; ht.lab = ht.r ? 'N-1' : 'N'; ht.load = mva / (ht.total * hm) * 100; ht.loadOut = ht.total > 1 ? mva / ((ht.total - 1) * hm) * 100 : null;
     }
+    var n150 = kv > 20 ? (ibt ? ibt.total : circ) + (ht ? ht.total : 0) : 0, sect = kv > 20 && hi && (kv <= 150 || !!ibt) && n150 >= 8;
+    if (sect && kv <= 150) scheme = ['Double busbar, sectionalised (2 couplers + 2 bus sections, normally open)', '双母线分段（2台母联+2台分段，常开）'];
+    /* 150 kV link between the interbus transformers and the data-center substation (reference: two separate cable routes, one energised and one standby, each route 2 circuits of 525 MVA with 2 × Cu 2,000 mm² per phase) */
+    var ugc = null; if (ibt) { var i150 = mva * 1000 / (1.732 * 150), cpr = Math.max(1, ceil(i150 / 2300)); ugc = { i: i150, routes: 2, circ: cpr, perPhase: 2, mm2: 2000, mvaC: mva / cpr }; }
     /* 20 kV sections: per HV/MV transformer one section per ≤ 3,150 A (two LV windings above 150 MVA); a 20 kV PLN supply with two incomers (Tier III+) has
        two sections with a bus section, each sized for the whole load; the fault level of the whole transformer winding (+5 % motor / UPS contribution) applies */
     var sb = ht ? ht.mva / ht.sec : mva, boards = ht ? ht.total * ht.sec : (hi ? 2 : 1), mvI = sb * 1000 / (1.732 * 20);
-    var sw = ht ? (ht.split ? ht.mva / 2 : ht.mva) : 0, ik20 = ht ? sw / ((sw / ssc150 + ht.uk / 100) * 1.732 * 20) * 1.05 : 0;
-    var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: ht ? Math.max(25, pick([25, 31.5, 40, 50], ik20)) : (mva > 10 ? 25 : 20), ikCalc: ik20, boards: boards, ssc150: ssc150, sb: sb };
+    var sw = ht ? ht.w1 : 0, ik20 = ht ? sw / ((sw / ssc150 + ht.uk / 100) * 1.732 * 20) * 1.05 : 0;
+    var mv = { kv: 20, ur: 24, i: mvI, busA: pick([630, 1250, 2000, 2500, 3150, 4000], Math.max(630, mvI * 1.05)), ik: ht ? Math.max(25, pick([25, 31.5, 40, 50], ik20 * 1.25)) : (mva > 10 ? 25 : 20), ikCalc: ik20, boards: boards, ssc150: ssc150, sb: sb };
     mv.gis = mv.busA > 2500;
     var fit = mva > V.hi ? 'over' : (mva < V.lo ? 'under' : 'ok'), asm = connAssess(kv, mva, gid, av, hi);
     var opts = KV.map(function (o) {
@@ -340,8 +345,8 @@
     var txMVA = ibt ? ibt.mva : (ht ? ht.mva : 0), iTx = txMVA * 1000 / (1.732 * kv), txBayA = kv > 20 ? Math.max(kv <= 150 ? 2000 : 3150, pick(IR, 1.2 * iTx)) : 0;
     var ehv = kv >= 275, ctCls = ehv ? 'TPY / TPX / 0.2S' : (kv > 20 ? '5P20 / 5P20 / 0.5 / 0.2S' : '5P20 / 0.5 / 0.2S');
     var bays = { lineA: lineA, lineCT: pick(CTP, iLine * 1.1) + '/1 A', txA: txBayA, txCT: kv > 20 ? pick(CTP, iTx * 1.2) + '/1 A' : '', coupA: busA, ctCls: ctCls,
-                 diam: kv === 500 || (kv === 275 && hi) ? Math.ceil((circ + (ibt ? ibt.total : 0)) / 2) : 0, iLine: iLine };
-    if (bays.diam && (circ + (ibt ? ibt.total : 0)) % 2) bays.spareBays = 1;
+                 lineBays: kv > 230 ? 2 * circ : circ, diam: kv === 500 || (kv === 275 && hi) ? Math.ceil(((kv > 230 ? 2 * circ : circ) + (ibt ? ibt.total : 0)) / 2) : 0, iLine: iLine };
+    if (bays.diam && (bays.lineBays + (ibt ? ibt.total : 0)) % 2) bays.spareBays = 1;
     /* dedicated HV cable per circuit, indicative (IEC 60287 study in detailed design): Cu 1,000 mm² ≈ 787 A, Cu 2,000 mm² ≈ 1,150 A per cable (direct buried, one circuit) */
     var hvCable = kv > 20 && kv <= 230 ? (iLine <= 787 ? '1 × Cu 1,000 mm²' : (iLine <= 1150 ? '1 × Cu 2,000 mm²' : Math.ceil(iLine / 1150) + ' × Cu 2,000 mm² per phase')) : (kv > 230 ? 'overhead line, Π connection' : '');
     var cost = kv === 20 ? Math.max(0.3e6, 0.05e6 * mva) : (kv === 70 ? 3e6 + 0.09e6 * mva : (kv === 150 ? Math.max(6e6, 0.12e6 * mva) : (kv === 500 ? 35e6 + 0.07e6 * mva : 15e6 + 0.08e6 * mva)));
@@ -350,7 +355,7 @@
       : kv === 150 ? ['HV 150 kV (PLN TT) with on-site GIS substation', '高压150 kV（PLN高压），自建GIS变电站']
       : kv === 230 ? (av[230] === 4 ? ['230 kV private grid (BIC, Batam) with on-site GIS substation — not PLN', '230 kV私营电网（BIC，巴淡），自建GIS变电站——非PLN'] : ['220/230 kV GIS substation (international practice, not a PLN voltage)', '220/230 kV GIS变电站（国际做法，非PLN电压等级）'])
       : ['EHV ' + kv + ' kV (PLN TET) GIS substation with ' + kv + '/150 kV transformers', '超高压' + kv + ' kV（PLN超高压）GIS变电站，配' + kv + '/150 kV变压器'];
-    return { kv: kv, rule: rule, name: kvName(kv), gisName: kvName(kv) + ' GIS (Ur ' + V.ur + ' kV)', ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, bays: bays, hvCable: hvCable, ik: ik, busA: busA,
+    return { kv: kv, rule: rule, name: kvName(kv), gisName: kvName(kv) + ' GIS (Ur ' + V.ur + ' kV)', ur: V.ur, cls: V.cls, intl: !!V.intl, lo: V.lo, hi: V.hi, capC: V.cap, gis: kv >= 70, duty: duty, circ: circ, scheme: scheme, bays: bays, hvCable: hvCable, sect: sect, ugc: ugc, ik: ik, busA: busA,
              pccIk: pccIk, pccIk1: pccIk1, pccRule: pccRule, ssc: ssc, ibt: ibt, ht: ht, mv: mv, fit: fit, asm: asm, avail: av[kv] || 0, opts: opts, lead: lead, cost: cost, volt: volt };
   }
 
@@ -456,7 +461,7 @@
        uk × Sn × loading² + magnetising (HV/MV 0.4 %, MV/LV 1 % of Sn) − cable charging; capacitor banks restore PF ≥ 0.95 lagging (reference SLD: (10 + 20) Mvar per
        265 MVA, Ud 21 % transformer) */
     var Pm = el.demandKW / 1000, qLoadF = Pm * (upsShare * 0.1425 + (1 - upsShare) * 0.426), htx = hv.ht, ib = hv.ibt;
-    var qHT = htx ? htx.total * htx.mva * (htx.uk / 100 * Math.pow(S / (htx.total * htx.mva), 2) + 0.004) : 0;
+    var qHT = htx ? htx.total * ((htx.split ? (htx.uk * htx.w1 + (htx.uk2 || htx.uk) * htx.w2) / 100 : htx.uk / 100 * htx.mva) * Math.pow(S / (htx.total * htx.mva), 2) + 0.004 * htx.mva) : 0;
     var qIBT = ib ? ib.total * ib.mva * (ib.uk / 100 * Math.pow(S / (ib.total * ib.mva), 2) + 0.004) : 0;
     var lvS = (el.lvKVA || el.demandKVA) / 1000, qLV = el.txTotal * el.txSize / 1000 * (el.lv.uk / 100 * Math.pow(lvS / Math.max(0.001, el.txTotal * el.txSize / 1000), 2) + 0.01);
     var qFull = qLoadF + qHT + qIBT + qLV - qc;   /* cable charging offsets the lagging demand at full load */
@@ -628,10 +633,10 @@
       var gGrp = genV === 'MV' ? (mvdb ? mvdb.n : Math.max(1, hv.mv.boards)) : (txArch === 'N1' ? txc.b : 1);
       if (gGrp > 1) { var gpg = ceil(demandKW / gGrp / (genSize * K.GEN_LOAD)); genN = gGrp * gpg; genR = gGrp; genLab = gGrp + ' × (' + gpg + '+1)'; genGrp = gGrp; }
     }
-    if (mvdb) { mvdb.genPer = genV === 'MV' ? ceil((genN + genR) / mvdb.n) : 0; mvdb.busA = pick([1250, 2000, 2500, 3150], Math.max(mvdb.mva, mvdb.genPer * genSize / 800) * 1000 / (1.732 * 20) * 1.05);
+    if (mvdb) { mvdb.genPer = genV === 'MV' ? ceil((genN + genR) / mvdb.n) : 0; mvdb.busA = pick([1250, 2000, 2500, 3150], Math.max(mvdb.mva, mvdb.genPer * genSize / 800) * 1000 / (1.732 * 20) * 1.05); mvdb.ikGen = mvdb.genPer * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); mvdb.ik = Math.max(25, pick([25, 31.5, 40, 50], hv.mv.ikCalc + mvdb.ikGen));
       mvdb.panels = 2 + 2 + 2 + mvdb.txPer + mvdb.genPer + 1; }   /* 2 incomers, bus section + riser, 2 bus VT, transformer feeders, generator incomers, 1 spare */
     /* MV generator plant paralleled with the utility (closed-transition transfer): its fault contribution (X"d ≈ 0.15) adds to the 20 kV boards */
-    if (genV === 'MV') { var gpb = ceil((genN + genR) / Math.max(1, hv.mv.boards)), ikGen = gpb * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); hv.mv.ikGen = ikGen; var ikT = hv.mv.ikCalc + ikGen; if (ikT > hv.mv.ik) hv.mv.ik = pick([25, 31.5, 40, 50, 63], ikT); }
+    if (genV === 'MV' && !mvdb) { var gpb = ceil((genN + genR) / Math.max(1, hv.mv.boards)), ikGen = gpb * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); hv.mv.ikGen = ikGen; var ikT = hv.mv.ikCalc + ikGen; if (ikT > hv.mv.ik) hv.mv.ik = pick([25, 31.5, 40, 50, 63], ikT); }
     R.el = { lvV: lvV, txArch: txArch, txAlt: txAlt, txIT: txIT, itKVA: itKVA, lvKVA: lvKVA, chV: chV, chVRule: chVRule, chKWe: chKWe, chMV: chMV, chTx: chTx, chCopD: copD, upsLoad: upsLoad, mechUPS: mechUPS, demandKW: demandKW, demandKVA: demandKVA, demandRule: demandRule, mva: mva, volt: volt, vclass: vclass, feeds: feeds, hv: hv,
              txSize: txSize, txRule: txRule, txLoad: txLoad, txN: txN, txR: txR, txTotal: txN + txR, lv: lv, genSize: genSize, genRule: genRule, genN: genN, genR: genR, genTotal: genN + genR, genV: genV,
              fuelQ: fuelQ, fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tankRule: tankRule, tanks: tanks, upsSize: upsSize, upsRule: upsRule, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
@@ -960,6 +965,18 @@
     for (var n = 1; n <= 4; n++) for (var j = 0; j < CBL20.length; j++) if (CBL20[j][0] >= smin && CBL20[j][1] * 0.8 * n >= i) return { n: n, s: CBL20[j][0], txt: (n > 1 ? n + ' × ' : '') + '3 × 1C ' + CBL20[j][0] + ' mm² Cu XLPE', i: i, smin: smin };
     return { n: 4, s: 630, txt: '4 × 3 × 1C 630 mm² Cu XLPE', i: i, smin: smin };
   }
+  /* From the 20 kV sections to the IT load: what one HV/MV transformer, section, feeder, building board, MV/LV block and transformer carries (IT MW, GPU racks, GPUs, current),
+     and the GPU parameters that act on the substation: coincident peak power, synchronised swing, dynamic compensation */
+  function gpuDist(R) {
+    var el = R.el, c = R.cap, hv = el.hv, mv = hv.mv, ht = hv.ht, hp = R.hdP, gi = R.gimp || {}, db = el.mvdb || null, ai = !!(hp && hp.cat === 'AI' && c.hdR > 0), it = c.itKW / 1000, lvk = el.lvKVA || el.demandKVA;
+    function lvl(n) { n = Math.max(1, n); return { n: n, it: it / n, hd: c.hdR / n, gpus: (c.gpus || 0) / n, racks: c.racks / n }; }
+    var blk = el.txBlk || { b: 1, per: el.txTotal }, duty = el.txArch === 'N1' && el.txR && blk.per > 1 ? blk.b * (blk.per - 1) : (el.txArch === '2N' ? el.txN : el.txTotal), I20 = function (mva) { return mva * 1000 / (1.732 * 20); };
+    var fMVA = db ? db.mva : el.txSize * el.txLoad / 1000, aiKVA = ai ? c.hdR * c.hd / K.PF : 0, share = Math.min(1, aiKVA / Math.max(1, lvk)), peakF = ai && hp.kw > 0 ? (hp.kwPeak || hp.kw) / hp.kw : 1;
+    var ldTx = lvk / Math.max(1, duty * el.txSize) * 100, ldPk = ldTx * (1 + share * (peakF - 1));
+    return { ai: ai, plat: hp || null, rackKW: c.hd, peakKW: hp ? hp.kwPeak : 0, gpuPerRack: hp ? (hp.gpu || 0) : 0, hdRacks: c.hdR, gpus: c.gpus || 0, ht: ht ? lvl(ht.total) : null, sec: lvl(mv.boards), board: db ? lvl(db.n) : null, blk: lvl(blk.b), tx: lvl(duty),
+      fMVA: fMVA, iF: I20(fMVA), iFn: db ? I20(fMVA) / 2 : I20(fMVA), secMVA: el.mva / mv.boards, secI: I20(el.mva / mv.boards), secA: mv.busA, ldTx: ldTx, ldPk: ldPk, share: share, peakF: peakF, swing: gi.swing || 0, swingMW: (gi.aiKW || 0) / 1000 * (gi.swing || 0) / 100, dv: gi.dvAi || 0,
+      dyn: ai && (gi.aiKW || 0) > 0.5 * c.itKW && (gi.swing || 0) >= 30, bess: el.bess || null };
+  }
   function mvPlan(R) {
     var el = R.el, hv = el.hv, mv = hv.mv, ht = hv.ht, gi = R.gimp || {}, db = el.mvdb || null, F = [];
     var ikC = (ht ? (mv.ikCalc || 0) : (hv.pccIk || mv.ik)) + (mv.ikGen || 0), I20 = function (kva) { return kva / (1.732 * 20); };   /* prospective 20 kV fault level at the switchboard */
@@ -970,12 +987,13 @@
     if (el.genV === 'MV' && !db) add('gen', el.genTotal, fmt(el.genSize) + ' kWe', 'generator', '发电机', 630, I20(el.genSize / 0.8));
     if (el.bess) { var nb = Math.max(1, ceil(el.bess.mw / 18)); add('bess', nb, fmt(el.bess.mw / nb, 1) + ' MW', 'BESS', '储能', 630, I20(el.bess.mw / nb * 1000 / 0.95)); }
     if (hv.kv > 20) add('st', 2, '500 kVA', 'station TX', '站用变', 630, I20(500));
-    if (ht) (gi.capStepList || []).forEach(function (st) { var ia = I20(st * 1000) * 1.43; add('cap', ht.total, fmtN(st) + ' Mvar', 'capacitor', '电容器', pick([630, 1250, 2000], ia), ia); });
+    var dyn = (gi.aiKW || 0) > 0.5 * R.cap.itKW && (gi.swing || 0) >= 30;   /* synchronised GPU load swings: SVG instead of switched capacitor steps (reference BoQ: 20 + 10 Mvar SVG per transformer) */
+    if (ht) (gi.capStepList || []).forEach(function (st) { var ia = I20(st * 1000) * 1.43; add('cap', ht.total, fmtN(st) + ' Mvar', dyn ? 'SVG' : 'capacitor', dyn ? 'SVG动态无功' : '电容器', pick([630, 1250, 2000], ia), ia); });
     var nF = F.reduce(function (a, x) { return a + x.n; }, 0), spares = Math.max(1, ceil(nF * 0.15));
     add('sp', spares, 'spare', 'equipped', '备用', 630, I20(el.txSize));
     F[F.length - 1].cable = '';
     var ties = mv.boards - 1, inc = ht ? mv.boards : hv.circ;   /* bus-section breakers between all adjacent sections, normally open and interlocked: a section can be picked up after an HV/MV transformer outage (N-1) without running the transformers in parallel */
-    return { feeders: F, nF: nF, spares: spares, ties: ties, incomers: inc, vt: mv.boards, panels: inc + mv.boards + 2 * ties + nF + spares, mvdb: db, ikC: ikC };
+    return { feeders: F, nF: nF, spares: spares, ties: ties, incomers: inc, vt: mv.boards, panels: inc + mv.boards + 2 * ties + nF + spares, mvdb: db, ikC: ikC, dyn: dyn };
   }
   /* --------------------------------------------------------------- BOQ */
   function boq(p, R) {
@@ -988,16 +1006,16 @@
     add('EL-01', mp.panels, 'panels', '24 kV | ' + fmt(hv.mv.busA) + ' A | ' + hv.mv.ik + ' kA' + (hv.kv > 20 ? ' (' + hv.name + ' substation)' : ''),
       mvB + ' section(s): ' + mp.incomers + ' incomers, ' + mp.vt + ' bus VT, ' + mp.ties + ' bus sections, ' + mp.nF + ' feeders (' + fl.map(function (x) { return x.n + ' ' + (x.k === 'db' ? 'to building boards' : x.l1 + ' ' + x.l2); }).join(', ') + '), ' + mp.spares + ' equipped spares',
       mvB + '段：' + mp.incomers + '路进线、' + mp.vt + '面母线PT、' + mp.ties + '处分段、' + mp.nF + '回馈线（' + fl.map(function (x) { return x.n + '回' + x.zh; }).join('、') + '）、' + mp.spares + '面备用', '面');
-    if (mp.mvdb) add('EL-01', mp.mvdb.n * mp.mvdb.panels, 'panels', '24 kV | ' + fmt(mp.mvdb.busA) + ' A | ' + hv.mv.ik + ' kA (building boards)',
+    if (mp.mvdb) add('EL-01', mp.mvdb.n * mp.mvdb.panels, 'panels', '24 kV | ' + fmt(mp.mvdb.busA) + ' A | ' + mp.mvdb.ik + ' kA (building boards)',
       mp.mvdb.n + ' building 20 kV switchboards, main-tie-main: 2 incomers, bus section, 2 bus VT, ' + mp.mvdb.txPer + ' transformer feeders' + (mp.mvdb.genPer ? ', ' + mp.mvdb.genPer + ' generator incomers' : '') + ', 1 spare each (≤ ' + fmt(mp.mvdb.mva, 1) + ' MVA per board)',
       mp.mvdb.n + '套楼宇20 kV开关柜（双进线+分段）：每套2路进线、分段、2面PT、' + mp.mvdb.txPer + '回变压器馈线' + (mp.mvdb.genPer ? '、' + mp.mvdb.genPer + '路发电机进线' : '') + '、1面备用', '面');
     if (hv.kv > 20) {
-      var bays = hv.circ + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (p.tier >= 3 ? 2 : 1);
+      var bays = hv.bays.lineBays + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (hv.sect ? 4 : (p.tier >= 3 ? 2 : 1));
       add('EL-24', bays, 'bays', hv.name + ' (Ur ' + hv.ur + ' kV) | ' + hv.ik + ' kA | ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + 150 kV) + ' : '') + hv.ht.total + ' transformer + coupler bays | ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及150 kV）+' : '') + hv.ht.total + '个主变间隔+母联 | ' + hv.scheme[1], '个间隔');
       if (hv.ibt) add('EL-25', hv.ibt.total, 'no.', hv.ibt.mva + ' MVA ' + hv.ibt.ratio, 'Interbus transformers (single-phase banks)', '联络变压器（单相组）', '台');
       add('EL-25', hv.ht.total, 'no.', hv.ht.mva + ' MVA ' + hv.ht.ratio + ' (' + hv.ht.lab + ')' + ' | uk ' + hv.ht.uk + ' %', (hv.ht.split ? 'Split-winding, ' : '') + 'ONAN ' + hv.ht.onan + ' / ONAF ' + hv.ht.mva + ' MVA', (hv.ht.split ? '分裂绕组，' : '') + 'ONAN ' + hv.ht.onan + '/ONAF ' + hv.ht.mva + ' MVA', '台');
       add('EL-26', hv.ht.total * hv.ht.wind, 'no.', '40 Ω | 300 A | 10 s', hv.ht.wind > 1 ? 'One per 20 kV winding (two-winding LV units), with earthing transformer' : 'One per HV/MV transformer (20 kV neutral or earthing transformer)', hv.ht.wind > 1 ? '每个20 kV绕组一台（双低压绕组主变），配接地变' : '每台主变一台（20 kV中性点或接地变）', '台');
-      if (R.gimp && R.gimp.capPerTx > 0) add('EL-17', hv.ht.total, 'banks', fmt(R.gimp.capPerTx, 1) + ' Mvar 20 kV (' + R.gimp.capSteps + ')', 'Capacitor bank per HV/MV transformer — compensates the transformer reactive consumption (PF ≥ 0.95 at the connection point)', '每台主变一组20 kV电容器——补偿主变无功消耗（接入点功率因数≥0.95）', '组');
+      if (R.gimp && R.gimp.capPerTx > 0) add('EL-17', hv.ht.total, 'banks', fmt(R.gimp.capPerTx, 1) + ' Mvar 20 kV (' + R.gimp.capSteps + ')', (mp.dyn ? 'Dynamic compensation (SVG) per HV/MV transformer — follows the GPU load swings and keeps PF ≥ 0.95 at the connection point' : 'Capacitor bank per HV/MV transformer — compensates the transformer reactive consumption (PF ≥ 0.95 at the connection point)'), '每台主变一组20 kV电容器——补偿主变无功消耗（接入点功率因数≥0.95）', '组');
       add('EL-27', 1, 'lot', 'IEC 61850 SAS | ' + bays + ' bays | 87L + 21 per circuit, 87T / 64REF per transformer, 87B + 50BF', 'Protection, control & automation; gateway IEC 60870-5-104 to PLN; DFR, revenue metering main + check', '保护、控制及自动化；IEC 60870-5-104网关接PLN；故障录波、主/校核关口计量', '套');
       add('EL-28', 2, 'systems', '110 V DC (≥ 400 Ah class) + 48 V DC (≥ 200 Ah class), 8 h, duplicated', 'Batteries (NiCd or LFP), chargers and DC boards; capacity by IEEE 1115', '蓄电池（镍镉或磷酸铁锂）、充电器及直流屏；容量按IEEE 1115', '套');
       if (R.gimp && R.gimp.reactor > 0) add('EL-24', 1, 'bay', 'Shunt reactor ≈ ' + fmt(Math.ceil(R.gimp.reactor)) + ' MVAr (150 kV bay or 20 kV bus)', 'Cable charging at light load: keeps the power factor within 0.9 leading (grid impact study)', '轻载时电缆充电：保持功率因数在超前0.9以内（电网影响研究）', '间隔');
@@ -1078,7 +1096,7 @@
     }).sort(function (a, b) { return a.d - b.d; }).slice(0, 4).map(function (x) { return x.r; });
   }
 
-  g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, txBlocks: txBlocks, find: find, mvPlan: mvPlan, cable20: cable20, capacity: capacity, coolingMatrix: coolingMatrix,
+  g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, txBlocks: txBlocks, find: find, mvPlan: mvPlan, gpuDist: gpuDist, cable20: cable20, capacity: capacity, coolingMatrix: coolingMatrix,
                  loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
                  KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection, connAssess: connAssess, HT_STD: HT_STD, htUk: htUk,
                  COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, REF_STUDIES: REF_STUDIES, PLN_STDS: PLN_STDS, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS, tddLimitOf: tddLimitOf, hEff: hEff, CABLE_C: CABLE_C };

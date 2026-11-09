@@ -365,7 +365,7 @@
     if (s === 'el') mountSLD();
   }
   /* single-line diagram (assets/js/sld.js): drawn from the current design every time the page opens */
-  function sldOpt(r) { r = r || curRef(); return { name: r ? Lt(r.en, r.zh) : (curName() || 'Untitled'), basis: r ? r.id : Lt('Project', '项目'), code: r ? r.id : safeName(curName() || 'PRJ').slice(0, 12).toUpperCase() }; }
+  function sldOpt(r, x) { r = r || curRef(); var d = window.DCSLD.design(x || S.x, r ? null : (curName() || null)); return { name: d.name, code: d.code, file: d.file, basis: r ? L('Based on ', '基于') + r.id : L('Project', '项目') }; }
   function mountSLD() { var host = $('#sldHost'); if (!host) return; if (!window.DCSLD) { host.textContent = Lt('SLD module not loaded', '单线图模块未加载'); return; } try { window.DCSLD.mount(host, S.x, sldOpt()); } catch (e) { console.error(e); host.textContent = String(e); } }
   function sldCard(x) {
     return '<div class="card" id="sldCard">' + ptitle('Single-line diagram', '单线图') + '<div class="small muted" style="margin:-4px 0 10px">' + L('One integrated drawing of this design from the PLN connection to the IT rack (HV, MV and LV), in the selected language; the building board and the MV/LV block are typical, repeated as listed. Export it as PDF with the button.', '本设计从PLN接入到IT机柜的一张综合图（高压、中压及低压），按所选语言显示；楼宇开关柜及中/低压模块为典型，按所列数量重复。可用按钮导出PDF。') + '</div>' +
@@ -567,7 +567,7 @@
       if (a === 'docx') { toast(Lt('Building Word report…', '正在生成Word报告…')); RP.docx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Word export failed', 'Word导出失败')); }); }
       if (a === 'xlsx') { toast(Lt('Building Excel workbook…', '正在生成Excel…')); RP.xlsx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Excel export failed', 'Excel导出失败')); }); }
       if (a === 'sldpdf' && window.DCSLD) { var so = sldOpt(); download(window.DCSLD.fileName(so), window.DCSLD.build(S.x, so).output(), 'application/pdf'); }
-      if (a === 'sldref' && window.DCSLD) { var rr = find(DB.references, id); window.DCSLD.open(resolveRef(rr), sldOpt(rr)); return; }
+      if (a === 'sldref' && window.DCSLD) { var rr = find(DB.references, id), rx = resolveRef(rr); window.DCSLD.open(rx, sldOpt(rr, rx)); return; }
       if (a === 'csv') exportBOQ();
       if (a === 'fincsv') exportFin();
       if (a === 'eq') { S.eq.sel = id; S.eqTab = 'eq'; renderEquip(); show('equip'); }

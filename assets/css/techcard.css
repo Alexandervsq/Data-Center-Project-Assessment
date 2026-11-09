@@ -25,11 +25,6 @@
 .tc-bar .tc-sp { flex: 1; }
 .tc-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 9px; border: 1px solid var(--tc-line); background: #fff; color: var(--tc-ind); font: 600 .82rem var(--tc-f); cursor: pointer; }
 .tc-btn:hover { border-color: var(--tc-ind); }
-.tc-seg { display: inline-flex; border: 1px solid var(--tc-line); border-radius: 9px; overflow: hidden; background: #fff; }
-.tc-seg button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 0; background: transparent; color: var(--tc-ind); font: 600 .82rem var(--tc-f); cursor: pointer; }
-.tc-seg button + button { border-left: 1px solid var(--tc-line); }
-.tc-seg button.on { background: var(--tc-ind); color: #fff; }
-.tc-seg svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tc-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tc-hint { font-size: .78rem; color: var(--tc-muted); margin-top: 8px; }
 
@@ -42,12 +37,8 @@
 .tc-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--s, .5));
   background: linear-gradient(180deg, #FAFBFE 0%, #F2F3FA 58%, #E9EBF6 100%); overflow: hidden; contain: layout paint; font-family: var(--tc-f); color: var(--tc-ink);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .35); }
-.tc-sldv { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; background: #fff; padding: 10px 12px; color: var(--tc-ink); font-family: var(--tc-f); }
-.tc-sldv[hidden] { display: none; }
-.tc-sldv .sld-bar { flex: none; margin-bottom: 8px; }
-.tc-sldv .sld-view { flex: 1 1 auto; min-height: 0; max-height: none; }
-.tc-wrap.tc-sldon .tc-stage { visibility: hidden; }
-.tc-wrap.tc-focus .tc-sldv { padding-right: 58px; }
+.tc-sldp { min-height: 200px; }
+.tc-sldp .sld-view { max-height: 76vh; }
 .tc-ctl { position: absolute; z-index: 5; display: flex; gap: 10px; }
 .tcv [hidden] { display: none !important; }
 .tc-ctl[data-place="side"] { top: 50%; transform: translateY(-50%); flex-direction: column; }

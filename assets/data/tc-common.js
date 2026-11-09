@@ -74,13 +74,60 @@
     var rows = vsBasis(chainRows(c), rows0Of(chainRows, c));
     return '<div><h3>' + L.te(['Power chain of this design — every rating follows the demand', '本设计供电链——各额定值随需量联动']) + '</h3>' + L.ptable([['Stage', '环节'], ['Arrangement', '配置'], ['Rating', '额定']], rows) + '</div>';
   }
+  /* From the 20 kV sections to the GPU racks: what each level carries; the GPU parameters that act on the substation */
+  function gpuTable(c) {
+    var d = E.gpuDist(c.R), el = c.R.el, h = el.hv, mv = h.mv, db = el.mvdb, hp = d.plat, mp = E.mvPlan(c.R), vLV = (el.lvV >= 690 ? 400 : (el.lvV || 400)) / 1000;
+    function row(lab, arr, o, cur) { return [lab, arr, F(o.it, o.it < 100 ? 1 : 0) + ' MW', F(d.ai ? o.hd : o.racks, (d.ai ? o.hd : o.racks) < 10 ? 1 : 0), d.ai ? F(o.gpus) : '–', cur || '–']; }
+    var rows = [];
+    if (d.ht) rows.push(row(['HV/MV transformer', '主变压器'], h.ht.total + ' × ' + h.ht.mva + ' MVA', d.ht, F(el.mva * 1000 / (1.732 * 20 * h.ht.total)) + ' A'));
+    rows.push(row(['20 kV section', '20 kV母线段'], mv.boards + ' × ' + F(mv.busA) + ' A', d.sec, F(d.secI) + ' A'));
+    if (d.board) rows.push(row(['Building board (two 1,250 A feeders)', '楼宇开关柜（两回1,250 A馈线）'], db.n + ' × (' + db.txPer + ' TX)', d.board, [F(d.iFn) + ' A per feeder | ' + F(d.iF) + ' A on one feeder', '每回' + F(d.iFn) + ' A | 单回' + F(d.iF) + ' A']));
+    if (el.txBlk && el.txBlk.b > 1) rows.push(row(['MV/LV block', '中/低压模块'], el.txLabel, d.blk, ''));
+    rows.push(row(['MV/LV transformer', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA', d.tx, F(el.lv.i) + ' A LV'));
+    if (d.ai) rows.push([['GPU rack', 'GPU机柜'], t([hp.en, hp.zh]), F(d.rackKW) + ' kW', '1', F(d.gpuPerRack), F(d.rackKW / (1.732 * vLV * 0.8)) + ' A']);
+    var out = '<div><h3>' + L.te(['From the 20 kV sections to the ' + (d.ai ? 'GPU racks' : 'racks'), '从20 kV母线段到' + (d.ai ? 'GPU机柜' : '机柜')]) + '</h3>' + L.ptable([['Level', '层级'], ['Quantity and rating', '数量及额定'], ['IT load each', '每个IT负载'], [d.ai ? 'GPU racks each' : 'Racks each', d.ai ? '每个GPU机柜数' : '每个机柜数'], ['GPUs each', '每个GPU数'], ['Current', '电流']], rows) + '</div>';
+    if (!d.ai) return out;
+    var ok = d.ldPk <= 100, p2 = [
+      [['Coincident GPU peak', 'GPU同步峰值'], hp.kw + ' → ' + hp.kwPeak + ' kW per rack', [F(d.ldTx) + ' % → ' + F(d.ldPk) + ' % loading of the duty transformers ' + (ok ? '✓' : '△ add units or lower the loading limit'), '工作变压器负载率' + F(d.ldTx) + '% → ' + F(d.ldPk) + '% ' + (ok ? '✓' : '△ 增加台数或降低负载率上限')]],
+      [['Synchronised GPU load swing', 'GPU同步负荷波动'], F(d.swing) + ' % = ' + F(d.swingMW) + ' MW', ['voltage step ' + F(d.dv, 1) + ' % at the connection point (limit 2 %)' + (d.bess ? '; BESS ' + F(d.bess.mw, 1) + ' MW smooths it' : ''), '接入点电压阶跃' + F(d.dv, 1) + '%（限值2%）' + (d.bess ? '；储能' + F(d.bess.mw, 1) + ' MW平滑' : '')]],
+      [['Reactive compensation', '无功补偿'], c.R.gimp.capSteps || '–', d.dyn ? ['SVG on the 20 kV sections: switched capacitor steps cannot follow GPU swings', '20 kV母线段采用SVG：投切电容器无法跟随GPU波动'] : ['switched capacitor steps', '投切电容器']],
+      [['Heat to liquid', '液冷热量占比'], F((hp.liq || 0) * 100) + ' %', el.chTx ? [el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV take the chillers off the LV blocks', el.chTx.total + '×' + F(el.chTx.kva) + ' kVA 20/6.6 kV变压器使冷机不占用低压模块'] : ['chillers and pumps stay on the LV blocks', '冷机及水泵接低压模块']],
+      [['Growth', '增长'], mp.spares + L.te([' spare feeders', '回备用馈线']), ['kept on the 20 kV sections for the next GPU generation', '保留在20 kV母线段，供下一代GPU使用']]];
+    return out + '<div><h3>' + L.te(['GPU parameters that act on the substation', '影响变电站的GPU参数']) + '</h3>' + L.ptable([['Parameter', '参数'], ['This design', '本设计'], ['Effect', '影响']], p2) + '</div>';
+  }
+  L.gpuTable = gpuTable;
+  /* worked reference: how a 1,050 MVA data-center campus steps down (anonymised) */
+  var REFCASE = [
+    [['Contracted demand', '合同容量'], ['1,050 MVA', '1,050 MVA'], ['4,041 A at 150 kV, 1,212 A at 500 kV: above what a 150 kV connection can bring', '150 kV时4,041 A，500 kV时1,212 A：超出150 kV接入能力']],
+    [['500 kV GIS', '500 kV GIS'], ['Breaker-and-a-half, 5 diameters, 4 line bays (loop-in of 2 circuits), 4 transformer bays', '一个半断路器，5串，4个线路间隔（2回线路π接），4个主变间隔'], ['A busbar or breaker fault loses no circuit', '母线或断路器故障不失去回路']],
+    [['Interbus transformers', '联络变压器'], ['4 × 500 MVA 500/150 kV', '4×500 MVA 500/150 kV'], ['N-1: 3 × 500 = 1,500 MVA, well above the 1,050 MVA contract', 'N-1：3×500 = 1,500 MVA，高于1,050 MVA合同容量']],
+    [['150 kV link', '150 kV联络'], ['2 separate cable routes, one energised and one standby; each route 2 circuits of 525 MVA, 2 × Cu 2,000 mm² per phase', '2条独立电缆路径，一用一备；每条2回525 MVA，每相2×2,000 mm²铜缆'], ['Each route carries the whole 1,050 MVA', '每条路径可带全部1,050 MVA']],
+    [['150 kV GIS at the campus', '园区150 kV GIS'], ['Double busbar with 2 couplers + 2 bus sections, normally open; Ur 170 kV, main bus 4,000 A, bays 3,150 A, 50 kA', '双母线，2台母联+2台分段，常开；Ur 170 kV，主母线4,000 A，间隔3,150 A，50 kA'], ['A busbar fault loses only a quarter of the bays', '母线故障仅失去四分之一间隔']],
+    [['HV/MV transformers', '主变压器'], ['5 × 265 MVA 150/20/20 kV, LV windings 180 + 85 MVA, YNd11-d11, Ud 21 % / 10.5 %', '5×265 MVA 150/20/20 kV，低压绕组180+85 MVA，YNd11-d11，Ud 21%/10.5%'], ['N-1: 4 × 265 = 1,060 MVA for 1,050 MVA; 79 % normal, 99 % with one out', 'N-1：4×265 = 1,060 MVA带1,050 MVA；正常79%，一台退出99%']],
+    [['Why two LV windings', '为何两个低压绕组'], ['One 265 MVA winding at 20 kV would be 7,650 A; 180 and 85 MVA give 5,196 A and 2,454 A', '单绕组265 MVA在20 kV为7,650 A；180及85 MVA分别为5,196 A及2,454 A'], ['Above the 24 kV switchgear range; the split brings every section within 3,150 A', '超出24 kV开关柜范围；分裂后每段不超过3,150 A']],
+    [['Why 21 % and 10.5 %', '为何21%及10.5%'], ['21 % on 180 MVA and 10.5 % on 85 MVA', '180 MVA时21%，85 MVA时10.5%'], ['Both give ≈ 24 kA at 20 kV: the same fault level on every section, within the 31.5 kA class', '20 kV短路电流均约24 kA：各段短路水平相同，在31.5 kA等级内']],
+    [['20 kV sections', '20 kV母线段'], ['15 sections, 3 per transformer: 3,150 A incomer, 24 kV, 31.5 kA 3 s', '15段，每台主变3段：进线3,150 A，24 kV，31.5 kA 3 s'], ['≈ 88 MVA = 2,550 A per section, 81 % of 3,150 A (109 MVA)', '每段约88 MVA = 2,550 A，为3,150 A（109 MVA）的81%']],
+    [['3,150 A to 1,250 A', '3,150 A至1,250 A'], ['6 feeders of 1,250 A per section, 18 per transformer', '每段6回1,250 A馈线，每台主变18回'], ['≈ 14.7 MVA = 425 A per feeder (34 %); 850 A (68 %) with its partner out. Standard 24 kV feeder breakers and cables; each building is fed from two transformers', '每回约14.7 MVA = 425 A（34%）；对侧退出时850 A（68%）。采用标准24 kV馈线断路器及电缆；每栋楼取自两台主变']],
+    [['Compensation and earthing', '补偿及接地'], ['(10 + 20) Mvar per transformer; 2 earthing transformers + 40 Ω resistors per transformer; 2 station transformers', '每台主变(10+20) Mvar；每台主变2套接地变+40 Ω电阻；2台站用变'], ['PF ≥ 0.95; 20 kV earth faults limited to 300 A', '功率因数≥0.95；20 kV接地故障电流限制为300 A']]];
+  /* why 5 × 265 MVA: HV/MV transformer options for the 1,050 MVA of the reference case (firm capacity with one unit out, 20 kV current, sections ≤ 3,150 A) */
+  function refOptRows() {
+    var RES = { 225: ['✗ Below the 1,050 MVA demand', '✗ 低于1,050 MVA需量'], '6x175': ['✗ No reserve: every unit is needed', '✗ 无备用：所有主变均需投运'], '7x175': ['✓ Firm with one unit out, but 7 transformer bays and 14 sections', '✓ 满足N-1，但需7个主变间隔及14段母线'], 265: ['✓ Reference design: firm with one unit out, 5 bays and 15 sections', '✓ 参考设计：满足N-1，5个间隔及15段母线'], 500: ['✗ Not buildable at 20 kV: 500 MVA is the 500/150 kV stage', '✗ 20 kV侧无法实现：500 MVA属于500/150 kV一级'] };
+    return [[4, 225], [6, 175], [7, 175], [5, 265], [4, 500]].map(function (o) {
+      var n = o[0], m = o[1], a = m * 1000 / (Math.sqrt(3) * 20), s = Math.ceil(a / 3150);
+      var r = [n + ' × ' + m + ' MVA', F(n * m) + ' MVA', F((n - 1) * m) + ' MVA', F(a) + ' A', s + ' × ' + F(a / s) + ' A', RES[m] || RES[n + 'x' + m]];
+      if (m === 265) r.cur = true; return r;
+    });
+  }
+  function refCaseTable() { return '<div><h3>' + L.te(['Reference case: a 1,050 MVA data-center campus (anonymised)', '参考案例：1,050 MVA数据中心园区（匿名）']) + '</h3>' + L.ptable([['Stage', '环节'], ['Reference design', '参考设计'], ['Why', '原因']], REFCASE) + '</div>' +
+    '<div><h3>' + L.te(['HV/MV transformer options for 1,050 MVA at 150/20 kV', '1,050 MVA的150/20 kV主变方案比较']) + '</h3>' + L.ptable([['Option', '方案'], ['Installed', '装机'], ['One unit out', '一台退出'], ['20 kV current per unit', '每台20 kV电流'], ['Sections ≤ 3,150 A per unit', '每台母线段（≤3,150 A）'], ['Result', '结论']], refOptRows()) + '</div>'; }
   function chainRows(c) {
     var el = c.R.el, h = el.hv, rows = [];
     rows.push([L.te(['PLN supply', 'PLN供电']), L.te([h.name + ' | ' + h.circ + ' circuit(s)', h.name + ' | ' + h.circ + '回']), F(el.mva, 1) + ' MVA']);
     if (h.gis) rows.push([L.te(['HV substation: ' + h.name + ' GIS (IEC 62271-203)', '高压变电站：' + h.name + ' GIS（IEC 62271-203）']), L.te(h.scheme), 'Ur ' + h.ur + ' kV | ' + h.ik + ' kA | ' + F(h.busA) + ' A']);
     if (h.ibt) rows.push([L.te(['EHV/HV interbus transformers', '超高压/高压联络变压器']), h.ibt.ratio, h.ibt.total + ' × ' + h.ibt.mva + ' MVA']);
     rows.push([L.te(['Fault level at the connection point', '接入点短路水平']), L.te(['planning value, PLN confirms', '规划值，以PLN确认为准']), F(h.pccIk, 1) + ' kA | ' + F(h.ssc) + ' MVA']);
-    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' | uk ' + h.ht.uk + ' % | ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' | split winding', ' | 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA (' + h.ht.lab + ')']);
+    if (h.ugc) rows.push([L.te(['150 kV link to the campus substation', '至园区变电站的150 kV联络']), L.te([h.ugc.routes + ' routes (one energised, one standby), ' + h.ugc.circ + ' circuit(s) per route', h.ugc.routes + '条路径（一用一备），每条' + h.ugc.circ + '回']), h.ugc.perPhase + ' × Cu ' + F(h.ugc.mm2) + ' mm²/' + L.te(['phase', '相'])]);
+    if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + (h.ht.split ? ' | ' + L.te(['windings ', '绕组']) + h.ht.w1 + ' + ' + h.ht.w2 + ' MVA | uk ' + h.ht.uk + ' / ' + h.ht.uk2 + ' %' : ' | uk ' + h.ht.uk + ' % | ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA'), h.ht.total + ' × ' + h.ht.mva + ' MVA (' + h.ht.lab + ')']);
     if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω | 300 A | 10 s']);
     rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']) + ' | ' + L.te(['fault ' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? ' incl. generators' : ''), '短路' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? '（含发电机）' : '')]), h.mv.boards + ' × ' + F(h.mv.busA) + ' A | ' + h.mv.ik + ' kA']);
     rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/' + String((el.lvV || 400) / 1000) + ' kV | uk ' + el.lv.uk + ' % | ' + el.txLabel, el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
@@ -115,7 +162,7 @@
       basis: function (c) { var el = c.R.el, h = el.hv; return h.kv > 20 ? [h.name + ' GIS (Ur ' + h.ur + ' kV, ' + h.ik + ' kA) → ' + (h.ibt ? h.ibt.total + ' × ' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' + ' → ' + h.mv.boards + ' × 24 kV boards (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + (el.mvdb ? el.mvdb.n + ' building 20 kV boards (main-tie-main) with ' : '') + (el.txTotal + (el.chTx ? el.chTx.total : 0)) + ' transformers',
         h.name + ' GIS（Ur ' + h.ur + ' kV，' + h.ik + ' kA）→ ' + (h.ibt ? h.ibt.total + '台' + h.ibt.mva + ' MVA ' + h.ibt.ratio + ' → ' : '') + h.ht.total + '台' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' + ' → ' + h.mv.boards + '段24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），' + (el.mvdb ? '经' + el.mvdb.n + '套楼宇20 kV开关柜（双进线+分段）' : '') + '向' + el.txTotal + '台变压器供电']
         : [h.circ + ' incoming 20 kV feeder(s) on a 24 kV board (' + F(h.mv.busA) + ' A, ' + h.mv.ik + ' kA) feeding ' + (el.txTotal + (el.chTx ? el.chTx.total : 0)) + ' transformers', h.circ + '路20 kV进线接入24 kV开关柜（' + F(h.mv.busA) + ' A，' + h.mv.ik + ' kA），向' + el.txTotal + '台变压器供电']; },
-      extra: function (c) { return chainTable(c); },
+      extra: function (c) { return chainTable(c) + gpuTable(c) + refCaseTable(); },
       calc: 'mva' },
     tx: { eq: 'EL-02', more: ['EL-25', 'EL-03'],
       how: ['Cast-resin dry-type transformers step 20 kV down to the LV system voltage (230/400 V is the Indonesian standard; 415, 480 or 690 V where selected), close to the load and without oil, so they can stand indoors next to the LV switchboards. Each unit feeds one LV main switchboard, whose busbar distributes the power to the UPS, mechanical and building feeders: the number of units follows from the total LV load and the largest unit the LV busbar can carry, and redundancy is arranged in identical blocks.',
@@ -125,7 +172,7 @@
         ['Order early: large transformers have 12–24 month lead times.', '尽早订货：大型变压器交货期12–24个月。']],
       basis: function (c) { var el = c.R.el, mvc = el.chTx ? [' + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV for the MV chillers (LV load ' + F(el.lvKVA) + ' kVA)', ' + ' + el.chTx.total + '×' + F(el.chTx.kva) + ' kVA 20/6.6 kV供中压冷机（低压负荷' + F(el.lvKVA) + ' kVA）'] : ['', ''];
         return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ', uk ' + el.lv.uk + ' %) for ' + F(el.demandKVA) + ' kVA maximum demand' + mvc[0] + ' | LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '，uk ' + el.lv.uk + '%），最大需量' + F(el.demandKVA) + ' kVA' + mvc[1] + ' | 低压' + F(el.lv.acb) + ' A/' + el.lv.icw + ' kA']; },
-      extra: function (c) { return chainTable(c); }, calc: 'tx' },
+      extra: function (c) { return chainTable(c) + gpuTable(c); }, calc: 'tx' },
     lv: { eq: 'EL-03', more: ['EL-07', 'EL-08', 'EL-16'],
       how: ['The main switchboard receives the transformer and generator supplies and distributes LV power to the UPS, mechanical plant and building services. Automatic transfer (ATS or breaker interlocks) moves the load to the generators within seconds of a utility failure and back again when PLN returns.',
         '低压主配电柜接收变压器及发电机电源，向UPS、暖通设备及建筑负荷分配低压电力。市电故障后数秒内通过自动转换（ATS或断路器联锁）切换至发电机，PLN恢复后再切回。'],

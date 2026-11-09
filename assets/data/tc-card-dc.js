@@ -50,7 +50,7 @@
     o += L.air('M1002 484H1062', false, 4) + L.air('M1062 414H1004', true, 4);
     o += L.thin('M232 513V498', 'data', 3, '3 4') + L.thin('M1246 513V498', 'data', 3, '3 4');
     /* banners */
-    o += L.banner(140, 0, 1310, ['① POWER PATH | 供电路径', '① 供电路径 | POWER PATH'], ['PLN → transformers → generators → UPS: two independent paths to every rack', 'PLN → 变压器 → 发电机 → UPS：每个机柜两条独立路径'], null, 'tcZone3');
+    o += L.banner(140, 0, 1310, ['① POWER PATH | 供电路径', '① 供电路径 | POWER PATH'], ['PLN → transformers → generators → UPS: two independent paths to every rack', 'PLN → 变压器 → 发电机 → UPS：每个机柜两条独立路径'], null, 'tcZone3') + (g.DCSLD ? L.sldBtn(1254, 3) : '');
     o += L.banner(1030, 290, 430, ['② WHITE SPACE | 白区', '② 白区 | WHITE SPACE'], ['racks | busway | containment', '机柜·母线·封闭'], null, 'tcZone');
     o += L.banner(410, 290, 600, ['③ COOLING | 制冷', '③ 制冷 | COOLING'], ['heat from the racks to the outdoor air', '将机柜热量排至室外'], null, 'tcZone2');
     o += L.banner(10, 290, 380, ['④ NETWORK | 网络', '④ 网络 | NETWORK'], ['carriers', '运营商'], null, 'tcZone5');

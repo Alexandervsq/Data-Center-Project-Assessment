@@ -193,6 +193,7 @@
   function hot(key, name, x, y, w, h, body) {
     return '<g class="tc-hot" data-tco="' + key + '" tabindex="0" role="button" aria-label="' + te(name) + '"><rect x="' + Math.round(x) + '" y="' + Math.round(y) + '" width="' + Math.round(w) + '" height="' + Math.round(h) + '" fill="none" pointer-events="all"/>' + body + '</g>';
   }
+  function sldBtn(x, y) { var nm = ['Single-line diagram', '单线图'], w = 190, sx = x + 14, cy = y + 12; return hot('sld', nm, x, y, w, 24, '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="24" rx="12" fill="#fff"/><path d="M' + sx + ' ' + (cy - 6) + 'V' + (cy - 2) + 'M' + (sx - 4) + ' ' + (cy - 2) + 'H' + (sx + 4) + 'M' + sx + ' ' + (cy - 2) + 'V' + (cy + 2) + 'M' + (sx - 3) + ' ' + (cy + 6) + 'H' + (sx + 3) + 'M' + sx + ' ' + (cy + 2) + 'V' + (cy + 6) + '" fill="none" stroke="#3F3CBB" stroke-width="1.8" stroke-linecap="round"/><text x="' + (x + w / 2 + 8) + '" y="' + (y + 17) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#3F3CBB">' + te(nm) + '</text>'); }
   function unit(key, name, x, y, body, wh, lab, zone) {
     var sp = labelSpan(lab[0], lab[3], lab[5]), X0 = Math.min(x, sp[0]) - 4;
     return hot(key, name, X0, lab[1] - 22, Math.max(x + wh[0], sp[1]) - X0 + 8, y + wh[1] - lab[1] + 26, G(x, y, body) + label(lab[0], lab[1], lab[2], lab[3], lab[4], lab[5], zone));
@@ -638,9 +639,9 @@
 
   /* ============================================================== viewer */
   /* ST.chg[basis][engineKey] = value: design changes shared by every card that uses the basis; ST.loc[basis][calc][input]: local calculator assumptions */
-  var CARDS = [], ST = { card: null, open: null, focus: false, userRot: null, basis: {}, chg: {}, loc: {}, view: 'slide' };
-  try { var sv = JSON.parse(localStorage.getItem('dcpa_tc')); if (sv) { ST.basis = sv.basis || {}; ST.card = sv.card || null; ST.chg = sv.chg || {}; ST.loc = sv.loc || {}; ST.view = sv.view === 'sld' ? 'sld' : 'slide'; } } catch (x) { }
-  function save() { try { localStorage.setItem('dcpa_tc', JSON.stringify({ basis: ST.basis, card: ST.card, chg: ST.chg, loc: ST.loc, view: ST.view })); } catch (x) { } }
+  var CARDS = [], ST = { card: null, open: null, focus: false, userRot: null, basis: {}, chg: {}, loc: {} };
+  try { var sv = JSON.parse(localStorage.getItem('dcpa_tc')); if (sv) { ST.basis = sv.basis || {}; ST.card = sv.card || null; ST.chg = sv.chg || {}; ST.loc = sv.loc || {}; } } catch (x) { }
+  function save() { try { localStorage.setItem('dcpa_tc', JSON.stringify({ basis: ST.basis, card: ST.card, chg: ST.chg, loc: ST.loc })); } catch (x) { } }
   var VIEW = null, CTX = null, PANELS = [], CUR_CARD = null;
   var mm = function (q) { return !!(g.matchMedia && g.matchMedia(q).matches); };
   var TOUCH = mm('(pointer: coarse)') || (navigator.maxTouchPoints > 0 && mm('(hover: none)'));
@@ -740,20 +741,16 @@
     PREV_X = CTX.x; LAST_SRC = src || null;
     save(); rerender();
   }
-  /* single-line diagram of the simulated design (base design + the reader's changes): a view of the stage itself (Slide | Single-line diagram, assets/js/sld.js),
-     redrawn whenever the design basis, a linked change or the language changes; zoom, pan and PDF export are in its own toolbar */
-  function sldOpt() { var n = Object.keys(CTX.chg || {}).length; return { name: CTX.name + (n ? ' — ' + t(['modified', '已修改']) + ' (' + n + ')' : ''), basis: t(['Simulation', '模拟']), code: (CTX.key === 'ACTIVE' ? 'PRJ' : CTX.key) + (n ? '-M' + n : ''), lang: lang() }; }
-  var SLD_KEY = null;
-  function renderSLD() {
-    var box = VIEW && VIEW.querySelector('.tc-sldv'); if (!box || !g.DCSLD || !CTX) return;
-    var on = ST.view === 'sld'; box.hidden = !on; if (!on) return;
-    var key = CTX.ckey + '|' + JSON.stringify(CTX.chg || {}) + '|' + lang();
-    if (key === SLD_KEY && box.querySelector('.sld-view')) return;
-    SLD_KEY = key; var x = CTX.x, o = sldOpt();
-    if (!box.firstChild) box.textContent = t(['Drawing the single-line diagram…', '正在绘制单线图…']);
-    setTimeout(function () { try { g.DCSLD.mount(box, x, o, 'stage'); } catch (e) { console.error(e); box.textContent = String(e); } }, 0);
+  /* single-line diagram of the simulated design (base design + the reader's changes): a panel opened from the Power Path zone of the slides, drawn inside the page (assets/js/sld.js);
+     its name, drawing number and PDF file name come from the design parameters, not from the template the design started from */
+  function sldLead() { return CTX && CTX.key === 'ACTIVE' && g.DCApp && g.DCApp.activeName ? g.DCApp.activeName() : null; }
+  function sldOpt() { var n = Object.keys(CTX.chg || {}).length, ld = sldLead(), d = g.DCSLD.design(CTX.x, ld, lang()); return { name: d.name, code: d.code, file: d.file, basis: (ld ? t(['Project', '项目']) : t(['Simulation based on ', '模拟，基于']) + CTX.key) + (n ? ' + ' + n + t([' change(s)', '处修改']) : ''), lang: lang() }; }
+  function sldPanel(ctx) {
+    var d = g.DCSLD.design(ctx.x, ctx.key === 'ACTIVE' && g.DCApp && g.DCApp.activeName ? g.DCApp.activeName() : null, lang());
+    var body = '<div class="tc-sldp" data-sld-host>' + te(['Drawing the single-line diagram…', '正在绘制单线图…']) + '</div>' + (LIB.gpuTable ? LIB.gpuTable(ctx) : '');
+    return freePanel('sld', 'SLD', ['Single-line diagram', '单线图'], [d.name + ' | ' + t(['one drawing from the PLN connection to the rack; it follows every change in this simulation', '从PLN接入到机柜的一张图，随本模拟的每处修改更新']), d.name + ' | ' + t(['one drawing from the PLN connection to the rack; it follows every change in this simulation', '从PLN接入到机柜的一张图，随本模拟的每处修改更新'])], body, 'x');
   }
-  function setView(v) { if (ST.view === v) return; if (ST.open) closePanel(); ST.view = v; save(); render(); }
+  function mountSld() { var ov = VIEW.querySelector('.tc-ov'), h = ov && ov.querySelector('[data-sld-host]'); if (!h || !g.DCSLD || !CTX) return; var x = CTX.x, o = sldOpt(); setTimeout(function () { try { g.DCSLD.mount(h, x, o); } catch (e) { console.error(e); h.textContent = String(e); } }, 0); }
   function resetAll() { var key = CTX.ckey; delete ST.chg[key]; delete ST.loc[key]; PREV_X = CTX.x; LAST_SRC = '*'; save(); rerender(); }
   function hotTexts() { var m = {}; if (VIEW) Array.prototype.forEach.call(VIEW.querySelectorAll('.tc-stage [data-tco]'), function (el, i) { m[el.getAttribute('data-tco') + '#' + i] = el.textContent; }); return m; }
   function rerender() {
@@ -789,7 +786,7 @@
     if (CTX.fell && card.fallFix) try { FALLFIX = card.fallFix(resolveWith(JSON.stringify(basisInput(card, CTX.key).input), ST.chg[CTX.key] || {})); } catch (x) { FALLFIX = null; }
     PANELS = card.panels(CTX, LIB);
     var textAll = stage.replace(/<[^>]+>/g, ' ') + ' ' + PANELS.map(function (p) { return p.html.replace(/<[^>]+>/g, ' '); }).join(' ');
-    PANELS.push(basisPanel(card, CTX, LAST_SRC === 'basis' || LAST_SRC === '*' ? DIFF : null)); PANELS.push(glossPanel(card, textAll));
+    PANELS.push(basisPanel(card, CTX, LAST_SRC === 'basis' || LAST_SRC === '*' ? DIFF : null)); PANELS.push(glossPanel(card, textAll)); if (g.DCSLD) PANELS.push(sldPanel(CTX));
     var sel = '<div class="tc-sel" role="tablist">' + CARDS.map(function (c) {
       return '<button type="button" class="tc-cardbtn' + (c.id === card.id ? ' on' : '') + '" data-card="' + c.id + '" role="tab" aria-selected="' + (c.id === card.id) + '"><i>' + svgIcon(c.icon) + '</i><span><b>' + te(c.short || c.title) + '</b><span>' + te(c.blurb) + '</span></span></button>';
     }).join('') + '</div>';
@@ -797,17 +794,15 @@
     var bar = '<div class="tc-bar"><span>' + te(UI.basis) + ':</span>' + basisSelect(card) + (CTX.fell ? '<span style="color:#B0302A">' + te(card.fallNote || ['The selected design does not use this technology; the card shows its benchmark.', '所选设计未采用该技术；卡片显示其基准设计。']) + '</span>' : '') +
       (FALLFIX ? '<button type="button" class="tc-btn tc-fix" data-fallfix title="' + te(['Adds this change to the selected design: every card and panel follows', '将此修改加入所选设计：所有卡片及面板随之联动']) + '">' + LINK_SVG + te(FALLFIX.label) + '</button>' : '') +
       (nCh ? '<button type="button" class="tc-btn tc-rsall" data-resetall>↺ ' + te(UI.resetAll) + ' <b>' + nCh + '</b></button><button type="button" class="tc-chgk" data-tco="basis"><i></i>' + te(UI.chgKey) + '</button>' : '') +
-      (g.DCSLD ? '<span class="tc-seg" role="group" aria-label="' + te(['View', '视图']) + '"><button type="button" class="' + (ST.view === 'sld' ? '' : 'on') + '" data-view="slide" aria-pressed="' + (ST.view !== 'sld') + '">' + te(['Slide', '幻灯片']) + '</button><button type="button" class="' + (ST.view === 'sld' ? 'on' : '') + '" data-view="sld" aria-pressed="' + (ST.view === 'sld') + '" title="' + te(['Integrated single-line diagram of the simulated design, including your changes; export it as PDF from its toolbar', '当前模拟设计（含修改）的综合单线图；可在其工具栏导出PDF']) + '">' + SLD_SVG + te(['Single-line diagram', '单线图']) + '</button></span>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
-    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-sldv" hidden></div><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
+    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>';
     VIEW.querySelector('.tc-head').innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Project Technology Simulation', '项目技术模拟']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
       te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. All five systems share one design: choose a design basis, open any part of the slide and change a linked input (link symbol) in its calculator — every connected parameter in every other panel and card is re-sized at once by its code / standard rule, and what changed is outlined in amber. ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。五个系统共用同一设计：选择设计基准，点击幻灯片任意部分，在其计算器中修改带链接符号的输入——其他所有面板及卡片中的相关参数即按规范/标准规则同步重新选型，变化部分以琥珀色标示。← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
     var wrapEl = VIEW.querySelector('.tc-wrap'), stEl = VIEW.querySelector('.tc-stage');
-    wrapEl.classList.toggle('tc-focus', !!ST.focus); wrapEl.classList.toggle('tc-sldon', ST.view === 'sld');
+    wrapEl.classList.toggle('tc-focus', !!ST.focus);
     stEl.setAttribute('aria-label', t(card.title)); stEl.innerHTML = stage; stEl.__s = null; markChanged(stEl, stage0);
     VIEW.querySelector('.tc-ctl').innerHTML = '<button type="button" data-unexpand title="' + te(UI.close) + '">' + BTN_X + '</button><button type="button" data-rot title="' + te(['Rotate view', '旋转视图']) + '">' + BTN_ROT + '</button>';
-    setTimeout(renderSLD, 0);
-    VIEW.querySelector('.tc-hint').textContent = ST.view === 'sld' ? t(['Single-line diagram of the simulated design: one drawing from the PLN connection to the IT rack. It is redrawn with every change in this simulation and follows the website language. Ctrl + wheel zooms, drag pans.', '模拟设计的单线图：从PLN接入到IT机柜的一张图，随本模拟的每处修改重绘，并跟随网站语言。Ctrl+滚轮缩放，拖动平移。']) : t(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library (links open in a new tab).', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库（链接在新标签页打开）。']);
+    VIEW.querySelector('.tc-hint').textContent = t(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library (links open in a new tab).', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库（链接在新标签页打开）。']);
     if (!DEFS_ADDED) { document.body.insertAdjacentHTML('beforeend', DEFS); DEFS_ADDED = true; }
     if (ST.focus) document.documentElement.style.overflow = 'hidden';
     fit(); motion();
@@ -833,7 +828,7 @@
       wrap.style.transform = 'none'; wrap.style.width = '';
       W = wrap.clientWidth || VIEW.clientWidth || 800;
       var hdr = document.querySelector('header'), hh = hdr && g.getComputedStyle(hdr).position === 'sticky' ? hdr.getBoundingClientRect().height : 0;
-      H = Math.min(W * 1080 / 1920, Math.max(240, vh - hh - 28)); if (ST.view === 'sld') H = Math.max(H, Math.min(640, Math.max(320, vh - hh - 28))); wrap.style.height = Math.round(H) + 'px';
+      H = Math.min(W * 1080 / 1920, Math.max(240, vh - hh - 28)); wrap.style.height = Math.round(H) + 'px';
     }
     var s = Math.min(W / 1920, H / 1080), gx = (W - 1920 * s) / 2, gy = (H - 1080 * s) / 2;
     if (ST.focus) {
@@ -863,7 +858,7 @@
     if (!VIEW) return;
     var st = VIEW.querySelector('.tc-stage'), ov = VIEW.querySelector('.tc-ov'), panelOpen = !!ST.open;
     VIEW.classList.add('tcv'); VIEW.classList.toggle('tc-lite', lite);
-    var stop = STILL || lite || !visible || panelOpen || ST.view === 'sld';
+    var stop = STILL || lite || !visible || panelOpen;
     pauseSvgs(svgs(st), stop); VIEW.classList.toggle('tc-still', stop && !lite);
     if (ov) pauseSvgs(svgs(ov), STILL || lite || !visible);
     if (lite && visible && !ticker) ticker = setInterval(step12, 85);
@@ -885,7 +880,7 @@
     var ov = VIEW.querySelector('.tc-ov'); if (!ST.open || quiet) lastFocus = document.activeElement;
     ov.innerHTML = PANELS[i].html; ov.hidden = false; ov.scrollTop = 0; ST.open = id;
     if (!ST.focus) document.documentElement.style.overflow = 'hidden';
-    calc(id); motion(); syncHash();
+    calc(id); motion(); syncHash(); if (id === 'sld') mountSld();
     var b = ov.querySelector('[data-x]'); if (b) try { b.focus({ preventScroll: true }); } catch (x) { }
   }
   function closePanel() {
@@ -1068,7 +1063,7 @@
     el.addEventListener('click', function (ev) {
       var tg = ev.target;
       if (tg.closest('[data-lang-btn]')) { var nl = lang() === 'en' ? 'zh' : 'en'; if (g.DCApp && g.DCApp.setLang) g.DCApp.setLang(nl); else { g.I18N.set(nl); render(); } return; }
-      var cb = tg.closest('[data-card]'); if (cb) { var cid = cb.getAttribute('data-card'); if (ST.open) closePanel(); ST.card = cid; ST.open = null; ST.view = 'slide'; save(); render(); return; }
+      var cb = tg.closest('[data-card]'); if (cb) { var cid = cb.getAttribute('data-card'); if (ST.open) closePanel(); ST.card = cid; ST.open = null; save(); render(); return; }
       if (tg.closest('[data-expand]')) { setFocus(true); return; }
       if (tg.closest('[data-unexpand]')) { setFocus(false); return; }
       if (tg.closest('[data-rot]')) { ST.userRot = (ST.userRot === 'on' || (ST.userRot === null && TOUCH && vhGtVw())) ? 'off' : 'on'; fit(); return; }
@@ -1076,7 +1071,6 @@
       if (tg.closest('[data-goassess]')) { closePanel(); if (ST.focus) setFocus(false); if (g.DCApp) g.DCApp.show('assess'); return; }
       if (tg.closest('[data-fallfix]')) { applyFallFix(); return; }
       if (tg.closest('[data-resetall]')) { resetAll(); return; }
-      var vb = tg.closest('[data-view]'); if (vb) { setView(vb.getAttribute('data-view')); return; }
       var gr = tg.closest('[data-gr]'); if (gr) { ev.preventDefault(); commit(gr.getAttribute('data-gr'), null, 'basis'); return; }
       var op = tg.closest('[data-tco]'); if (op) { ev.preventDefault(); openPanel(op.getAttribute('data-tco')); return; }
       if (tg.closest('[data-x]')) { closePanel(); return; }
@@ -1114,7 +1108,7 @@
 
   var LIB = {
     t: t, o: o, e: e, te: te, F: F, tw: tw, ord: ord, G: G, R: R_, text: text, shadow: shadow, vessel: vessel, cylV: cylV, storageTank: storageTank, cylH: cylH, pump: pump, tankBox: tankBox,
-    building: building, city: city, bubbles: bubbles, rotor: rotor, fan: fan, waves: waves, pipe: pipe, thin: thin, air: air, arrowHead: arrowHead, banner: banner, label: label, labelSpan: labelSpan,
+    sldBtn: sldBtn, building: building, city: city, bubbles: bubbles, rotor: rotor, fan: fan, waves: waves, pipe: pipe, thin: thin, air: air, arrowHead: arrowHead, banner: banner, label: label, labelSpan: labelSpan,
     hot: hot, unit: unit, cab: cab, switchgear: switchgear, lvBoard: lvBoard, dryTx: dryTx, powerTx: powerTx, pylon: pylon, genset: genset, fuelTank: fuelTank, upsCab: upsCab, battRack: battRack,
     bessBox: bessBox, busway: busway, rack: rack, rackRow: rackRow, containment: containment, crah: crah, fanWall: fanWall, chiller: chiller, coolingTower: coolingTower, dryCooler: dryCooler,
     cduCab: cduCab, phe: phe, gasCyl: gasCyl, camera: camera, fence: fence, bollards: bollards, barrier: barrier, mantrap: mantrap, reader: reader, nocWall: nocWall, firePanel: firePanel,

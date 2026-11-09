@@ -197,7 +197,7 @@
   /* ------------------------------------------------------------------ design data and component ratings */
   function design(x, meta) {
     var R = x.R, p = x.p, el = R.el, hv = el.hv;
-    return { R: R, p: p, el: el, hv: hv, gi: R.gimp || {}, meta: meta, kv: hv.kv, ehv: !!hv.ibt, ht: hv.ht, mv: hv.mv, lvV: el.lvV || 400, dbl: /Double busbar/.test(hv.scheme[0]) };
+    return { R: R, p: p, el: el, hv: hv, gi: R.gimp || {}, meta: meta, kv: hv.kv, ehv: !!hv.ibt, ht: hv.ht, mv: hv.mv, lvV: el.lvV || 400, dbl: /Double busbar/.test(hv.scheme[0]), gd: E.gpuDist(R) };
   }
   var INS = { 24: 'LI 125 / AC 50 kV', 72.5: 'LI 325 / AC 140 kV', 170: 'LI 750 / AC 325 kV', 245: 'LI 1,050 / AC 460 kV', 300: 'LI 1,050 / SI 850 kV', 550: 'LI 1,550 / SI 1,175 kV' };
   function saOf(kv) { return kv >= 500 ? 'Ur 420–444 kV, In 20 kA' : (kv >= 275 ? 'Ur ≈ 240 kV, In 20 kA' : (kv >= 230 ? 'Ur ≈ 192 kV, In 10 kA' : (kv >= 150 ? 'Ur 150 kV, In 10 kA, Ures ≤ 416 kV' : (kv >= 70 ? 'Ur ≈ 60 kV, In 10 kA' : 'Ur 24 kV, In 10 kA')))); }
@@ -207,6 +207,8 @@
   var PROT = { tx: ['50/51, 50N/51N, temperature trip', '50/51、50N/51N、温度跳闸'], db: ['50/51, 50N/51N, 67', '50/51、50N/51N、67'], ch: ['50/51, 50N/51N, 87T ≥ 5 MVA', '50/51、50N/51N、≥5 MVA时87T'], gen: ['87G, 51V, 32, 40, 46, 27/59, 81, 25', '87G、51V、32、40、46、27/59、81、25'],
     st: ['50/51, 50N/51N', '50/51、50N/51N'], cap: ['50/51, 59, 27, 60 unbalance', '50/51、59、27、60不平衡'], bess: ['50/51, 67, 27/59, 81', '50/51、67、27/59、81'], sp: ['as a transformer feeder', '同变压器馈线'] };
   var UNIT = { 'no.': '台', panels: '面', bays: '间隔', banks: '组', sets: '套', lot: '项', set: '套', m: '米', km: '公里', systems: '套', tanks: '座', runs: '条', containers: '个', 'line-ups': '组' };
+  function isSVG(f) { return f.k === 'cap' && f.l2 === 'SVG'; }
+  function nameOf(f) { return isSVG(f) ? 'SVG' : T(NAME[f.k][0], NAME[f.k][1]); }
   function rating(f) { return f.k === 'db' ? F(f.a) + ' A' : (f.k === 'sp' ? '' : f.l1); }
   /* feeders of the shared 20 kV plan (DCEngine.mvPlan) on the sections; building boards: bus A and bus B from two different HV/MV transformers, the
      partners spread over all the others so that one transformer outage is shared by them (N-1) */
@@ -233,8 +235,8 @@
       var items = [];
       sc.groups.forEach(function (gp) {
         var f = gp.f, cd = CODE[f.k];
-        if (indiv) for (var q = 0; q < gp.n; q++) { cnt[cd] = (cnt[cd] || 0) + 1; items.push({ f: f, lab: [cd + cnt[cd], rating(f), T(NAME[f.k][0], NAME[f.k][1])] }); }
-        else items.push({ f: f, lab: [gp.n + ' ×', T(NAME[f.k][0], NAME[f.k][1]), rating(f)] });
+        if (indiv) for (var q = 0; q < gp.n; q++) { cnt[cd] = (cnt[cd] || 0) + 1; items.push({ f: f, lab: [cd + cnt[cd], rating(f), nameOf(f)] }); }
+        else items.push({ f: f, lab: [gp.n + ' ×', nameOf(f), rating(f)] });
       });
       return items;
     });
@@ -242,7 +244,7 @@
   function hvRatings(d) {
     var hv = d.hv, ht = d.ht, ehv = d.ehv, kvH = ehv ? 150 : hv.kv;
     var ikH = ehv ? pickN([40, 50, 63], 1.25 * d.mv.ssc150 / (1.732 * 150)) : hv.ik, iIn = ehv ? hv.ibt.mva * 1000 / (1.732 * 150) : hv.bays.iLine;
-    var lineA = ehv ? pickN(IR, 1.2 * iIn) : hv.bays.lineA, busA = ehv ? Math.max(lineA, pickN([2000, 2500, 3150, 4000, 5000], 1.2 * d.el.mva * 1000 / (1.732 * 150))) : hv.busA;
+    var lineA = ehv ? pickN(IR, 1.2 * iIn) : hv.bays.lineA, busA = ehv ? Math.max(lineA, pickN([2000, 2500, 3150, 4000, 5000], (hv.sect ? 0.9 : 1.2) * d.el.mva * 1000 / (1.732 * 150))) : hv.busA;
     var iT = ht.mva * 1000 / (1.732 * kvH), txA = ehv ? Math.max(2000, pickN(IR, 1.2 * iT)) : hv.bays.txA;
     return { kv: kvH, ik: ikH, lineA: lineA, busA: busA, txA: txA, lineCT: ehv ? pickN(CTP, 1.1 * iIn) + '/1 A' : hv.bays.lineCT, txCT: ehv ? pickN(CTP, 1.2 * iT) + '/1 A' : hv.bays.txCT, ur: ehv ? 170 : hv.ur };
   }
@@ -291,7 +293,7 @@
         else { ins = gaps.slice(); for (var m = 1; ins.length < nIn; m++) ins.unshift(xtr[0] - 46 * m); }
         P.hin = ins;
       } else {
-        var nL = hv.circ, nD = Math.max(hv.bays.diam || 0, Math.ceil((nL + nIBT) / 2)), Ls = [], Ts = [], pr = [];
+        var nL = hv.bays.lineBays || hv.circ, nD = Math.max(hv.bays.diam || 0, Math.ceil((nL + nIBT) / 2)), Ls = [], Ts = [], pr = [];
         for (var a = 1; a <= nL; a++) Ls.push(['L', a]); for (var b2 = 1; b2 <= nIBT; b2++) Ts.push(['T', b2]);
         for (var k3 = 0; k3 < nD; k3++) { var up = null, lo = null, lft = nD - k3 - 1;
           if (Ls.length && Ts.length) { up = Ls.shift(); lo = Ts.shift(); } else if (Ls.length) { up = Ls.shift(); if (Ls.length > lft) lo = Ls.shift(); } else if (Ts.length) { lo = Ts.shift(); if (Ts.length > lft) up = Ts.shift(); }
@@ -313,6 +315,20 @@
       }
       P.hbL = Math.min.apply(null, P.hin.concat(xtr)) - Math.max(30, TW(P.hvR.kv + ' kV ' + T(P.dbl ? 'BUS II' : 'BUS', P.dbl ? 'II母' : '母线'), H2, true) + 8);
       P.hbR = Math.max.apply(null, P.hvt.concat([xl], P.hin)) + 20;
+      /* sectionalised double busbar (≥ 8 bays): two bus-section breakers, a coupler and two bus VTs per half */
+      P.sect = !!hv.sect && P.dbl; P.hvt2 = []; P.coup2 = null;
+      if (P.sect) {
+        var xb = P.hin.concat(xtr, P.hvt, [P.coup]).sort(function (a0, b0) { return a0 - b0; }), midB = (P.hbL + P.hbR) / 2, xs0 = null;
+        for (var g1 = 0; g1 + 1 < xb.length; g1++) if (xb[g1 + 1] - xb[g1] >= 30) { var cx0 = (xb[g1] + xb[g1 + 1]) / 2; if (xs0 === null || Math.abs(cx0 - midB) < Math.abs(xs0 - midB)) xs0 = cx0; }
+        if (xs0 === null) P.sect = false; else {
+          P.xsec = xs0;
+          var below = xtr.filter(function (q) { return q < xs0 - 16; }), wid = 0;
+          for (var g2 = 0; g2 + 1 < below.length; g2++) { var gw = below[g2 + 1] - below[g2]; if (gw >= (g2 === 0 ? 96 : 60) && gw > wid) { wid = gw; P.coup2 = g2 === 0 ? below[g2] + 44 : (below[g2] + below[g2 + 1]) / 2; } }
+          if (P.coup2 === null && below.length) { var gLast = xs0 - below[below.length - 1]; if (gLast >= (below.length === 1 ? 72 : 44)) P.coup2 = below[below.length - 1] + (below.length === 1 ? 44 : gLast / 2); }
+          var above = [P.hbL + 34].concat(P.hin.filter(function (q) { return q < xs0 - 10; }).sort(function (a0, b0) { return a0 - b0; }), [xs0 - 14]), wv = 0;
+          for (var g3 = 0; g3 + 1 < above.length; g3++) { var lo0 = above[g3] + (g3 === 1 ? 44 : 0), gv = above[g3 + 1] - lo0; if (gv >= 72 && gv > wv) { wv = gv; var cv0 = (lo0 + above[g3 + 1]) / 2; P.hvt2 = [cv0 - 14, cv0 + 14]; } }
+        }
+      }
       var left = Math.min(P.hbL, P.eL !== undefined ? P.eL : P.hbL);
       if (left < X0) shiftAll(P, X0 - left);
     }
@@ -331,9 +347,9 @@
   function shiftAll(P, dx) {
     P.secs.forEach(function (sc) { sc.X += dx; sc.inc = sc.inc.map(function (v) { return v + dx; }); sc.xv += dx; sc.fx = sc.fx.map(function (v) { return v + dx; }); });
     P.mvR += dx; P.tr.forEach(function (t) { t.x += dx; t.leads.forEach(function (l) { l.x += dx; }); });
-    if (P.hin) P.hin = P.hin.map(function (v) { return v + dx; }); if (P.coup !== null && P.coup !== undefined) P.coup += dx; if (P.hvt) P.hvt = P.hvt.map(function (v) { return v + dx; });
+    if (P.hin) P.hin = P.hin.map(function (v) { return v + dx; }); if (P.coup !== null && P.coup !== undefined) P.coup += dx; if (P.coup2 !== null && P.coup2 !== undefined) P.coup2 += dx; if (P.hvt) P.hvt = P.hvt.map(function (v) { return v + dx; }); if (P.hvt2) P.hvt2 = P.hvt2.map(function (v) { return v + dx; });
     if (P.dia) P.dia.forEach(function (q) { q.x += dx; q.ex.forEach(function (e) { e.tx += dx; e.lead += dx; }); });
-    ['hbL', 'hbR', 'eL', 'eR', 'eV'].forEach(function (k) { if (P[k] !== undefined) P[k] += dx; });
+    ['hbL', 'hbR', 'eL', 'eR', 'eV', 'xsec'].forEach(function (k) { if (P[k] !== undefined) P[k] += dx; });
   }
   function routeList(d, P) {
     var R = [], lv = 0, db = d.el.mvdb, nS = d.mv.boards;
@@ -354,18 +370,28 @@
       out.push([T('PLN connection and GIS', 'PLN接入及GIS'), (hv.ibt ? [[hv.kv + ' kV GIS', T('breaker-and-a-half, ' + (hv.bays.diam || '') + ' diameters, ' + F(hv.busA) + ' A, ' + hv.ik + ' kA 1 s, ' + (INS[hv.ur] || ''), '一个半断路器，' + (hv.bays.diam || '') + '串，' + F(hv.busA) + ' A，' + hv.ik + ' kA 1 s，' + (INS[hv.ur] || ''))],
           [T(hv.kv + ' kV CT / VT', hv.kv + ' kV互感器'), T('5 cores TPY / TPX / 5P20 / 0.2S per breaker; CVT 0.2 / 3P', '每台断路器5绕组TPY/TPX/5P20/0.2S；CVT 0.2/3P')],
           [T('Interbus transformers', '联络变压器'), hv.ibt.total + ' × ' + F(hv.ibt.mva) + ' MVA ' + hv.ibt.ratio + T(' + Δ tertiary, uk ≈ ', ' + 三角形第三绕组，uk约') + hv.ibt.uk + ' %']] : [[T('PLN lines', 'PLN线路'), hv.name + ', ' + hv.circ + T(' circuits (N-1)', '回（N-1）') + (hv.hvCable ? ', ' + hv.hvCable : '')]])
-        .concat([[R.kv + ' kV GIS', 'Ur ' + R.ur + ' kV, ' + T(P.dbl ? 'double busbar + coupler' : 'single busbar', P.dbl ? '双母线+母联' : '单母线') + ', ' + F(R.busA) + ' A, ' + R.ik + ' kA 1 s, ' + (INS[R.ur] || '')],
+        .concat(hv.ugc ? [[T('150 kV link', '150 kV联络'), T(hv.ugc.routes + ' cable routes, one energised and one standby; ' + hv.ugc.circ + ' circuit(s) per route, ' + hv.ugc.perPhase + ' × Cu ' + F(hv.ugc.mm2) + ' mm² per phase; each route carries the whole demand', hv.ugc.routes + '条电缆路径，一用一备；每条' + hv.ugc.circ + '回，每相' + hv.ugc.perPhase + '×' + F(hv.ugc.mm2) + ' mm²铜缆；每条路径可带全部负荷')]] : [])
+        .concat([[R.kv + ' kV GIS', 'Ur ' + R.ur + ' kV, ' + T(P.sect ? 'double busbar, 2 couplers + 2 bus sections (N.O.)' : (P.dbl ? 'double busbar + coupler' : 'single busbar'), P.sect ? '双母线，2台母联+2台分段（常开）' : (P.dbl ? '双母线+母联' : '单母线')) + ', ' + F(R.busA) + ' A, ' + R.ik + ' kA 1 s, ' + (INS[R.ur] || '')],
           [T('Incoming bays', '进线间隔'), F(R.lineA) + ' A; CT ' + R.lineCT + ' 5P40 / 5P40 / 0.2S + 5P40 / 5P40 / 0.5; VT 0.5 / 3P; ' + saOf(R.kv)],
           [T('Transformer bays', '主变间隔'), F(R.txA) + ' A; CT ' + R.txCT + ' 5P30 × 2 + 0.2S']])]);
-      out.push([T('HV/MV transformers and 20 kV earthing', '主变及20 kV接地'), [[T('Transformers', '主变压器'), ht.total + ' × ' + F(ht.mva) + ' MVA ONAF (' + F(ht.onan) + ' ONAN), ' + ht.ratio + ', ' + ht.vg + ', uk ' + ht.uk + ' %' + T(ht.split ? ' per LV winding' : '', ht.split ? '（每低压绕组）' : '')],
+      out.push([T('HV/MV transformers and 20 kV earthing', '主变及20 kV接地'), [[T('Transformers', '主变压器'), ht.total + ' × ' + F(ht.mva) + (ht.split ? ' MVA, ' : ' MVA ONAF (' + F(ht.onan) + ' ONAN), ') + ht.ratio + ', ' + ht.vg + ', uk ' + ht.uk + (ht.uk2 ? ' / ' + ht.uk2 : '') + ' %' + (ht.split ? T(', LV windings ' + ht.w1 + ' + ' + ht.w2 + ' MVA', '，低压绕组' + ht.w1 + '+' + ht.w2 + ' MVA') : '')],
         [T('Tap changer / neutral', '调压/中性点'), T('OLTC ± 8 × 1.25 %; HV neutral solidly earthed (PLN)', '有载调压±8×1.25%；高压中性点直接接地（PLN）')], [T('Loading (PLN N-1)', '负载率（PLN N-1）'), T('normal ', '正常') + F(ht.load) + ' %' + (ht.loadOut ? T(', one out ', '，一台退出') + F(ht.loadOut) + ' %' : '')],
-        [T('20 kV earthing', '20 kV接地'), T('zig-zag earthing TR + NGR 40 Ω, 300 A, 10 s per LV winding (' + ht.total * ht.wind + ')', '每个低压绕组Z型接地变+40 Ω、300 A、10 s电阻（' + ht.total * ht.wind + '套）')], [T('Capacitors', '电容器'), gi.capPerTx ? gi.capSteps + T(' per transformer', '（每台主变）') : T('not required (PF ≥ 0.95)', '不需要（功率因数≥0.95）')]]]);
+        [T('20 kV earthing', '20 kV接地'), T('zig-zag earthing TR + NGR 40 Ω, 300 A, 10 s per LV winding (' + ht.total * ht.wind + ')', '每个低压绕组Z型接地变+40 Ω、300 A、10 s电阻（' + ht.total * ht.wind + '套）')], [mp.dyn ? T('SVG (dynamic)', 'SVG动态补偿') : T('Capacitors', '电容器'), gi.capPerTx ? gi.capSteps + T(' per transformer', '（每台主变）') : T('not required (PF ≥ 0.95)', '不需要（功率因数≥0.95）')]]]);
     } else out.push([T('PLN 20 kV supply', 'PLN 20 kV供电'), [[T('Supply', '电源'), hv.circ + T(' PLN 20 kV feeders, ', '路PLN 20 kV馈线，') + T(hv.scheme[0], hv.scheme[1])], [T('Metering', '计量'), T('PLN kWh metering per incomer, CT / VT 0.2S', '每路进线PLN计量，CT/VT 0.2S')], [T('Fault level', '短路电流'), F(hv.pccIk, 1) + ' kA → ' + mv.ik + ' kA']]]);
-    out.push([T('20 kV feeder schedule', '20 kV馈线表'), [[T('Incomers', '进线') + ' (' + mp.incomers + ')', F(mv.busA) + ' A VCB; CT 5P20 / 5P20 / 0.5 / 0.2S; 50/51, 51N, 67, 27/59, 81']].concat(mp.feeders.map(function (f) { return [T(NAME[f.k][0], NAME[f.k][1]) + (f.k === 'cap' ? ' ' + f.l1 : '') + ' (' + f.n + ')', F(f.a) + ' A VCB' + (f.cable ? '; ' + f.cable : '') + '; ' + T(PROT[f.k][0], PROT[f.k][1])]; }))]);
-    out.push([T('20 kV switchgear and distribution', '20 kV开关柜及配电'), [[T('Switchgear', '开关柜'), 'Ur 24 kV, ' + INS[24] + ', LSC2B-PM, IAC AFLR ' + mv.ik + ' kA 1 s (IEC 62271-200)'], [T('Sections', '母线段'), mv.boards + ' × ' + F(mv.busA) + ' A, ' + mv.ik + ' kA 3 s' + (ht ? T('; calculated ', '；计算') + F(mv.ikCalc, 1) + ' kA' : '')],
+    out.push([T('20 kV feeder schedule', '20 kV馈线表'), [[T('Incomers', '进线') + ' (' + mp.incomers + ')', F(mv.busA) + ' A VCB; CT 5P20 / 5P20 / 0.5 / 0.2S; 50/51, 51N, 67, 27/59, 81']].concat(mp.feeders.map(function (f) { return [nameOf(f) + (f.k === 'cap' ? ' ' + f.l1 : '') + ' (' + f.n + ')', F(f.a) + ' A VCB' + (f.cable ? '; ' + f.cable : '') + '; ' + (isSVG(f) ? '50/51, 50N/51N, 27/59' : T(PROT[f.k][0], PROT[f.k][1]))]; }))]);
+    out.push([T('20 kV switchgear and distribution', '20 kV开关柜及配电'), [[T('Switchgear', '开关柜'), 'Ur 24 kV, ' + INS[24] + ', LSC2B-PM, IAC AFLR ' + mv.ik + ' kA 1 s (IEC 62271-200)'], [T('Sections', '母线段'), mv.boards + ' × ' + F(mv.busA) + ' A, ' + mv.ik + ' kA 3 s' + (ht ? T('; calculated ', '；计算') + F(mv.ikCalc, 1) + ' kA' : '') + T('; feeders 1,250 A or 630 A', '；馈线1,250 A或630 A')],
       [T('Bus sections', '分段'), mp.ties + T(' bus-section breakers, normally open, interlocked: the incomers do not run in parallel', '台分段断路器，常开，联锁：进线不并列运行')],
       [T('Panels', '面数'), mp.panels + ' (' + mp.incomers + T(' incomers, ', '路进线，') + mp.nF + T(' feeders, ', '回馈线，') + mp.spares + T(' spares', '面备用') + ')'], [T('Building boards', '楼宇开关柜'), db ? db.n + ' × (' + db.txPer + ' TX' + (db.genPer ? ' + ' + db.genPer + ' G' : '') + '), ' + F(db.busA) + ' A, ' + db.panels + T(' panels each; bus A and bus B from different HV/MV transformers', '面/套；A、B段取自不同主变') : T('not needed (≤ 24 feeders per section)', '不需要（每段≤24回）')],
       [T('Cables', '电缆'), T('XLPE 12/20 kV Cu, sized for current and ' + F(mp.ikC, 1) + ' kA × 0.5 s (IEC 60502-2, IEC 60949); screen ≥ 25 mm²', '交联聚乙烯12/20 kV铜芯，按电流及' + F(mp.ikC, 1) + ' kA×0.5 s选型（IEC 60502-2、IEC 60949）；屏蔽≥25 mm²')]]]);
+    var gd = d.gd, lt = function (o) { return F(o.it, o.it < 100 ? 1 : 0) + ' MW IT, ' + (gd.ai ? F(o.hd, o.hd < 10 ? 1 : 0) + T(' GPU racks, ', '个GPU机柜，') + F(o.gpus) + T(' GPUs', '颗GPU') : F(o.racks, o.racks < 10 ? 1 : 0) + T(' racks', '个机柜')); }, gr = [];
+    if (gd.ht) gr.push([T('HV/MV transformer', '主变压器') + ' (' + ht.total + ')', lt(gd.ht)]);
+    gr.push([T('20 kV section', '20 kV母线段') + ' (' + mv.boards + ')', lt(gd.sec) + ', ' + F(gd.secI) + ' A']);
+    if (gd.board) gr.push([T('Building board', '楼宇开关柜') + ' (' + db.n + ')', lt(gd.board) + T('; ' + F(gd.iFn) + ' A per 1,250 A feeder, ' + F(gd.iF) + ' A on one feeder', '；每回1,250 A馈线' + F(gd.iFn) + ' A，单回' + F(gd.iF) + ' A')]);
+    gr.push([T('MV/LV block', '中/低压模块') + ' (' + ((el.txBlk && el.txBlk.b) || 1) + ')', lt(gd.blk)]);
+    if (gd.ai) { gr.push([T('GPU rack', 'GPU机柜'), T(gd.plat.en, gd.plat.zh) + ': ' + F(gd.rackKW) + T(' kW design, ', ' kW设计，') + gd.peakKW + T(' kW peak, ', ' kW峰值，') + gd.gpuPerRack + ' GPU']);
+      gr.push([T('Coincident peak', '同步峰值'), T('MV/LV duty loading ' + F(gd.ldTx) + ' % normal, ' + F(gd.ldPk) + ' % with all GPUs at peak', '中/低压工作变压器负载率正常' + F(gd.ldTx) + '%，GPU全部峰值时' + F(gd.ldPk) + '%')]);
+      gr.push([T('GPU load swing', 'GPU负荷波动'), F(gd.swing) + ' % = ' + F(gd.swingMW) + ' MW; ' + T('voltage step ', '电压阶跃') + F(gd.dv, 1) + ' %' + (gd.dyn ? T('; SVG on the 20 kV sections', '；20 kV母线段配SVG') : '')]); }
+    out.push([T('From 20 kV to the ' + (gd.ai ? 'GPU racks' : 'racks'), '从20 kV到' + (gd.ai ? 'GPU机柜' : '机柜')), gr]);
     out.push([T('MV/LV blocks and critical power', '中/低压模块及关键供电'), [[T('MV/LV transformers', '中/低压变压器'), el.txTotal + ' × ' + F(el.txSize) + ' kVA 20/' + lvKV(d.lvV) + ' kV Dyn11, uk ' + lv.uk + ' %, ' + blk(el)],
       [T('LV system', '低压系统'), d.lvV + ' V (IEC 60038); ' + T('one main switchboard per transformer, ', '每台变压器一面总配电柜，') + F(lv.i) + ' A → ACB ' + F(lv.acb) + ' A, ' + F(lv.ik, 1) + ' → ' + lv.icw + ' kA (IEC 61439-2, IEC 60947-2)' + (lv.over ? ' ✗' : '')],
       [T('UPS / batteries', 'UPS/电池'), el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + '), ' + F(el.battKWh) + ' kWh'], [T('Generators', '发电机'), el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), ' + (el.genV === 'MV' ? '20 kV' : d.lvV + ' V')],
@@ -391,10 +417,10 @@
     }
     if (P.hvOn) {
       var R = P.hvR;
-      block(P.yb1 - 34, R.kv + ' kV GIS', [T(P.dbl ? 'double busbar' : 'single busbar', P.dbl ? '双母线' : '单母线'), 'Ur ' + R.ur + ' kV, ' + F(R.busA) + ' A', R.ik + ' kA 1 s', INS[R.ur] || '']);
+      block(P.yb1 - 34, R.kv + ' kV GIS', [T(P.sect ? 'double busbar, sectionalised' : (P.dbl ? 'double busbar' : 'single busbar'), P.sect ? '双母线分段' : (P.dbl ? '双母线' : '单母线')), 'Ur ' + R.ur + ' kV, ' + F(R.busA) + ' A', R.ik + ' kA 1 s', INS[R.ur] || '']);
       block(P.yt + 1, T('HV/MV TRANSFORMERS', '主变压器'), [ht.total + ' × ' + F(ht.mva) + ' MVA (' + ht.lab + ')', ht.ratio + ', ' + ht.vg, T('20 kV: earthing TR + NGR', '20 kV：接地变+电阻')]);
     }
-    block(P.y20 - 24, T('20 kV SWITCHGEAR', '20 kV开关柜'), [T('metal-clad, withdrawable', '金属铠装、手车式'), 'Ur 24 kV, ' + F(mv.busA) + ' A', mv.ik + ' kA 3 s, IAC AFLR', T(mv.boards + ' sections', mv.boards + '段') + (P.typ ? T(', S1–S' + P.secs.length + ' shown', '，图示S1–S' + P.secs.length) : ''), T('bus sections N.O., interlocked', '分段常开、联锁'), P.indiv ? '' : T('feeders: quantity, type, rating', '馈线：数量、类型、额定')]);
+    block(P.y20 - 24, T('20 kV SWITCHGEAR', '20 kV开关柜'), [T('metal-clad, withdrawable', '金属铠装、手车式'), 'Ur 24 kV, ' + F(mv.busA) + ' A', mv.ik + ' kA 3 s, IAC AFLR', T(mv.boards + ' sections', mv.boards + '段') + (P.typ ? T(', S1–S' + P.secs.length + ' shown', '，图示S1–S' + P.secs.length) : ''), T('bus sections N.O., interlocked', '分段常开、联锁'), T('≈ ' + F(d.gd.sec.it, 1) + ' MW IT per section', '每段约' + F(d.gd.sec.it, 1) + ' MW IT'), P.indiv ? '' : T('feeders: quantity, type, rating', '馈线：数量、类型、额定')]);
     block(P.D0 + 2, T('TYPICAL DISTRIBUTION', '典型配电'), [T('one of each kind; the quantity is in each title', '每类一套；数量见各标题')]);
   }
   function drawEHV(s, d, P) {
@@ -434,7 +460,7 @@
           s.ct(tx, yB + 6, 3, 1.3); s.ln(tx, yB + 15.1, tx, yT);
           s.tr3(tx, yT, 'Y', true, 'D');
           var lx = tx - 4.5, ly = yT + 18.15;
-          s.ln(lx, ly, lx, ly + 3); s.sa(lx, ly + 2, -1, 8); s.term(lx, ly + 3); s.ln(lx, ly + 6.6, lx, P.Hb + 8.5); s.t(lx - 2.5, ly + 19.5, T('cable 150 kV', '150 kV电缆'), H3, { a: 'r' });
+          s.ln(lx, ly, lx, ly + 3); s.sa(lx, ly + 2, -1, 8); s.term(lx, ly + 3); s.ln(lx, ly + 6.6, lx, P.Hb + 8.5); s.t(lx - 2.5, ly + 19.5, T('UGC 150 kV', '150 kV电缆'), H3, { a: 'r' });
           var rx = tx + 4.5; s.ln(rx, ly, rx, ly + 7); s.vt(rx, ly + 5, 1); s.t(rx + 2, ly + 12.5, T('Δ tertiary', '第三绕组'), H3);
           s.t(tx + 11.5, yT + 4, 'IBT-' + f[1], H2, { b: true }); s.t(tx + 11.5, yT + 8, F(ib.mva) + ' MVA', H3); s.t(tx + 11.5, yT + 11.6, ib.ratio, H3); s.t(tx + 11.5, yT + 15.2, 'uk ≈ ' + ib.uk + ' %, OLTC', H3);
           if (f[1] === 1) s.relay(tx + 15, yB + 8, '87T 64REF');
@@ -444,7 +470,9 @@
   }
   function drawHV(s, d, P) {
     var ht = d.ht, ehv = d.ehv, Hb = P.Hb, dbl = P.dbl, yb1 = P.yb1, yb2 = P.yb2, R = P.hvR, LB = 10;
-    s.bus(P.hbL, P.hbR, yb1); if (dbl) s.bus(P.hbL, P.hbR, yb2);
+    function hBus(y) { if (!P.sect) { s.bus(P.hbL, P.hbR, y); return; } s.bus(P.hbL, P.xsec - 7, y); s.bus(P.xsec + 7, P.hbR, y); s.ln(P.xsec - 7, y, P.xsec - 6, y); s.cbH(P.xsec - 6, y, true); s.ln(P.xsec + 6, y, P.xsec + 7, y); }
+    hBus(yb1); if (dbl) hBus(yb2);
+    if (P.sect) { s.t(P.xsec, yb1 - 4.6, 'N.O.', H3, { a: 'c' }); s.t(P.xsec, yb2 + 5.5, T('Bus section', '分段'), H3, { a: 'c', b: true }); }
     s.t(P.hbL + 1, yb1 - 2.6, R.kv + ' kV ' + T(dbl ? 'BUS I' : 'BUS', dbl ? 'I母' : '母线'), H2, { b: true });
     if (dbl) s.t(P.hbL + 1, yb2 + 6, R.kv + ' kV ' + T('BUS II', 'II母'), H2, { b: true });
     function risers(x, up) {
@@ -469,19 +497,22 @@
       else { s.ln(x, Hb + 7.5, x, Hb + 8.5); s.arrowDn(x, Hb + 7.5); s.t(x + 3.5, Hb + 5, T('Line ' + (i + 1) + ' — PLN', 'PLN线路' + (i + 1)), H2, { b: true }); }
       if (i === 0) { var rw = s.relay(x + 6, yCB + 2.2, ehv ? '87T 51' : '87L 21 67N'); s.t(x + 7.5 + rw, yCB + 6.1, 'CB ' + F(R.lineA) + ' A', H3); }
     });
-    P.hvt.forEach(function (x, k) {
+    function vtBay(x, k, tag) {
       var yy = k ? yb2 : yb1, top = Hb + 42;
       s.dot(x, yy); if (k) s.vline(x, yb1 - 2, yb2, [yb1]); else s.ln(x, yb1, x, yb1 - 2);
       s.sw(x, yb1 - 12, 'ds', LB); s.ln(x, yb1 - 12, x, top); s.es(x, yb1 - 15, 1); s.vt(x, top + 4, 1, true); s.sa(x, top + 9, -1);
-      s.t(x, top - 4, T('Bus VT' + (dbl ? (k ? ' II' : ' I') : ''), (dbl ? (k ? 'II' : 'I') : '') + '母PT'), H3, { a: 'c', b: true });
-    });
-    if (dbl) {
-      var xc = P.coup, a = xc - 4, b = xc + 4;
+      s.t(x, top - 4, T('Bus VT' + (dbl ? (k ? ' II' : ' I') : '') + (tag || ''), (dbl ? (k ? 'II' : 'I') : '') + (tag || '') + '母PT'), H3, { a: 'c', b: true });
+    }
+    P.hvt.forEach(function (x, k) { vtBay(x, k, P.sect ? '-2' : ''); });
+    P.hvt2.forEach(function (x, k) { vtBay(x, k, '-1'); });
+    [P.coup, P.coup2].forEach(function (xc) {
+      if (!dbl || xc === null || xc === undefined) return;
+      var a = xc - 4, b = xc + 4;
       s.dot(a, yb1); s.vline(a, yb1, yb2 + 2, [yb2]); s.sw(a, yb2 + 2, 'ds', LB);
       var hc = s.ct(a, yb2 + 12, 2); s.sw(a, yb2 + 12 + hc, 'cb', LB); var yl = yb2 + 24 + hc;
       s.ln(a, yb2 + 22 + hc, a, yl); s.ln(a, yl, b, yl); s.ln(b, yl, b, yb2 + 12); s.sw(b, yb2 + 2, 'ds', LB); s.ln(b, yb2, b, yb2 + 2); s.dot(b, yb2);
       s.t(xc, yl + 5.5, T('Bus coupler', '母联'), H3, { a: 'c', b: true });
-    }
+    });
     function earth(lx, ly, dir) { var ex = lx + 7 * dir; s.ln(lx, ly + 6, ex, ly + 6); s.pg.circle(ex, ly + 9.2, 2.8, { c: INK, w: 0.3 }); s.wind(ex, ly + 9.2, 'Z', 2.8); s.ln(ex, ly + 12, ex, ly + 12.6); s.res(ex, ly + 12.6); s.gnd(ex, ly + 20.6); }
     P.tr.forEach(function (t, j) {
       var x2 = t.x, y2 = risers(x2, false);
@@ -490,7 +521,7 @@
       if (ht.split) s.tr3(x2, P.yt, 'D', true); else s.tr2(x2, P.yt, 'Y', 'D', true);
       t.leads.forEach(function (ld) { earth(ld.x, P.ly, ld.dir); });
       var lx0 = x2 + (ht.split ? 11 : 9), yt = P.yt;
-      s.t(lx0, yt + 3.5, 'TR-' + (j + 1), H2, { b: true }); s.t(lx0, yt + 7.5, F(ht.mva) + ' MVA', H3); s.t(lx0, yt + 11.1, ht.ratio, H3); s.t(lx0, yt + 14.7, ht.vg + ', uk ' + ht.uk + ' %', H3);
+      s.t(lx0, yt + 3.5, 'TR-' + (j + 1), H2, { b: true }); s.t(lx0, yt + 7.5, (ht.split ? ht.mva + ' / ' + ht.w1 + ' / ' + ht.w2 : F(ht.mva)) + ' MVA', H3); s.t(lx0, yt + 11.1, ht.ratio, H3); s.t(lx0, yt + 14.7, ht.vg + ', uk ' + ht.uk + (ht.uk2 ? ' / ' + ht.uk2 : '') + ' %', H3);
       if (j === 0) s.relay(x2 + 5, P.yb2 + 25, '87T 64REF 51/51N');
     });
   }
@@ -501,8 +532,8 @@
     else {
       s.term(x, Y + 22.2); s.ln(x, Y + 25.8, x, Y + 27); var yy = Y + 27;
       if (f.k === 'gen') s.gen(x, yy, 4.5);
-      else if (f.k === 'cap') { s.cap(x, yy); s.gnd(x, yy + 7); }
-      else if (f.k === 'bess' || f.k === 'db') { s.pg.rect(x - 5.5, yy, 11, 6, { c: INK, w: 0.4, fill: PAPER }); s.t(x, yy + 4.1, f.k === 'db' ? 'DB' : 'BESS', H3, { a: 'c', b: true }); }
+      else if (f.k === 'cap' && !isSVG(f)) { s.cap(x, yy); s.gnd(x, yy + 7); }
+      else if (f.k === 'bess' || f.k === 'db' || isSVG(f)) { s.pg.rect(x - 5.5, yy, 11, 6, { c: INK, w: 0.4, fill: PAPER }); s.t(x, yy + 4.1, f.k === 'db' ? 'DB' : (isSVG(f) ? 'SVG' : 'BESS'), H3, { a: 'c', b: true }); }
       else s.tr2(x, yy, 'D', 'Y', false, 3.4);
     }
     labLines(s, lab, FS - 1.5).forEach(function (q, i) { s.t(x, Y + 44 + i * LH, q[0], H3, { a: 'c', b: q[1], k: true }); });
@@ -518,7 +549,7 @@
       var X = sc.X, w = sc.w, k = sc.k;
       s.bus(X, X + w, y20); s.t(X + w, y20 - 2.6, 'S' + (k + 1), H2, { a: 'r', b: true });
       sc.inc.forEach(function (x) {
-        inc(s, x, y20, !ht);
+        inc(s, x, y20, !ht); s.t(x + 3.5, y20 - 12, F(mv.busA) + ' A', H3, { k: true });
         if (!ht) { pln++; s.arrowDn(x, P.Mtop - 2); s.ln(x, P.Mtop - 2, x, P.Mtop); s.t(x, P.Mtop - 8, 'PLN ' + pln, H2, { a: 'c', b: true }); }
       });
       busVT(s, sc.xv, y20);
@@ -550,12 +581,12 @@
   function drawBoard(s, d, P) {
     var db = d.el.mvdb, el = d.el, mv = d.mv, yB = P.yBb, nT = 0, nG = 0, tx0 = P.bA.inX + 6, tw = P.bB.inX - 6 - tx0;
     s.t(tx0, P.D0 - 9.5, fit(s, T('TYPICAL BUILDING 20 kV BOARD — 1 OF ' + db.n, '典型楼宇20 kV开关柜——共' + db.n + '套之一'), H2, tw, true), H2, { b: true, k: true });
-    s.para(tx0, P.D0 - 5, T(db.txPer + ' MV/LV TX' + (db.genPer ? ' + ' + db.genPer + ' generators' : '') + ', ' + F(db.busA) + ' A, ' + mv.ik + ' kA; bus A and bus B from different ' + (d.ht ? 'HV/MV transformers' : '20 kV sections'),
-      db.txPer + '台中/低压变' + (db.genPer ? '+' + db.genPer + '台发电机' : '') + '，' + F(db.busA) + ' A，' + mv.ik + ' kA；A、B段取自不同' + (d.ht ? '主变' : '20 kV母线段')), H3, tw, { k: true });
+    s.para(tx0, P.D0 - 5, T(db.txPer + ' MV/LV TX' + (db.genPer ? ' + ' + db.genPer + ' generators' : '') + ', ' + F(db.busA) + ' A, ' + db.ik + ' kA; ≈ ' + F(d.gd.board.it, 1) + ' MW IT' + (d.gd.ai ? ' = ' + F(d.gd.board.hd) + ' GPU racks' : '') + '; bus A and bus B from different ' + (d.ht ? 'HV/MV transformers' : '20 kV sections'),
+      db.txPer + '台中/低压变' + (db.genPer ? '+' + db.genPer + '台发电机' : '') + '，' + F(db.busA) + ' A，' + db.ik + ' kA；约' + F(d.gd.board.it, 1) + ' MW IT' + (d.gd.ai ? ' = ' + F(d.gd.board.hd) + '个GPU机柜' : '') + '；A、B段取自不同' + (d.ht ? '主变' : '20 kV母线段')), H3, tw, { k: true });
     [P.bA, P.bB].forEach(function (h, hi) {
       var X0b = h.x, X1 = h.X1;
       s.bus(X0b, X1, yB); s.t(X1, yB - 2.6, T('BUS ' + (hi ? 'B' : 'A'), (hi ? 'B' : 'A') + '段'), H2, { a: 'r', b: true });
-      s.arrowDn(h.inX, P.D0 + 3); s.ln(h.inX, P.D0 + 3, h.inX, yB - 30); inc(s, h.inX, yB, false);
+      s.arrowDn(h.inX, P.D0 + 3); s.ln(h.inX, P.D0 + 3, h.inX, yB - 30); inc(s, h.inX, yB, false); s.t(h.inX + 3.5, yB - 12, F(db.busA) + ' A', H3, { k: true });
       busVT(s, X0b + 20, yB);
       var list = [], i;
       for (i = 0; i < h.g; i++) list.push({ f: { k: 'gen' }, lab: ['G' + (++nG), F(el.genSize) + ' kWe', T('generator', '发电机')] });
@@ -586,6 +617,7 @@
     var tx0 = X[0] + 6;
     s.t(tx0, D0 - 9.5, T('TYPICAL MV/LV BLOCK — ' + el.txTotal + ' × ' + F(el.txSize) + ' kVA = ' + blk(el), '典型中/低压模块——' + el.txTotal + '×' + F(el.txSize) + ' kVA = ' + blk(el)), H2, { b: true, k: true });
     s.t(tx0, D0 - 5, T('LV system ' + d.lvV + ' V (IEC 60038): each transformer feeds one main switchboard; its busbar distributes the load to the outgoing feeders', '低压系统' + d.lvV + ' V（IEC 60038）：每台变压器供一面总配电柜，由其母线分配负荷至各出线'), H3, { k: true });
+    var gdb = d.gd.blk; s.t(tx0, D0 - 1.4, d.gd.ai ? T('Each block ≈ ' + F(gdb.it, 1) + ' MW IT = ' + F(gdb.hd) + ' GPU racks (' + F(d.gd.rackKW) + ' kW) = ' + F(gdb.gpus) + ' GPUs', '每个模块约' + F(gdb.it, 1) + ' MW IT = ' + F(gdb.hd) + '个GPU机柜（' + F(d.gd.rackKW) + ' kW）= ' + F(gdb.gpus) + '颗GPU') : T('Each block ≈ ' + F(gdb.it, 1) + ' MW IT = ' + F(gdb.racks) + ' racks', '每个模块约' + F(gdb.it, 1) + ' MW IT = ' + F(gdb.racks) + '个机柜'), H3, { k: true });
     cols.forEach(function (lab, i) {
       var x = X[i], res = lab === 'R';
       s.arrowDn(x, D0 + 3); s.term(x, D0 + 4.5); s.ln(x, D0 + 8.1, x, D0 + 10);
@@ -609,10 +641,10 @@
       if (el.genV !== 'MV') { var xg = x + 38; s.ln(xg, D0 + 50, xg, D0 + 52); s.sw(xg, D0 + 52, 'cb', 10); s.ln(xg, D0 + 62, xg, D0 + 66); s.gen(xg, D0 + 66, 5); s.t(xg + 7, D0 + 70, F(el.genSize) + ' kWe', H3); s.t(xg + 7, D0 + 73.6, d.lvV + ' V', H3); }
     });
     var ups = cols.filter(function (l) { return l !== 'R'; }), i0 = cols.indexOf(ups[0]), i1 = cols.indexOf(ups[1]), xa = X[i0] - 26, xb = X[i1] - 26, xR = (X[i0] + X[i1]) / 2 - 13, yr = D0 + 100;
-    s.pg.rect(xR - 16, yr, 32, 22, { c: INK, w: 0.4, fill: PAPER }); s.t(xR, yr + 5.5, T('IT rack', 'IT机柜'), H3, { a: 'c', b: true }); s.t(xR, yr + 9.3, F(rackKW, 1) + ' kW' + (d.R.cap.hdR > 0 ? ' / HD ' + F(d.R.cap.hd) + ' kW' : ''), H3, { a: 'c' });
-    s.t(xR, yr + 13.1, el.feedsPerRack === 2 ? 'rPDU A + B' : 'rPDU', H3, { a: 'c' }); s.t(xR, yr + 16.9, el.feedsPerRack === 2 ? T('dual-corded', '双电源') : T('single-corded', '单电源'), H3, { a: 'c' });
-    s.ln(xa, D0 + 98, xa, yr + 7); s.ln(xa, yr + 7, xR - 16, yr + 7); s.t(xa + 2.5, yr + 5.6, T('cord A', 'A路'), H3);
-    if (el.feedsPerRack === 2) { s.ln(xb, D0 + 98, xb, yr + 15); s.ln(xb, yr + 15, xR + 16, yr + 15); s.t(xb - 2.5, yr + 13.6, T('cord B', 'B路'), H3, { a: 'r' }); }
+    var gq = d.gd; s.pg.rect(xR - 22, yr, 44, 22, { c: INK, w: 0.4, fill: PAPER }); s.t(xR, yr + 5.5, gq.ai ? T('GPU rack', 'GPU机柜') : T('IT rack', 'IT机柜'), H3, { a: 'c', b: true }); s.t(xR, yr + 9.5, gq.ai ? F(gq.rackKW) + ' kW, ' + gq.gpuPerRack + ' GPU' : F(rackKW, 1) + ' kW' + (d.R.cap.hdR > 0 ? ' / HD ' + F(d.R.cap.hd) + ' kW' : ''), H3, { a: 'c' });
+    s.t(xR, yr + 13.5, T('≈ ' + F(gq.ai ? gq.blk.hd : gq.blk.racks) + ' racks per block', '每模块约' + F(gq.ai ? gq.blk.hd : gq.blk.racks) + '个机柜'), H3, { a: 'c' }); s.t(xR, yr + 17.5, (el.feedsPerRack === 2 ? 'rPDU A + B' : 'rPDU') + ', ' + (el.feedsPerRack === 2 ? T('dual-corded', '双电源') : T('single-corded', '单电源')), H3, { a: 'c' });
+    s.ln(xa, D0 + 98, xa, yr + 7); s.ln(xa, yr + 7, xR - 22, yr + 7); s.t(xa + 2.5, yr + 5.6, T('cord A', 'A路'), H3);
+    if (el.feedsPerRack === 2) { s.ln(xb, D0 + 98, xb, yr + 15); s.ln(xb, yr + 15, xR + 22, yr + 15); s.t(xb - 2.5, yr + 13.6, T('cord B', 'B路'), H3, { a: 'r' }); }
   }
 
   function chainOf(d) { var hv = d.hv; return (d.ehv ? 'PLN ' + hv.kv + ' kV → 150 kV' : (d.kv > 20 ? 'PLN ' + hv.kv + ' kV' : 'PLN 20 kV')) + ' → 20 kV → ' + d.lvV + ' V'; }
@@ -661,10 +693,15 @@
 
   /* ------------------------------------------------------------------ build: PDF (2 sheets) and SVG (website) */
   function setLang(opt) { LANG = (opt && opt.lang) || (g.I18N && g.I18N.lang ? g.I18N.lang() : 'en'); if (LANG !== 'zh') LANG = 'en'; }
+  /* the name, drawing code and file name come from the design itself (category, IT load, Tier, voltages), not from the template it started from */
+  function designOf(x, lead, lang) {
+    setLang({ lang: lang }); var c = x.R.cap, el = x.R.el, it = c.itMW, tag = String(Math.round(it * 10) / 10), slug = String(c.type.en || 'Data-Center').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return { name: (lead ? lead + ' — ' : '') + T(c.type.en, c.type.zh) + ' — ' + F(it, it < 10 ? 1 : 0) + ' MW IT', code: c.type.id + '-' + tag + 'MW', file: 'SLD_' + slug + '_' + tag + 'MW_Tier-' + (['I', 'II', 'III', 'IV'][x.p.tier - 1] || x.p.tier) + '_' + el.hv.kv + 'kV_' + (el.lvV || 400) + 'V' };
+  }
   function metaOf(x, opt) {
     var R = x.R, rev = (g.DCDB && g.DCDB.kbDocs && g.DCDB.kbDocs.rev) || '';
-    return { project: opt.name || T('Data center design', '数据中心设计'), basis: (opt.basis ? opt.basis + ' | ' : '') + F(R.cap.itMW, 1) + ' MW IT | Tier ' + x.p.tier + ' | ' + R.el.hv.name + ' | ' + F(R.el.mva, 1) + ' MVA',
-      dwg: 'DC-SLD-' + (opt.code || 'X'), date: new Date().toISOString().slice(0, 10), rev: rev, titles: [] };
+    return { project: opt.name || designOf(x, null, LANG).name, basis: (opt.basis ? opt.basis + ' | ' : '') + F(R.cap.itMW, 1) + ' MW IT | Tier ' + x.p.tier + ' | ' + R.el.hv.name + ' | ' + F(R.el.mva, 1) + ' MVA',
+      dwg: 'DC-SLD-' + (opt.code || designOf(x, null, LANG).code), date: new Date().toISOString().slice(0, 10), rev: rev, titles: [] };
   }
   function build(x, opt) {
     opt = opt || {}; setLang(opt);
@@ -685,7 +722,7 @@
   /* ------------------------------------------------------------------ viewer (website): sheet tabs, zoom and pan, export as PDF; texts in the website language */
   function Lx(en, zh) { return g.I18N && g.I18N.lang && g.I18N.lang() === 'zh' ? zh : en; }
   function escH(v) { return String(v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
-  function fileName(opt) { return ('SLD_' + (opt.code || 'design') + '_' + (opt.name || '')).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/_$/, '').slice(0, 90) + '.pdf'; }
+  function fileName(opt) { if (opt && opt.file) return opt.file.replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) + '.pdf'; return ('SLD_' + (opt.code || 'design') + '_' + (opt.name || '')).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/_$/, '').slice(0, 90) + '.pdf'; }
   function downloadPDF(x, opt) {
     var blob = build(x, opt).blob(), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = fileName(opt); document.body.appendChild(a); a.click();
@@ -762,6 +799,6 @@
     document.addEventListener('keydown', escKey, true); document.body.appendChild(d); MODAL = d; document.documentElement.classList.add('sld-lock');
     var b = d.querySelector('[data-sldx]'); if (b) b.focus();
   }
-  g.DCSLD = { build: build, buildSVG: buildSVG, mount: mount, open: open, close: close, downloadPDF: downloadPDF, fileName: fileName };
+  g.DCSLD = { design: designOf, build: build, buildSVG: buildSVG, mount: mount, open: open, close: close, downloadPDF: downloadPDF, fileName: fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = g.DCSLD;
 })(typeof window !== 'undefined' ? window : globalThis);

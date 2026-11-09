@@ -57,7 +57,7 @@
     o += L.pipe('M300 232V278H1048V236', 'mv', 4, true, true) + L.thin('M800 250V232', 'fuel', 3, '4 4');
     o += L.pipe('M630 140V112H1462V446H1418', 'lv', 7);
     o += L.pipe('M1262 470H1236', 'dc', 6, true, true) + L.pipe('M1270 404V388H1032', 'lv', 6);
-    o += L.banner(140, 0, 1310, ['① UTILITY, TRANSFORMATION & BACK-UP | 市电、变压与备用', '① 市电、变压与备用 | UTILITY & BACK-UP'], ['two PLN feeders, transformers, generators and storage', '两路PLN进线、变压器、发电机及储能'], null, 'tcZone3');
+    o += L.banner(140, 0, 1310, ['① UTILITY, TRANSFORMATION & BACK-UP | 市电、变压与备用', '① 市电、变压与备用 | UTILITY & BACK-UP'], ['two PLN feeders, transformers, generators and storage', '两路PLN进线、变压器、发电机及储能'], null, 'tcZone3') + (g.DCSLD ? L.sldBtn(1254, 3) : '');
     o += L.banner(560, 290, 900, ['② CRITICAL POWER | 关键供电', '② 关键供电 | CRITICAL POWER'], ['UPS + batteries → busway → rack PDUs, on A and B paths', 'UPS+电池 → 母线 → 机柜PDU，A、B双路'], null, 'tcZone');
     o += L.banner(130, 290, 410, ['③ PROTECTION | 保护与监控', '③ 保护与监控 | PROTECTION'], ['earthing | monitoring', '接地 | 监控'], null, 'tcZone5');
     /* row 1 */
