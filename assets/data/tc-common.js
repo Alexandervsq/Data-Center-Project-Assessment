@@ -83,10 +83,10 @@
     if (h.ht) rows.push([L.te(['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）']), h.ht.ratio + ' | uk ' + h.ht.uk + ' % | ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + ' MVA' + (h.ht.split ? L.te([' | split winding', ' | 分裂绕组']) : ''), h.ht.total + ' × ' + h.ht.mva + ' MVA (' + h.ht.lab + ')']);
     if (h.ht) rows.push([L.te(['20 kV neutral earthing resistors', '20 kV中性点接地电阻']), L.te(['one per HV/MV transformer (SPLN, IEC 60076-25)', '每台主变一台（SPLN、IEC 60076-25）']), h.ht.total + ' × 40 Ω | 300 A | 10 s']);
     rows.push([L.te(['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）']), L.te(h.mv.gis ? ['GIS, vacuum breakers', 'GIS，真空断路器'] : ['metal-clad AIS, vacuum breakers', '金属铠装空气绝缘，真空断路器']) + ' | ' + L.te(['fault ' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? ' incl. generators' : ''), '短路' + F(h.mv.ikCalc + (h.mv.ikGen || 0), 1) + ' kA' + (h.mv.ikGen ? '（含发电机）' : '')]), h.mv.boards + ' × ' + F(h.mv.busA) + ' A | ' + h.mv.ik + ' kA']);
-    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/0.4 kV | uk ' + el.lv.uk + ' % | ' + el.txLabel + L.te([' | ≈ ' + el.txIT + ' duty units for the UPS-fed IT', ' | 约' + el.txIT + '台工作变压器供UPS-IT']), el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
+    rows.push([L.te(['MV/LV transformers', '中/低压变压器']), '20/' + String((el.lvV || 400) / 1000) + ' kV | uk ' + el.lv.uk + ' % | ' + el.txLabel, el.txTotal + ' × ' + F(el.txSize) + ' kVA']);
     if (el.chTx) rows.push([L.te(['MV/MV transformers for MV chillers', '中压冷机用中压/中压变压器']), L.te(['20/6.6 kV | chiller compressors ' + F(el.chKWe) + ' kW (design day)', '20/6.6 kV | 冷机压缩机' + F(el.chKWe) + ' kW（设计日）']), el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA']);
     rows.push([L.te(['LV main switchboards (IEC 61439-2)', '低压主配电柜（IEC 61439-2）']), L.te(['main ACB | fault level', '主框架断路器 | 短路水平']), el.txTotal + ' × ' + F(el.lv.acb) + ' A | ' + el.lv.icw + ' kA']);
-    rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V sets with ATS', '400 V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
+    rows.push([L.te(['Generators', '发电机']), L.te(el.genV === 'MV' ? ['20 kV paralleled plant', '20 kV并机电站'] : [(el.lvV || 400) + ' V sets with ATS', (el.lvV || 400) + ' V机组+ATS']), el.genTotal + ' × ' + F(el.genSize) + ' kWe']);
     rows.push([L.te(['UPS | batteries', 'UPS | 蓄电池']), el.upsLabel + ' | ' + c.p.upsMin + ' min', el.upsTotal + ' × ' + F(el.upsSize) + ' kW | ' + F(el.battKWh) + ' kWh']);
     return rows;
   }
@@ -118,17 +118,17 @@
       extra: function (c) { return chainTable(c); },
       calc: 'mva' },
     tx: { eq: 'EL-02', more: ['EL-25', 'EL-03'],
-      how: ['Cast-resin dry-type transformers step 20 kV down to 400 V close to the load, without oil, so they can stand indoors next to the LV switchboards. They are counted with the Tier redundancy so that normal loading stays moderate and a failed unit can be carried by the others.',
-        '环氧树脂浇注干式变压器将20 kV降至400 V，无油，可靠近负荷布置于室内低压配电柜旁。按Tier冗余配置台数，正常负载率适中，单台故障时其余变压器可承担负荷。'],
-      key: [['N = ⌈kVA ÷ (unit kVA × ' + K.TX_LOAD + ')⌉ + redundancy', 'N = ⌈kVA ÷ (单台kVA × ' + K.TX_LOAD + ')⌉ + 冗余'], function (c) { var el = c.R.el; return F(el.demandKVA) + ' kVA ÷ (' + F(el.txSize) + ' × ' + K.TX_LOAD + ') → ' + el.txN + ' + ' + el.txR + ' (' + el.txLabel + ')'; }],
+      how: ['Cast-resin dry-type transformers step 20 kV down to the LV system voltage (230/400 V is the Indonesian standard; 415, 480 or 690 V where selected), close to the load and without oil, so they can stand indoors next to the LV switchboards. Each unit feeds one LV main switchboard, whose busbar distributes the power to the UPS, mechanical and building feeders: the number of units follows from the total LV load and the largest unit the LV busbar can carry, and redundancy is arranged in identical blocks.',
+        '环氧树脂浇注干式变压器将20 kV降至低压系统电压（230/400 V为印尼标准；可选415、480或690 V），无油，可靠近负荷布置于室内低压配电柜旁。每台变压器供一面低压总配电柜，由其母线将电力分配至UPS、机械及建筑馈线：台数由低压总负荷及低压母线可承载的最大单台容量决定，冗余按相同模块配置。'],
+      key: [['Units = LV kVA ÷ (unit kVA × loading limit), arranged in identical blocks', '台数 = 低压kVA ÷（单台kVA × 负载率上限），按相同模块配置'], function (c) { var el = c.R.el; return F(el.lvKVA) + ' kVA ÷ (' + F(el.txSize) + ' × ' + (el.txLoad || K.TX_LOAD) + ') → ' + el.txLabel + ' = ' + el.txTotal + ' × ' + F(el.txSize) + ' kVA'; }],
       om: [['Keep enclosure filters clean and check winding temperature (PT100) alarms monthly.', '保持外壳滤网清洁，每月检查绕组温度（PT100）报警。'], ['Partial-discharge test at commissioning; infrared scan of LV links every year.', '调试时进行局部放电测试；每年对低压连接进行红外测温。'],
         ['Order early: large transformers have 12–24 month lead times.', '尽早订货：大型变压器交货期12–24个月。']],
-      basis: function (c) { var el = c.R.el, mvc = el.chTx ? [' + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV for the MV chillers (400 V load ' + F(el.lvKVA) + ' kVA)', ' + ' + el.chTx.total + '×' + F(el.chTx.kva) + ' kVA 20/6.6 kV供中压冷机（400 V负荷' + F(el.lvKVA) + ' kVA）'] : ['', ''];
+      basis: function (c) { var el = c.R.el, mvc = el.chTx ? [' + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV for the MV chillers (LV load ' + F(el.lvKVA) + ' kVA)', ' + ' + el.chTx.total + '×' + F(el.chTx.kva) + ' kVA 20/6.6 kV供中压冷机（低压负荷' + F(el.lvKVA) + ' kVA）'] : ['', ''];
         return [el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ', uk ' + el.lv.uk + ' %) for ' + F(el.demandKVA) + ' kVA maximum demand' + mvc[0] + ' | LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '，uk ' + el.lv.uk + '%），最大需量' + F(el.demandKVA) + ' kVA' + mvc[1] + ' | 低压' + F(el.lv.acb) + ' A/' + el.lv.icw + ' kA']; },
       extra: function (c) { return chainTable(c); }, calc: 'tx' },
     lv: { eq: 'EL-03', more: ['EL-07', 'EL-08', 'EL-16'],
-      how: ['The main switchboard receives the transformer and generator supplies and distributes 400 V to the UPS, mechanical plant and building services. Automatic transfer (ATS or breaker interlocks) moves the load to the generators within seconds of a utility failure and back again when PLN returns.',
-        '低压主配电柜接收变压器及发电机电源，向UPS、暖通设备及建筑负荷分配400 V电力。市电故障后数秒内通过自动转换（ATS或断路器联锁）切换至发电机，PLN恢复后再切回。'],
+      how: ['The main switchboard receives the transformer and generator supplies and distributes LV power to the UPS, mechanical plant and building services. Automatic transfer (ATS or breaker interlocks) moves the load to the generators within seconds of a utility failure and back again when PLN returns.',
+        '低压主配电柜接收变压器及发电机电源，向UPS、暖通设备及建筑负荷分配低压电力。市电故障后数秒内通过自动转换（ATS或断路器联锁）切换至发电机，PLN恢复后再切回。'],
       om: [['Check breaker trip units and settings against the coordination study.', '依据选择性配合研究核对断路器脱扣器及整定值。'], ['Infrared scan of busbars and cable lugs under load every year.', '每年带负荷对母排及电缆端子红外测温。'],
         ['Exercise the transfer scheme monthly together with the generator test.', '每月结合发电机试验演练切换方案。']],
       basis: function (c) { return [c.R.el.txTotal + ' LV line-ups (one per transformer)', c.R.el.txTotal + '组低压配电柜（每台变压器一组）']; }, calc: 'tx' },

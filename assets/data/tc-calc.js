@@ -17,8 +17,15 @@
   var TX_STD = [100, 160, 250, 315, 400, 500, 630, 800, 1000, 1250, 1600, 2000, 2500, 3150];
   var ACB = [630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000, 5000, 6300];
   var DN = [100, 125, 150, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200];
-  var ROW_MAX = 2500 * K.BW_V * 1.732 * K.BW_F;   /* row load of a 2,500 A busway */
-  function txSize(kva, ld) { var need = kva / (ld / 100); return need <= 3150 ? pick(TX_STD, need) : (kva > 40000 ? 3150 : 2500); }
+  function bwV(c) { var v = (c && c.R && c.R.el.lvV) || 400; return v >= 690 ? K.BW_V : v / 1000; }
+  function rowMax(c) { return 2500 * bwV(c) * 1.732 * K.BW_F; }   /* row load of a 2,500 A busway at the LV system voltage */
+  /* LV system voltage (IEC 60038): the largest economic MV/LV unit keeps the full-load current within a 5,000 A ACB / busbar frame */
+  var LVV = [400, 415, 480, 690], LVL = { 400: '230/400 V', 415: '240/415 V', 480: '277/480 V', 690: '400/690 V' };
+  var LVN = { 400: ['IEC 60038 / SNI standard; IT power supplies at 230 V', 'IEC 60038/SNI标准；IT电源230 V'], 415: ['IT power supplies at 240 V', 'IT电源240 V'], 480: ['IT power supplies at 277 V (North-American practice; 50 Hz equipment available)', 'IT电源277 V（北美惯例，有50 Hz设备）'],
+    690: ['for motors and mechanical boards; the IT path needs 690/400 V transformers (≈ 1.2 % losses)', '用于电机及机械配电；IT路径需690/400 V变压器（损耗约1.2%）'] };
+  var LVO = [[1, ['230/400 V — IEC 60038 / SNI standard', '230/400 V——IEC 60038/SNI标准']], [2, ['240/415 V', '240/415 V']], [3, ['277/480 V — 4,000 kVA units', '277/480 V——4,000 kVA单台']], [4, ['400/690 V — mechanical; IT via 690/400 V', '400/690 V——机械负荷；IT经690/400 V']]];
+  function lvMax(vv) { return vv >= 690 ? 5000 : (vv >= 480 ? 4000 : 3150); }
+  function txSize(kva, ld, vv) { var need = kva / (ld / 100), mx = lvMax(vv || 400), st = mx === 3150 ? 2500 : (mx === 4000 ? 3150 : 4000); return need <= mx ? pick(TX_STD.concat([4000, 5000]).filter(function (q) { return q <= mx; }), need) : (kva > 40000 ? mx : st); }
   function ukRule(s) { return s <= 630 ? 4 : (s <= 1250 ? 5 : (s <= 2500 ? 6 : 7)); }
   function genSize(d) { return d <= 1500 ? pick([300, 500, 800, 1000, 1250, 1500], d / K.GEN_LOAD) : (d <= 12000 ? 2000 : (d <= 60000 ? 2500 : 3000)); }
   function gridRel(c) { return (c.R.grid && c.R.grid.rel) || 'high'; }
@@ -39,7 +46,7 @@
   var LLC = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load 75–300 MW: ride-through study', '大负荷75–300 MW：穿越研究'], vlarge: ['very large load > 300 MW: dynamic and EMT studies', '超大负荷>300 MW：动态及电磁暂态研究'] };
   var B = {
     hu: ['HV/MV impedance uk: AUTO = max(typical for the rating — 10 % up to 40 MVA, 12.5 % up to 100 MVA, 13 % above — and the value that keeps the 20 kV fault level ≤ 90 % of the board rating); PLN 60 MVA units ≈ 12.5 %, large data-center units 14.5–24 % (BIC 120 MVA 14.5 %, Deltamas 150 MVA 24 %). A lower impedance raises the 20 kV fault level and the board rating (25 → 31.5 → 40 kA) and improves voltage regulation.', '主变短路阻抗uk：自动值=max（按容量的典型值——40 MVA以下10%、100 MVA以下12.5%、以上13%——与使20 kV短路电流≤开关柜额定90%的值）；PLN 60 MVA约12.5%，大型数据中心主变14.5–24%（BIC 120 MVA 14.5%，德尔塔马斯150 MVA 24%）。阻抗越低，20 kV短路电流及开关柜额定越高（25→31.5→40 kA），电压调整率越好。'],
-    chv: ['Chiller supply voltage: large water-cooled centrifugal chillers (≥ 3,517 kW ≈ 1,000 TR, plants above ≈ 20 MW of cooling) are commonly MV — 6.6 kV motors with MV drives or soft starters fed by 20/6.6 kV transformers (N + 1); their compressors leave the 400 V system, so fewer MV/LV transformers, ACBs and LV feeders are needed. Smaller chillers stay on 400 V.', '冷机供电电压：大型水冷离心冷机（≥3,517 kW约1,000冷吨，制冷量约20 MW以上的冷站）通常采用中压——6.6 kV电机配中压变频或软启动，由20/6.6 kV变压器（N+1）供电；压缩机不再占用400 V系统，中/低压变压器、框架断路器及低压馈线减少。较小冷机仍用400 V。'],
+    chv: ['Chiller supply voltage: large water-cooled centrifugal chillers (≥ 3,517 kW ≈ 1,000 TR, plants above ≈ 20 MW of cooling) are commonly MV — 6.6 kV motors with MV drives or soft starters fed by 20/6.6 kV transformers (N + 1); their compressors leave the LV system, so fewer MV/LV transformers, ACBs and LV feeders are needed. Smaller chillers stay on the LV system.', '冷机供电电压：大型水冷离心冷机（≥3,517 kW约1,000冷吨，制冷量约20 MW以上的冷站）通常采用中压——6.6 kV电机配中压变频或软启动，由20/6.6 kV变压器（N+1）供电；压缩机不再占用低压系统，中/低压变压器、框架断路器及低压馈线减少。较小冷机仍接低压系统。'],
     tariff: ['PLN tariff class follows the connection voltage (Q4 2026): 20 kV (TM) → B-3 / I-3, ≈ Rp' + F(DB.idTariffs[0].eff, 1) + '/kWh blended 24/7; 70 kV and above (TT / TET) → I-4, Rp' + F(DB.idTariffs[2].eff, 2) + '/kWh.',
       'PLN电价类别取决于接入电压（2026年第四季度）：20 kV（中压）→B-3/I-3，24/7加权约' + F(DB.idTariffs[0].eff, 1) + '印尼盾/kWh；70 kV及以上（高压/超高压）→I-4，' + F(DB.idTariffs[2].eff, 2) + '印尼盾/kWh。'],
     kv: ['Connection rule: ≤ 30 MVA at 20 kV (PLN TM), ≤ 300 MVA at 150 kV (TT); above that 500 kV in Java–Bali, 275 kV in Sumatra, Kalimantan and Sulawesi (≤ 900 MVA), otherwise several 150 kV substations. 220 / 230 kV is the international equivalent, not a PLN voltage.',
@@ -51,10 +58,12 @@
       '接入点规划短路电流（电网规范：实际值由PLN应要求提供）：500 kV约40 kA，275 kV约20 kA，150 kV爪哇-巴厘约25 kA、其他地区约15 kA，20 kV约10 kA。开关设备短时耐受电流不得低于该值。'],
     gs: ['Generator rule: up to 1.5 MW of demand one set size to the load (300–1,500 kWe); up to 12 MW 2,000 kWe sets; up to 60 MW 2,500 kWe; above 3,000 kWe (data-center continuous rating, ISO 8528-1).',
       '发电机规则：需量1.5 MW以内按负荷选单机（300–1,500 kWe）；12 MW以内2,000 kWe；60 MW以内2,500 kWe；以上3,000 kWe（数据中心持续功率，ISO 8528-1）。'],
-    gv: ['Generators connect at 400 V with ATS up to ≈ 6 MW of demand; above that a 20 kV paralleled plant (MV alternators or step-up transformers) on the 20 kV board.', '需量约6 MW以内发电机以400 V经ATS接入；以上采用20 kV并机电站（中压发电机或升压变压器）接入20 kV母线。'],
-    n: ['UPS systems = ⌈UPS load ÷ (rating × ' + K.UPS_LOAD + ')⌉ + Tier redundancy (one per eight for Tier III, 2N for Tier IV).', 'UPS系统数 = ⌈UPS负载 ÷（单系统容量 × ' + K.UPS_LOAD + '）⌉ + Tier冗余（Tier III每8台加1台，Tier IV为2N）。'],
-    txSize: ['IEC 60076-1 / -11 preferred ratings: a single unit up to 3,150 kVA for small loads, otherwise 2,500 kVA blocks (3,150 kVA above 40 MVA) so each 400 V switchboard stays within a 4,000–5,000 A ACB and ≤ 65 kA (IEC 61439-2).',
-      'IEC 60076-1/-11优选容量：小负荷单台不超过3,150 kVA，否则采用2,500 kVA单元（40 MVA以上采用3,150 kVA），使每段400 V配电柜不超过4,000–5,000 A框架断路器及≤65 kA（IEC 61439-2）。'],
+    gv: ['Generators connect to the LV system with ATS up to ≈ 6 MW of demand; above that a 20 kV paralleled plant (MV alternators or step-up transformers) on the 20 kV board.', '需量约6 MW以内发电机接入低压系统（经ATS）；以上采用20 kV并机电站（中压发电机或升压变压器）接入20 kV母线。'],
+    n: ['UPS systems = ⌈UPS load ÷ (rating × ' + K.UPS_LOAD + ')⌉ + Tier redundancy: Tier III per MV/LV block, each block with its own reserve — B × (N+1); 2N for Tier IV.', 'UPS系统数 = ⌈UPS负载 ÷（单系统容量 × ' + K.UPS_LOAD + '）⌉ + Tier冗余：Tier III按中/低压模块配置，每个模块自带一台备用——B × (N+1)；Tier IV为2N。'],
+    txSize: ['IEC 60076-1 / -11 preferred ratings up to the largest economic unit for the LV voltage — 400 / 415 V: 3,150 kVA; 480 V: 4,000 kVA; 690 V: 5,000 kVA — a single unit for small loads, otherwise one step below the maximum (the maximum above 40 MVA), so each LV switchboard stays within a 5,000 A frame and ≤ 65–80 kA (IEC 60947-2, IEC 61439-2).',
+      'IEC 60076-1/-11优选容量，最大为该低压电压的经济单台容量——400/415 V：3,150 kVA；480 V：4,000 kVA；690 V：5,000 kVA——小负荷单台，否则取低一级（40 MVA以上取最大值），使每段低压配电柜不超过5,000 A框架及65–80 kA（IEC 60947-2、IEC 61439-2）。'],
+    lv: ['LV system voltage (IEC 60038, PUIL 2011): 230/400 V is the Indonesian standard. The load is distributed by each transformer\'s LV switchboard busbar; the number of transformers follows the total LV kVA ÷ (unit rating × loading), and the unit rating is limited by the LV current: 3,150 kVA at 400 / 415 V, 4,000 kVA at 480 V, 5,000 kVA at 690 V within a 5,000 A frame (6,300 A and 100 kA are the limits). A higher voltage gives fewer, larger units, but IT power supplies accept 200–277 V line-to-neutral — 690 V suits motors and mechanical boards (the IT path then needs 690/400 V transformers). Transformers are not paralleled on one LV busbar (fault level > 100 kA), so redundancy is arranged in blocks.',
+      '低压系统电压（IEC 60038、PUIL 2011）：230/400 V为印尼标准。负荷由每台变压器的低压配电柜母线分配；变压器台数 = 低压总负荷 ÷（单台容量 × 负载率），单台容量受低压电流限制：400/415 V为3,150 kVA，480 V为4,000 kVA，690 V为5,000 kVA（5,000 A框架内；6,300 A及100 kA为极限）。电压越高台数越少、单台越大，但IT电源只接受200–277 V相电压——690 V适用于电机及机械配电（IT路径需690/400 V变压器）。变压器不在同一低压母线并联（短路电流超过100 kA），因此按模块配置冗余。'],
     uk: ['IEC 60076-5 Table 1 short-circuit impedance: 4 % up to 630 kVA, 5 % to 1,250 kVA, 6 % to 2,500 kVA, 7 % above — limits the LV fault level.', 'IEC 60076-5表1短路阻抗：630 kVA及以下4%，至1,250 kVA为5%，至2,500 kVA为6%，以上7%——用于限制低压短路水平。'],
     fuelH: ['Uptime Tier Standard: ≥ 12 h at N load; TIA-942-C guidance 72 h (Rated-3) / 96 h (Rated-4). Rule: 12 / 24 / 24 / 48 h for Tier I–IV, +24 h on medium and +48 h on low-reliability PLN grids (max 96 h).',
       'Uptime等级标准：N负荷下≥12 h；TIA-942-C参考72 h（Rated-3）/96 h（Rated-4）。规则：Tier I–IV分别12/24/24/48 h，中等可靠性电网+24 h、低可靠性电网+48 h（最多96 h）。'],
@@ -132,7 +141,8 @@
       f: function (v, c) {
         var t = T(v), d = demandFrom(v.it, pkOf(v, c), c), md = chg(c, 'mdKVA'), kva = md ? +md : d / K.PF, mva = kva / 1000, Lc = locOf(v, c);
         var h = E.connection(mva, { tier: t, hvKV: v.kv, htMVA: v.hm, htUk: v.hu, ikPCC: v.ik }, Lc), gr = DB.idGrids[Lc.grid] || {};
-        var ld = (chg(c, 'txLoad') || K.TX_LOAD * 100) / 100, lvk = kva * (c.R.el.lvKVA || c.R.el.demandKVA) / Math.max(1, c.R.el.demandKVA), size = chg(c, 'txKVA') || txSize(lvk, ld * 100), n = Math.ceil(lvk / (size * ld)), ar = c.R.el.txArch, tb = E.txBlocks(n, ar, t), r = tb.r;
+        var ikB = (function () { var it = (h.mv.ikCalc || 0) + (c.R.el.hv.mv.ikGen || 0); if (!(it > h.mv.ik)) return h.mv.ik; var L = [25, 31.5, 40, 50, 63]; for (var q = 0; q < L.length; q++) if (L[q] >= it) return L[q]; return 63; })();
+        var ld = (chg(c, 'txLoad') || K.TX_LOAD * 100) / 100, lvk = kva * (c.R.el.lvKVA || c.R.el.demandKVA) / Math.max(1, c.R.el.demandKVA), size = chg(c, 'txKVA') || txSize(lvk, ld * 100, c.R.el.lvV || 400), n = Math.ceil(lvk / (size * ld)), ar = c.R.el.txArch, tb = E.txBlocks(n, ar, t), r = tb.r;
         var steps = [[['Maximum demand', '最大需量'], [F(v.it) + ' × ' + F(v.pk, 2) + ' + UPS losses + building', F(v.it) + ' × ' + F(v.pk, 2) + ' + UPS损耗 + 建筑负荷'], F(d) + ' kW'],
           [['Apparent power', '视在功率'], md ? ['set manually (transformer panel)', '手动设定（变压器面板）'] : F(d) + ' ÷ ' + K.PF, F(kva) + ' kVA = ' + F(mva, 1) + ' MVA'],
           [['Recommended connection (' + gr.en + ')', '建议接入（' + gr.zh + '）'], [F(mva, 1) + ' MVA → connection rule', F(mva, 1) + ' MVA → 接入规则'], E.kvName(h.rule)],
@@ -146,76 +156,87 @@
         if (h.ht) {
           steps.push([['HV/MV transformers (IEC 60076)', '高压/中压主变压器（IEC 60076）'], ['⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + ' — PLN N-1 (normal ≤ 80 %, one out ≤ 100 %) | uk ' + h.ht.uk + ' %' + (h.ht.uk !== h.ht.ukRule ? ' (set; rule ' + h.ht.ukRule + ' %)' : ' = max(typical, 20 kV fault ≤ 90 % of the board rating)'), '⌈' + F(mva, 1) + ' ÷ ' + h.ht.mva + '⌉ + ' + h.ht.r + '（正常≤80%，一台退出≤100%）· uk ' + h.ht.uk + '% = max（典型值，20 kV短路≤开关柜额定的90%）'],
             h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' + ' | ONAN ' + h.ht.onan + ' / ONAF ' + h.ht.mva + (h.ht.loadOut ? ' | ' + F(h.ht.loadOut) + ' % one out' : '')]);
-          steps.push([['20 kV fault level (IEC 60909)', '20 kV短路电流（IEC 60909）'], F(h.ht.mva) + ' MVA ÷ ((' + F(h.ht.mva) + ' ÷ ' + F(h.mv.ssc150) + ' + ' + F(h.ht.uk, 1) + ' %) × √3 × 20 kV) × 1.05' + (c.R.el.hv.mv.ikGen ? ' + MV generators ' + F(c.R.el.hv.mv.ikGen, 1) + ' kA (closed transition)' : ''), F(h.mv.ikCalc + (c.R.el.hv.mv.ikGen || 0), 1) + ' kA → ' + (c.R.el.hv.mv.ik || h.mv.ik) + ' kA']);
+          steps.push([['20 kV fault level (IEC 60909)', '20 kV短路电流（IEC 60909）'], F(h.ht.mva) + ' MVA ÷ ((' + F(h.ht.mva) + ' ÷ ' + F(h.mv.ssc150) + ' + ' + F(h.ht.uk, 1) + ' %) × √3 × 20 kV) × 1.05' + (c.R.el.hv.mv.ikGen ? ' + MV generators ' + F(c.R.el.hv.mv.ikGen, 1) + ' kA (closed transition)' : ''), F(h.mv.ikCalc + (c.R.el.hv.mv.ikGen || 0), 1) + ' kA → ' + ikB + ' kA']);
         }
-        steps.push([['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）'], F(h.mv.sb) + ' MVA ÷ (√3 × 20 kV) = ' + F(h.mv.i) + ' A', h.mv.boards + ' × 24 kV | ' + F(h.mv.busA) + ' A | ' + h.mv.ik + ' kA' + (h.mv.gis ? ' | GIS' : '')]);
-        /* 20 kV distribution (engine rule): ≤ 24 feeders per section fed directly, otherwise building 20 kV boards (main-tie-main, ≤ 20 MVA, ≤ 10 transformer feeders) */
-        var nTx = n + r, gMV = c.R.el.genV === 'MV' ? c.R.el.genTotal : 0, perSec = (nTx + gMV) / Math.max(1, h.mv.boards), lfT = Math.max(0.5, lvk / Math.max(1, nTx * size));
-        if (h.ht && perSec > 24) { var tpb = Math.max(2, Math.min(10, Math.floor(20000 / (size * lfT)))), nB = Math.ceil(nTx / tpb);
-          steps.push([['Building 20 kV boards (campus scale)', '楼宇20 kV开关柜（园区规模）'], ['(' + nTx + ' TX' + (gMV ? ' + ' + gMV + ' MV gen.' : '') + ') ÷ ' + h.mv.boards + ' sections = ' + F(perSec, 1) + ' > 24 per section → min(10, 20 MVA ÷ (' + F(size) + ' kVA × ' + F(lfT, 2) + ')) = ' + tpb + ' TX per board', '（' + nTx + '台变压器' + (gMV ? '+' + gMV + '台中压发电机' : '') + '）÷ ' + h.mv.boards + '段 = ' + F(perSec, 1) + ' > 24回/段 → 每套min(10, 20 MVA ÷ (' + F(size) + ' kVA × ' + F(lfT, 2) + ')) = ' + tpb + '台变压器'],
+        steps.push([['20 kV switchgear (IEC 62271-200)', '20 kV开关柜（IEC 62271-200）'], F(h.mv.sb) + ' MVA ÷ (√3 × 20 kV) = ' + F(h.mv.i) + ' A', h.mv.boards + ' × 24 kV | ' + F(h.mv.busA) + ' A | ' + ikB + ' kA' + (h.mv.gis ? ' | GIS' : '')]);
+        /* 20 kV distribution (engine rule): ≤ 24 feeders per section fed directly, otherwise building 20 kV boards (main-tie-main, whole blocks ≤ 10 transformer feeders, ≤ 20 MVA) */
+        var nTx = tb.t, gMV = c.R.el.genV === 'MV' ? c.R.el.genTotal : 0, perSec = (nTx + gMV) / Math.max(1, h.mv.boards), kva1 = lvk / Math.max(1, nTx);
+        if (h.ht && perSec > 24) { var kB = Math.max(1, Math.floor(Math.min(10 / Math.max(1, tb.per), 20000 / (Math.max(1, tb.per) * kva1)))), nB = Math.ceil(tb.b / kB);
+          steps.push([['Building 20 kV boards (campus scale)', '楼宇20 kV开关柜（园区规模）'], ['(' + nTx + ' TX' + (gMV ? ' + ' + gMV + ' MV gen.' : '') + ') ÷ ' + h.mv.boards + ' sections = ' + F(perSec, 1) + ' > 24 per section → whole blocks of ' + tb.per + ' units, ' + kB + ' per board (≤ 10 feeders, ≤ 20 MVA)', '（' + nTx + '台变压器' + (gMV ? '+' + gMV + '台中压发电机' : '') + '）÷ ' + h.mv.boards + '段 = ' + F(perSec, 1) + ' > 24回/段 → 每套带' + kB + '个完整模块（每模块' + tb.per + '台；≤10回，≤20 MVA）'],
             [nB + ' boards (main-tie-main) = ' + 2 * nB + ' substation feeders of 1,250 A', nB + '套（双进线+分段）= ' + 2 * nB + '回1,250 A变电站馈线']]); }
         else steps.push([['20 kV feeders per section', '每段20 kV馈线'], ['(' + nTx + ' TX' + (gMV ? ' + ' + gMV + ' MV gen.' : '') + ') ÷ ' + h.mv.boards + ' section(s)', '（' + nTx + '台变压器' + (gMV ? '+' + gMV + '台中压发电机' : '') + '）÷ ' + h.mv.boards + '段'], [F(perSec, 1) + ' ≤ 24 → fed directly from the sections', F(perSec, 1) + ' ≤ 24 → 由母线段直接供电']]);
-        steps.push([['MV/LV transformers (Tier ' + roman(t) + (c.R.el.chTx ? ', 400 V load — chillers on 6.6 kV' : '') + ')', '中/低压变压器（Tier ' + roman(t) + (c.R.el.chTx ? '，400 V负荷——冷机采用6.6 kV' : '') + '）'], '⌈' + F(lvk) + ' ÷ (' + F(size) + ' × ' + F(ld, 2) + ')⌉ + ' + r, F(n + r) + ' × ' + F(size) + ' kVA (' + (ar === 'DR' ? '3N/2' : E.redLabel(n, r, 'block')) + ')' + (c.R.el.chTx ? ' + ' + c.R.el.chTx.total + ' × ' + F(c.R.el.chTx.kva) + ' kVA 20/6.6 kV' : '')]);
+        steps.push([['MV/LV transformers (Tier ' + roman(t) + (c.R.el.chTx ? ', LV load — chillers on 6.6 kV' : '') + ')', '中/低压变压器（Tier ' + roman(t) + (c.R.el.chTx ? '，低压负荷——冷机采用6.6 kV' : '') + '）'], ['⌈' + F(lvk) + ' ÷ (' + F(size) + ' × ' + F(ld, 2) + ')⌉ = ' + n + ' duty, arranged as ' + tb.lab, '⌈' + F(lvk) + ' ÷ (' + F(size) + ' × ' + F(ld, 2) + ')⌉ = ' + n + '台工作，配置为' + tb.lab], F(tb.t) + ' × ' + F(size) + ' kVA = ' + tb.lab + (c.R.el.chTx ? ' + ' + c.R.el.chTx.total + ' × ' + F(c.R.el.chTx.kva) + ' kVA 20/6.6 kV' : '')]);
         steps.push([['PLN tariff | lead time | indicative cost', 'PLN电价 | 工期 | 参考投资'], h.kv >= 70 ? 'I-4 TT / TET' : 'B-3 / I-3 TM', 'Rp ' + F(h.kv >= 70 ? DB.idTariffs[2].eff : DB.idTariffs[0].eff, 1) + '/kWh | ≈ ' + h.lead + ' mo | ' + usd(h.cost)]);
         return steps;
       } },
     tx: { i: [['kva', ['Maximum demand', '最大需量'], 'kVA', 10, 1000000, 10, function (c) { return Math.round(c.R.el.demandKVA); }], tierIn(),
+      ['lv', ['LV system voltage (IEC 60038)', '低压系统电压（IEC 60038）'], '', 1, 4, 1, function (c) { return Math.max(1, LVV.indexOf(c.R.el.lvV || 400) + 1); }, LVO],
       ['ld', ['Loading limit', '负载率上限'], '%', 50, 100, 1, function (c) { return Math.round(c.R.el.txLoad * 100); }],
-      ['size', ['MV/LV transformer rating (20/0.4 kV)', '中/低压变压器容量（20/0.4 kV）'], 'kVA', 100, 6300, 5, function (c) { return c.R.el.txSize; }],
+      ['size', ['MV/LV transformer rating (20 kV / LV)', '中/低压变压器容量（20 kV/低压）'], 'kVA', 100, 6300, 5, function (c) { return c.R.el.txSize; }],
       ['hm', ['HV/MV transformer rating feeding the 20 kV boards (e.g. 60 MVA = 60,000 kVA)', '供20 kV母线的高压/中压主变容量（如60 MVA=60,000 kVA）'], 'MVA', 10, 500, 1, function (c) { var h = c.R.el.hv; return h.ht ? h.ht.mva : 60; }],
       ['uk', ['Impedance uk', '短路阻抗uk'], '%', 4, 8, .5, function (c) { return c.R.el.lv.uk; }],
-      ['chv', ['Chillers on MV (6.6 kV)', '冷机采用中压（6.6 kV）'], '', 0, 1, 1, function (c) { return c.R.el.chV === 'MV' ? 1 : 0; }, [[0, ['No — 400 V chillers', '否——400 V冷机']], [1, ['Yes — 6.6 kV via 20/6.6 kV transformers', '是——经20/6.6 kV变压器供6.6 kV']]]],
+      ['chv', ['Chillers on MV (6.6 kV)', '冷机采用中压（6.6 kV）'], '', 0, 1, 1, function (c) { return c.R.el.chV === 'MV' ? 1 : 0; }, [[0, ['No — chillers on the LV system', '否——冷机接低压系统']], [1, ['Yes — 6.6 kV via 20/6.6 kV transformers', '是——经20/6.6 kV变压器供6.6 kV']]]],
       ['arch', ['Redundancy architecture', '冗余架构'], '', 1, 3, 1, function (c) { return ({ N1: 1, DR: 2, '2N': 3 })[c.R.el.txArch] || 1; }, [[1, ['Block redundant N+1 (a reserve unit in every block)', '块冗余N+1（每块设一台备用）']], [2, ['Distributed redundant 3N/2 (any two of three carry the load)', '分布式冗余3N/2（三台中任意两台可承担负荷）']], [3, ['2N (A / B)', '2N（A/B）']]]]],
-      a: { size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
+      a: { lv: { b: B.lv, f: function () { return 1; } }, size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld, LVV[Math.round(v.lv) - 1]); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
         hm: { b: B.hm, f: function (v, c) { var h = conn(v.kva / 1000, T(v), chg(c, 'hvKV'), 0, c); return h.ht ? h.ht.rule : 60; } },
         arch: { b: B.arch, f: function (v) { return T(v) >= 4 ? 3 : 1; } }, chv: { b: B.chv, f: function (v, c) { return c.R.el.chVRule === 'MV' ? 1 : 0; } } },
-      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, hm: { k: 'htMVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] }, chv: { k: 'chV', map: [[0, 'LV'], [1, 'MV']] } },
+      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, lv: { k: 'lvV', map: [[1, 400], [2, 415], [3, 480], [4, 690]] }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, hm: { k: 'htMVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] }, chv: { k: 'chV', map: [[0, 'LV'], [1, 'MV']] } },
       f: function (v, c) {
-        var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1', el0 = c.R.el, chOn = Math.round(v.chv) === 1 && el0.chKWe > 0;
-        var chk = chOn ? v.kva * (el0.chKWe / 0.95) / Math.max(1, el0.demandKVA) : 0, lvk = Math.max(0.3 * v.kva, v.kva - chk);
+        var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1', el0 = c.R.el, chOn = Math.round(v.chv) === 1 && el0.chKWe > 0, vv = LVV[Math.round(v.lv) - 1] || 400, mx = lvMax(vv);
+        var chk = chOn ? v.kva * (el0.chKWe / 0.95) / Math.max(1, el0.demandKVA) : 0, lvk = Math.max(0.3 * v.kva, v.kva - chk), itShare = Math.min(1, el0.itKVA / Math.max(1, el0.demandKVA) * v.kva / Math.max(1, lvk));
         var cn = chOn ? Math.max(1, Math.ceil(chk / 8000)) : 0, cs = chOn ? pick([2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000], chk / (cn * 0.8)) : 0, cr = chOn ? (t >= 4 ? cn : (t >= 2 ? 1 : 0)) : 0;
         function count(sz, ar) { return E.txBlocks(Math.ceil(lvk / (sz * v.ld / 100)), ar, t); }
-        var k = count(v.size, arch), n = k.n, r = k.r, tot = k.t, iFL = v.size * 1000 / (1.732 * 400), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik);
-        var fail = arch === '2N' ? lvk / (n * v.size) * 100 : (arch === 'DR' ? lvk / tot * 1.5 / v.size * 100 : (tot > 1 ? lvk / ((tot - 1) * v.size) * 100 : null));
-        var h = conn(v.kva / 1000, t, chg(c, 'hvKV'), v.hm, c), el = c.R.el, itShare = Math.min(1, el.itKVA / Math.max(1, el.demandKVA) * v.kva / Math.max(1, lvk));
-        var AL = { N1: ['block N+1', '块冗余N+1'], DR: ['3N/2', '3N/2'], '2N': ['2N', '2N'] };
-        function alt(sz) { return F(sz) + ' kVA: ' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + ' (' + AL[a][0] + ')'; }).join(' | '); }
-        function altZh(sz) { return F(sz) + ' kVA：' + ['N1', 'DR', '2N'].map(function (a) { return count(sz, a).t + '（' + AL[a][1] + '）'; }).join(' | '); }
-        return [[['Chiller compressors on 6.6 kV (design day)', '6.6 kV冷机压缩机（设计日）'], el0.chKWe > 0 ? ['chilled-water load ÷ COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95', '冷冻水负荷÷COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95'] : ['no water-cooled chiller plant', '无水冷冷站'],
-            chOn ? [F(chk) + ' kVA → ' + (cn + cr) + ' × ' + F(cs) + ' kVA 20/6.6 kV (' + cn + ' + ' + cr + ')', F(chk) + ' kVA→' + (cn + cr) + '×' + F(cs) + ' kVA 20/6.6 kV（' + cn + '+' + cr + '）'] : ['on 400 V (included below)', '采用400 V（计入下方）']],
-          [['Load on the 400 V system', '400 V系统负荷'], chOn ? F(v.kva) + ' − ' + F(chk) + ' kVA' : ['maximum demand', '最大需量'], F(lvk) + ' kVA'],
+        function iOf(sz, u) { return sz * 1000 / (1.732 * u); }
+        var k = count(v.size, arch), n = k.n, tot = k.t, duty = arch === 'N1' && t >= 3 && k.per > 1 ? k.b * (k.per - 1) : (arch === '2N' ? n : tot);
+        var iFL = iOf(v.size, vv), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik), ld0 = lvk / (duty * v.size) * 100;
+        var fail = arch === '2N' ? [['the other side carries the whole load', '另一侧承担全部负荷'], [F(Math.min(200, ld0 * 2)) + ' % of one side', '单侧' + F(Math.min(200, ld0 * 2)) + '%']]
+          : (arch === 'DR' ? [['the two other units of the group share its load', '同组另两台分担其负荷'], [F(ld0 * 1.5) + ' %' + (ld0 * 1.5 > 100 ? ' ✗' : ' ✓'), F(ld0 * 1.5) + '%' + (ld0 * 1.5 > 100 ? ' ✗' : ' ✓')]]
+          : (t >= 3 ? [['the block reserve (catcher) takes over the failed unit\'s switchboard through an interlocked tie', '模块备用变压器经联锁联络开关接管故障变压器的配电柜'], [F(ld0) + ' % — unchanged ✓', F(ld0) + '%——不变 ✓']] : [['no reserve below Tier III', 'Tier III以下无备用'], ['–', '–']]));
+        var h = conn(v.kva / 1000, t, chg(c, 'hvKV'), v.hm, c), mp = E.mvPlan(c.R), db = c.R.el.mvdb, mv = c.R.el.hv.mv;
+        var rows = [[['LV system', '低压系统'], [LVL[vv] + ' — ' + LVN[vv][0], LVL[vv] + '——' + LVN[vv][1]], ['largest economic unit ' + F(mx) + ' kVA (≤ 5,000 A)', '最大经济单台' + F(mx) + ' kVA（≤5,000 A）']],
+          [['Chiller compressors on 6.6 kV (design day)', '6.6 kV冷机压缩机（设计日）'], el0.chKWe > 0 ? ['chilled-water load ÷ COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95', '冷冻水负荷÷COP ' + F(el0.chCopD, 2) + ' = ' + F(el0.chKWe) + ' kW ÷ 0.95'] : ['no water-cooled chiller plant', '无水冷冷站'],
+            chOn ? [F(chk) + ' kVA → ' + (cn + cr) + ' × ' + F(cs) + ' kVA 20/6.6 kV (' + cn + ' + ' + cr + ')', F(chk) + ' kVA→' + (cn + cr) + '×' + F(cs) + ' kVA 20/6.6 kV（' + cn + '+' + cr + '）'] : ['on the LV system (included below)', '接低压系统（计入下方）']],
+          [['LV load', '低压负荷'], [(chOn ? 'maximum demand − 6.6 kV chillers' : 'maximum demand') + ' — IT through UPS ≈ ' + F(itShare * 100) + ' %, the rest cooling and building', (chOn ? '最大需量−6.6 kV冷机' : '最大需量') + '——IT经UPS约' + F(itShare * 100) + '%，其余为制冷及建筑'], F(lvk) + ' kVA'],
+          [['How the load is distributed', '负荷如何分配'], ['each transformer feeds one LV main switchboard; its busbar distributes the load to UPS, mechanical and building feeders — loads are not assigned one per transformer', '每台变压器供一面低压总配电柜，其母线向UPS、机械及建筑馈线分配负荷——负荷并非按一台变压器一路分配'], ['1 main switchboard per transformer', '每台变压器1面总配电柜']],
           [['Duty transformers', '工作变压器'], '⌈' + F(lvk) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
-          [['Redundancy: ' + AL[arch][0] + ' (Tier ' + roman(t) + ')', '冗余：' + AL[arch][1] + '（Tier ' + roman(t) + '）'], arch === 'DR' ? ['3N/2: groups of three, any two carry the load', '3N/2：每组3台，任意2台可承担负荷'] : (arch === '2N' ? ['2N: A and B side each carry the whole load', '2N：A、B侧各自承担全部负荷'] : (r > 2 ? [E.redLabel(n, r, 'block') + ': ' + r + ' blocks, each with one reserve unit', E.redLabel(n, r, 'block') + '：' + r + '块，每块一台备用'] : E.redLabel(n, r, 'block'))), '+' + F(r)],
-          [['Installed', '安装台数'], F(n) + ' + ' + F(r), F(tot) + ' × ' + F(v.size) + ' kVA'],
-          [['Of which for the UPS-fed IT load', '其中供UPS-IT负荷'], [F(itShare * 100) + ' % of the 400 V load (IT + UPS losses)', '400 V负荷的' + F(itShare * 100) + '%（IT+UPS损耗）'], [F(Math.round(n * itShare)) + ' duty units; the rest feed cooling and building', F(Math.round(n * itShare)) + '台工作变压器；其余供制冷及建筑']],
-          [['Normal loading per unit', '正常时单台负载率'], F(lvk) + ' ÷ (' + F(tot) + ' × ' + F(v.size) + ')', F(lvk / (tot * v.size) * 100) + ' %'],
-          [['Loading after one failure', '一台故障后负载率'], arch === 'DR' ? ['group load ÷ two remaining units', '组负荷 ÷ 剩余2台'] : (arch === '2N' ? ['other side carries the block', '另一侧承担整个模块'] : (fail === null ? '–' : F(lvk) + ' ÷ (' + F(tot - 1) + ' × ' + F(v.size) + ')')), fail === null ? ['no standby', '无备用'] : F(fail) + ' %' + (fail <= 100 ? ' ✓' : ' ✗')],
-          [['LV full-load current → main ACB', '低压满载电流→主框架断路器'], F(v.size) + ' kVA ÷ (√3 × 400 V) → IEC 60947-2', iFL > 6300 ? [F(iFL) + ' A ✗ — above the largest 6,300 A ACB: ratings above ≈ 4,000 kVA are MV/MV (e.g. 20/6.6 kV) or HV/MV units (e.g. 150/20 kV 60 MVA = 60,000 kVA, input above)', F(iFL) + ' A ✗——超过最大6,300 A框架断路器：约4,000 kVA以上为中压/中压（如20/6.6 kV）或高压/中压变压器（如150/20 kV 60 MVA=60,000 kVA，见上方输入）'] : F(iFL) + ' A → ' + F(acb) + ' A' + (iFL > 5000 ? ' (6,300 A frame)' : '')],
-          [['LV fault level → switchboard rating', '低压短路电流→配电柜额定'], F(iFL) + ' A ÷ ' + F(v.uk, 1) + ' % → IEC 61439-2', (ik > 100 ? F(ik, 1) + ' kA ✗ (> 100 kA boards)' : F(ik, 1) + ' kA → ' + icw + ' kA')],
-          [['Same demand, other ratings and architectures', '同一需量的其他容量及架构'], [alt(2500) + ' | ' + alt(3150), altZh(2500) + ' | ' + altZh(3150)], [alt(4000), altZh(4000)]],
-          [['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' | ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' : ''), asmTxt(h)],
-          [['MV switchgear', '中压开关设备'], [F(tot + cn + cr) + ' TX feeders' + (chOn ? ' (incl. ' + (cn + cr) + ' to 20/6.6 kV)' : '') + ' + ' + (t >= 3 ? '2 incomers + bus coupler per board' : '1 incomer'), F(tot + cn + cr) + '路变压器馈线' + (chOn ? '（含' + (cn + cr) + '路至20/6.6 kV）' : '') + ' + ' + (t >= 3 ? '每段2路进线 + 母联' : '1路进线')], h.mv.boards + ' × 24 kV | ' + F(h.mv.busA) + ' A | ' + h.mv.ik + ' kA' + (h.gis ? ' + ' + h.name + ' GIS (Ur ' + h.ur + ' kV)' : '')]];
+          [['Arrangement (Tier ' + roman(t) + ')', '配置（Tier ' + roman(t) + '）'], arch === 'N1' ? (t >= 3 ? ['identical blocks of N duty + 1 reserve, N = 2–6 for the fewest units (each block: own switchboards, catcher bus, UPS, generators)', '相同模块，每块N用1备，N取2–6中台数最少者（每块自带配电柜、备用母线、UPS及发电机）'] : ['no reserve unit below Tier III', 'Tier III以下不设备用']) : (arch === 'DR' ? ['groups of three; any two carry the group load', '每组3台，任意2台承担本组负荷'] : ['A side and B side; each carries the whole load', 'A、B两侧，各承担全部负荷']),
+            k.lab + ' = ' + F(tot) + ' units'],
+          [['Installed', '安装'], F(tot) + ' × ' + F(v.size) + ' kVA', F(tot * v.size / 1000, 1) + ' MVA'],
+          [['Loading of each duty unit', '每台工作变压器负载率'], F(lvk) + ' ÷ (' + F(duty) + ' × ' + F(v.size) + ')', F(ld0) + ' %'],
+          [['On a transformer failure', '一台变压器故障时'], fail[0], fail[1]],
+          [['LV main switchboard per transformer', '每台变压器的低压总配电柜'], F(v.size) + ' kVA ÷ (√3 × ' + vv + ' V) → IEC 60947-2 / 61439-2', iFL > 6300 ? [F(iFL) + ' A ✗ — above 6,300 A: a higher LV voltage or a smaller unit', F(iFL) + ' A ✗——超过6,300 A：提高低压电压或减小单台容量'] : [F(iFL) + ' A → ACB and busbar ' + F(acb) + ' A' + (iFL > 5000 ? ' (6,300 A frame)' : ''), F(iFL) + ' A → 框架断路器及母线' + F(acb) + ' A' + (iFL > 5000 ? '（6,300 A框架）' : '')]],
+          [['LV fault level', '低压短路电流'], F(iFL) + ' A ÷ ' + F(v.uk, 1) + ' %', ik > 100 ? F(ik, 1) + ' kA ✗ (> 100 kA)' : F(ik, 1) + ' kA → ' + icw + ' kA switchboard']];
+        var opts = [[2500, vv], [3150, vv], [4000, vv], [4000, 480], [5000, 690], [6300, 690]].filter(function (o, i, a) { return !(o[0] === v.size && o[1] === vv) && a.findIndex(function (q) { return q[0] === o[0] && q[1] === o[1]; }) === i; });
+        opts.forEach(function (o) { var i1 = iOf(o[0], o[1]), ik1 = i1 / (ukRule(o[0]) / 100) / 1000, ok = i1 <= 5000 && ik1 <= 100;
+          rows.push([['Option: ' + F(o[0]) + ' kVA at ' + LVL[o[1]], '方案：' + F(o[0]) + ' kVA，' + LVL[o[1]]], F(i1) + ' A | ' + F(ik1, 0) + ' kA ' + (ok ? '✓' : (i1 <= 6300 && ik1 <= 100 ? '△ 6,300 A frame' : '✗')),
+            ['block N+1 ' + count(o[0], 'N1').t + ' | 3N/2 ' + count(o[0], 'DR').t + ' | 2N ' + count(o[0], '2N').t + ' units', '块冗余N+1 ' + count(o[0], 'N1').t + ' | 3N/2 ' + count(o[0], 'DR').t + ' | 2N ' + count(o[0], '2N').t + '台']]); });
+        rows.push([['PLN connection for this demand', '该需量对应的PLN接入'], F(v.kva / 1000, 1) + ' MVA → ' + h.name + (h.ht ? ' | ' + h.ht.total + ' × ' + h.ht.mva + ' MVA ' + h.ht.ratio + ' (' + h.ht.lab + ')' : ''), asmTxt(h)]);
+        rows.push([['20 kV switchgear (design)', '20 kV开关柜（设计）'], [mv.boards + ' sections × ' + F(mv.busA) + ' A | ' + mv.ik + ' kA', mv.boards + '段 × ' + F(mv.busA) + ' A | ' + mv.ik + ' kA'], [mp.panels + ' panels: ' + mp.incomers + ' incomers, ' + mp.nF + ' feeders, ' + mp.spares + ' spares', mp.panels + '面：' + mp.incomers + '路进线、' + mp.nF + '回馈线、' + mp.spares + '面备用']]);
+        rows.push(db ? [['Building 20 kV boards (design)', '楼宇20 kV开关柜（设计）'], [db.n + ' × (' + db.txPer + ' TX' + (db.genPer ? ' + ' + db.genPer + ' generators' : '') + '), 2 × 1,250 A incomers each', db.n + '套 ×（' + db.txPer + '台变压器' + (db.genPer ? '+' + db.genPer + '台发电机' : '') + '），每套2路1,250 A进线'], [db.panels + ' panels each', '每套' + db.panels + '面']]
+          : [['Transformer feeders (design)', '变压器馈线（设计）'], ['on the 20 kV sections', '接于20 kV母线段'], [F(c.R.el.txTotal + (c.R.el.chTx ? c.R.el.chTx.total : 0)) + ' feeders', F(c.R.el.txTotal + (c.R.el.chTx ? c.R.el.chTx.total : 0)) + '回']]);
+        return rows;
       } },
     fuel: { i: [['d', ['Maximum demand', '最大需量'], 'kW', 50, 1000000, 10, function (c) { return Math.round(c.R.el.demandKW); }], tierIn(),
       ['h', ['Fuel autonomy', '燃油自持'], 'h', 4, 120, 1, function (c) { return c.p.fuelH; }],
       ['q', ['Specific consumption', '比油耗'], 'L/kWh', .2, .35, .01, function (c) { return c.R.el.fuelQ; }],
       ['tank', ['Tank size', '储罐容量'], 'm³', 10, 200, 10, function (c) { return c.R.el.tankSize; }],
       ['gs', ['Generator rating (continuous)', '发电机容量（持续功率）'], 'kWe', 300, 3500, 1, function (c) { return c.R.el.genSize; }, GSO],
-      ['gv', ['Generator voltage', '发电机电压'], '', 1, 2, 1, function (c) { return c.R.el.genV === 'MV' ? 2 : 1; }, [[1, ['400 V sets with ATS', '400 V机组+ATS']], [2, ['20 kV paralleled plant', '20 kV并机电站']]]]],
+      ['gv', ['Generator voltage', '发电机电压'], '', 1, 2, 1, function (c) { return c.R.el.genV === 'MV' ? 2 : 1; }, [[1, ['LV sets with ATS', '低压机组+ATS']], [2, ['20 kV paralleled plant', '20 kV并机电站']]]]],
       a: { h: { b: B.fuelH, f: function (v, c) { var rel = gridRel(c); return Math.min(96, ({ 1: 12, 2: 24, 3: 24, 4: 48 })[T(v)] + (rel === 'med' ? 24 : (rel === 'low' ? 48 : 0))); } },
         tank: { b: B.tank, f: function (v) { var L = v.d * v.q * v.h; return L > 400000 ? 200 : (L > 100000 ? 100 : (L > 20000 ? 50 : 20)); } },
         gs: { b: B.gs, f: function (v) { return genSize(v.d); } }, gv: { b: B.gv, f: function (v) { return v.d > 6000 ? 2 : 1; } } },
       b: { d: { k: 'mdKVA', f: 1 / K.PF }, tier: { k: 'tier' }, h: { k: 'fuelH' }, q: { k: 'fuelQ' }, tank: { k: 'tankM3' }, gs: { k: 'genKW' }, gv: { k: 'genV', map: [[1, 'LV'], [2, 'MV']] } },
       f: function (v, c) {
         var t = T(v), lph = v.d * v.q, L = lph * v.h, tanks = Math.max(t >= 3 ? 2 : 1, Math.ceil(L / 1000 / v.tank)), trucks = Math.ceil(L / 16000);
-        var gs = v.gs, gn = Math.ceil(v.d / (gs * K.GEN_LOAD)), gr = E.redundancy(t, gn, 'gen'), mv = Math.round(v.gv) === 2;
+        var gs = v.gs, gn = Math.ceil(v.d / (gs * K.GEN_LOAD)), gr = E.redundancy(t, gn, 'gen'), mv = Math.round(v.gv) === 2, gg = t === 3 && gr > 0 && c.R.el.genGrp > 1 ? c.R.el.genGrp : 1, gpg = gg > 1 ? Math.ceil(v.d / gg / (gs * K.GEN_LOAD)) : 0;
+        if (gg > 1) { gn = gg * gpg; gr = gg; }
         return [[['Consumption at full load', '满载耗油'], F(v.d) + ' kW × ' + F(v.q, 2), F(lph) + ' L/h'],
           [['Fuel for the autonomy', '自持所需燃油'], F(lph) + ' × ' + F(v.h) + ' h', F(L / 1000, 1) + ' m³'],
           [['Bulk tanks', '主储油罐'], 'max(' + (t >= 3 ? 2 : 1) + ', ⌈' + F(L / 1000, 1) + ' ÷ ' + F(v.tank) + '⌉)', F(tanks) + ' × ' + F(v.tank) + ' m³'],
-          [['Generators (continuous rating, ' + K.GEN_LOAD * 100 + ' %)', '发电机（持续功率，' + K.GEN_LOAD * 100 + '%）'], '⌈' + F(v.d) + ' ÷ (' + F(gs) + ' × ' + K.GEN_LOAD + ')⌉ + ' + gr, F(gn + gr) + ' × ' + F(gs) + ' kWe (' + E.redLabel(gn, gr, 'block') + ')'],
+          [['Generators (continuous rating, ' + K.GEN_LOAD * 100 + ' %)', '发电机（持续功率，' + K.GEN_LOAD * 100 + '%）'], gg > 1 ? [gg + ' groups × (⌈' + F(v.d) + ' ÷ ' + gg + ' ÷ (' + F(gs) + ' × ' + K.GEN_LOAD + ')⌉ + 1 reserve); sets back each other only on a common bus', gg + '组 ×（⌈' + F(v.d) + ' ÷ ' + gg + ' ÷ (' + F(gs) + ' × ' + K.GEN_LOAD + ')⌉ + 1台备用）；机组仅在同一母线上互为备用'] : '⌈' + F(v.d) + ' ÷ (' + F(gs) + ' × ' + K.GEN_LOAD + ')⌉ + ' + gr, F(gn + gr) + ' × ' + F(gs) + ' kWe (' + (gg > 1 ? gg + ' × (' + gpg + '+1)' : E.redLabel(gn, gr, 'block')) + ')'],
           [['Generator voltage', '发电机电压'], v.d > 6000 ? ['> 6 MW: paralleled plant on the 20 kV board', '>6 MW：在20 kV母线并机'] : ['≤ 6 MW: 400 V sets with ATS', '≤6 MW：400 V机组+ATS'], mv ? ['20 kV paralleled plant', '20 kV并机电站'] : ['400 V (LV)', '400 V（低压）']],
           mv ? [['20 kV generator incomers', '20 kV发电机进线'], ['one breaker panel per set on the 20 kV board', '20 kV母线每台机组一面断路器柜'], [F(gn + gr) + ' panels', F(gn + gr) + '面']]
-            : [['400 V changeover', '400 V切换'], ['one ATS per LV switchboard', '每段低压配电一台ATS'], [F(c.R.el.txTotal) + ' ATS', F(c.R.el.txTotal) + '台ATS']],
+            : [['LV changeover', '低压切换'], ['one ATS per LV switchboard', '每段低压配电一台ATS'], [F(c.R.el.txTotal) + ' ATS', F(c.R.el.txTotal) + '台ATS']],
           [['Generator yard (≈ 75 m² per set)', '发电机场地（每台约75 m²）'], F(gn + gr) + ' × 75', F((gn + gr) * 75) + ' m²'],
           [['Refill by 16 kL tankers', '16 kL油罐车补油'], F(L / 1000, 1) + ' ÷ 16', [F(trucks) + ' trucks', F(trucks) + ' 车']]];
       } },
@@ -224,7 +245,7 @@
       ['m', ['Autonomy', '后备时间'], 'min', 1, 30, 1, function (c) { return c.p.upsMin; }], ['age', ['Ageing factor', '老化系数'], '', 1, 1.5, .05, function (c) { return c.R.el.battAge; }],
       ['eco', ['Operating mode', '运行模式'], '', 0, 1, 1, function (c) { return c.p.eco ? 1 : 0; }, [[0, ['Double conversion', '双变换']], [1, ['Eco-mode (high efficiency)', '节能模式（高效）']]]]],
       a: { m: { b: B.ups, f: function (v, c) { var li = Math.round(v.chem) !== 2, t = T(v); if (li && c.p.type === 'AI') return 5; return li ? (t === 4 ? 10 : 5) : (t === 4 ? 15 : 10); } },
-        n: { b: B.n, f: function (v, c) { var n = Math.ceil(c.R.el.upsLoad / (v.kw * K.UPS_LOAD)); return n + E.redundancy(T(v), n, 'ups'); } } },
+        n: { b: B.n, f: function (v, c) { var ug = T(v) === 3 && c.R.el.upsGrp > 1 ? c.R.el.upsGrp : 1; if (ug > 1) return ug * Math.ceil(c.R.el.upsLoad / ug / (v.kw * K.UPS_LOAD)) + ug; var n = Math.ceil(c.R.el.upsLoad / (v.kw * K.UPS_LOAD)); return n + E.redundancy(T(v), n, 'ups'); } } },
       b: { kw: { k: 'upsKW' }, chem: { k: 'battery', map: [[1, 'LI'], [2, 'VRLA']] }, tier: { k: 'tier' }, m: { k: 'upsMin' }, age: { k: 'battAge' }, eco: { k: 'eco', map: [[0, false], [1, true]] } },
       f: function (v, c) {
         var li = Math.round(v.chem) !== 2, e1 = v.kw * v.m / 60, e2 = e1 * v.age / K.BATT_EFF, tot = e2 * v.n;
@@ -239,16 +260,16 @@
           [['Electrical losses → PUE of the design', '电气损耗→设计PUE'], F(c.R.eff.elec, 3) + ' × IT', 'PUE ' + F(c.R.eff.pue, 3) + ' | ' + F(c.R.el.mva, 1) + ' MVA']];
       } },
     bwy: { i: [['nr', ['Racks per row', '每排机柜数'], '', 4, 40, 1, function (c) { return c.R.el.rackRow; }], ['rk', ['Rack design density', '机柜设计功率'], 'kW', 1, 400, 1, function (c) { return Math.round(c.R.cap.maxDens); }],
-      ['row', ['IT load per row', '每排IT负载'], 'kW', 5, 8000, 5, function (c) { return Math.min(c.R.el.rackRow, Math.max(2, Math.floor(ROW_MAX / Math.max(1, Math.round(c.R.cap.maxDens))))) * Math.round(c.R.cap.maxDens); }]],
-      a: { row: { b: B.row, f: function (v) { return Math.min(v.nr, Math.max(2, Math.floor(ROW_MAX / Math.max(1, v.rk)))) * v.rk; } } },
+      ['row', ['IT load per row', '每排IT负载'], 'kW', 5, 8000, 5, function (c) { return Math.min(c.R.el.rackRow, Math.max(2, Math.floor(rowMax(c) / Math.max(1, Math.round(c.R.cap.maxDens))))) * Math.round(c.R.cap.maxDens); }]],
+      a: { row: { b: B.row, f: function (v, c) { return Math.min(v.nr, Math.max(2, Math.floor(rowMax(c) / Math.max(1, v.rk)))) * v.rk; } } },
       b: { nr: { k: 'rackRow' }, rk: { k: function (c) { return c.R.cap.hdR > 0 && c.R.cap.hd >= c.R.cap.sd ? 'hdDens' : 'dens'; } } },
-      f: function (v) {
-        var nEff = Math.min(v.nr, Math.max(2, Math.floor(ROW_MAX / Math.max(1, v.rk)))), I = v.row / (K.BW_V * 1.732 * K.BW_F), bw = pick([160, 250, 400, 630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000], I), Ir = v.rk / (K.BW_V * 1.732 * K.BW_F);
+      f: function (v, c) {
+        var bvv = bwV(c), RM = rowMax(c), nEff = Math.min(v.nr, Math.max(2, Math.floor(RM / Math.max(1, v.rk)))), I = v.row / (bvv * 1.732 * K.BW_F), bw = pick([160, 250, 400, 630, 800, 1000, 1250, 1600, 2000, 2500, 3200, 4000], I), Ir = v.rk / (bvv * 1.732 * K.BW_F);
         var rp2 = v.rk <= 7 ? '1-ph 32 A' : v.rk <= 22 ? '3-ph 32 A' : v.rk <= 43 ? '3-ph 63 A' : Math.ceil(v.rk / 43) + ' × 3-ph 63 A';
-        return [[['Racks per row (≤ 2,500 A busway)', '每排机柜数（母线≤2,500 A）'], 'min(' + F(v.nr) + ', ⌊' + F(ROW_MAX) + ' ÷ ' + F(v.rk) + '⌋)', nEff < v.nr ? [F(nEff) + ' — row shortened', F(nEff) + '——缩短该排'] : F(nEff)],
-          [['Row current', '每排电流'], F(v.row) + ' ÷ (√3 × ' + K.BW_V + ' × ' + K.BW_F + ')', F(I) + ' A'],
+        return [[['Racks per row (≤ 2,500 A busway)', '每排机柜数（母线≤2,500 A）'], 'min(' + F(v.nr) + ', ⌊' + F(RM) + ' ÷ ' + F(v.rk) + '⌋)', nEff < v.nr ? [F(nEff) + ' — row shortened', F(nEff) + '——缩短该排'] : F(nEff)],
+          [['Row current', '每排电流'], F(v.row) + ' ÷ (√3 × ' + bvv + ' × ' + K.BW_F + ')', F(I) + ' A'],
           [['Busway rating (each of A and B)', '母线额定（A、B各一）'], 'IEC 61439-6, next ≥ ' + F(I) + ' A', bw + ' A' + (I > 4000 ? ' — split the row' : '')],
-          [['Rack current', '机柜电流'], F(v.rk) + ' ÷ (√3 × ' + K.BW_V + ' × ' + K.BW_F + ')', F(Ir) + ' A'],
+          [['Rack current', '机柜电流'], F(v.rk) + ' ÷ (√3 × ' + bvv + ' × ' + K.BW_F + ')', F(Ir) + ' A'],
           [['Rack feed per side (IEC 60309 tap-off)', '每路机柜进线（IEC 60309插接）'], F(v.rk) + ' kW', rp2]];
       } },
     bess: { i: [['on', ['BESS included', '配置储能'], '', 0, 1, 1, function (c) { return c.p.bessOn ? 1 : 0; }, [[1, ['Yes', '是']], [0, ['No', '否']]]],

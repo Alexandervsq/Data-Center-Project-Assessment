@@ -71,13 +71,13 @@
     tx: function (c) {
       var el = c.R.el, pct = Math.min(1, (el.lvKVA || el.demandKVA) / (el.txTotal * el.txSize)), s = ttl(['Cast-resin dry-type transformer (cut-away)', '环氧树脂浇注干式变压器（剖视）']);
       s += L.dryTx(40, 40, 230, 190);
-      s += co(100, 130, 300, 70, ['HV winding | 20 kV', '高压绕组 | 20 kV']) + co(170, 170, 300, 104, ['LV winding | 0.4 kV', '低压绕组 | 0.4 kV']) + co(240, 60, 300, 138, ['Terminals & busbar', '端子与母排']) + co(262, 214, 300, 172, ['Enclosure + PT100', '外壳 + PT100测温']);
+      s += co(100, 130, 300, 70, ['HV winding | 20 kV', '高压绕组 | 20 kV']) + co(170, 170, 300, 104, ['LV winding | ' + String((el.lvV || 400) / 1000) + ' kV', '低压绕组 | ' + String((el.lvV || 400) / 1000) + ' kV']) + co(240, 60, 300, 138, ['Terminals & busbar', '端子与母排']) + co(262, 214, 300, 172, ['Enclosure + PT100', '外壳 + PT100测温']);
       s += tx(300, 204, ['Normal loading per unit', '单台正常负载率'], 'start', 'font-weight:700') + L.R(300, 212, 200, 12, '#E6E8F3', ' rx="6"') + L.R(300, 212, 200 * pct, 12, C.am, ' rx="6"') + txb(505, 222, Math.round(pct * 100) + ' %', 'end');
       return svg(s + foot([el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')', el.txTotal + ' × ' + F(el.txSize) + ' kVA（' + el.txLabel + '）']));
     },
-    lv: function () {
+    lv: function (c) {
       var s = ttl(['LV main switchboard with automatic transfer', '带自动切换的低压主配电柜']);
-      s += bx(16, 56, 112, 46, C.am, ['Transformer', '变压器'], '400 V') + bx(16, 156, 112, 46, C.ind, ['Generator', '发电机'], ['ready in 10–15 s', '10–15 s就绪']);
+      s += bx(16, 56, 112, 46, C.am, ['Transformer', '变压器'], ((c && c.R && c.R.el.lvV) || 400) + ' V') + bx(16, 156, 112, 46, C.ind, ['Generator', '发电机'], ['ready in 10–15 s', '10–15 s就绪']);
       s += ar('M128 79H158V112H186', C.am) + ar('M128 179H158V146H186', C.ind) + bx(188, 96, 92, 66, C.deep, 'ATS', ['auto transfer', '自动切换']);
       s += ln('M280 129H322', C.deep, 4) + ln('M322 66V196', C.am, 7);
       s += ar('M322 80H396', C.deep) + bx(398, 62, 116, 34, C.ind, ['UPS systems', 'UPS系统']) + ar('M322 129H396', C.deep) + bx(398, 112, 116, 34, C.cy, ['Cooling plant', '制冷设备']) + ar('M322 178H396', C.deep) + bx(398, 162, 116, 34, C.sl, ['Building services', '建筑设备']);

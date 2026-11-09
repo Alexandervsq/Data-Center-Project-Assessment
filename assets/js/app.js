@@ -262,16 +262,15 @@
     ['Cooling technology (proposed by the weighted decision matrix), the annual PUE target and the renewable share.', '制冷技术（由加权决策矩阵提出）、年均PUE目标及可再生能源占比。'],
     ['PLN tariff, exchange rate, business case, prices and the financial assumptions behind IRR / TCO.', 'PLN电价、汇率、商业模式、价格及IRR/TCO的财务假设。']
   ];
-  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['sld', 'Single-line diagram', '单线图'], ['me', 'Cooling', '制冷'],
+  var RTABS = [['sum', 'Summary', '摘要'], ['site', 'Site & region', '场地与区域'], ['it', 'IT & racks', 'IT与机柜'], ['el', 'Resilience & power', '韧性与供电'], ['me', 'Cooling', '制冷'],
                ['sp', 'Building & space', '建筑与空间'], ['fs', 'Fire | security | monitoring', '消防·安防·监控'], ['boq', 'Equipment list', '设备清单'], ['fin', 'Cost & finance', '投资与财务'],
                ['sch', 'Schedule & staffing', '进度与人员'], ['risk', 'Risks', '风险'], ['std', 'Permits & standards', '许可与标准'], ['reg', 'Parameter register', '参数登记']];
-  var RIC = { sum: 'gauge', site: 'map', it: 'server', el: 'bolt', sld: 'sld', me: 'snow', sp: 'building', fs: 'shield', boq: 'list', fin: 'coins', sch: 'calendar', risk: 'alert', std: 'scale', reg: 'sliders' };
+  var RIC = { sum: 'gauge', site: 'map', it: 'server', el: 'bolt', me: 'snow', sp: 'building', fs: 'shield', boq: 'list', fin: 'coins', sch: 'calendar', risk: 'alert', std: 'scale', reg: 'sliders' };
   var RDESC = {
     sum: ['Key figures, main requirements, top risks and similar reference projects.', '关键指标、主要要求、主要风险及相似参考项目。'],
     site: ['Location profile, utilities, costs, labour and the site-area check.', '地点概况、公用设施、成本、人工及用地核查。'],
     it: ['Rack platforms, densities, GPUs, cabinet selection and a platform comparison.', '机柜平台、功率密度、GPU、机柜选型及平台比较。'],
-    el: ['Tier and standards, the critical power chain, electrical sizing, backup autonomy and BESS.', '等级与标准、关键供电链、电气容量、后备时间及储能。'],
-    sld: ['One integrated single-line diagram of this design — PLN connection, GIS bays or diameters, transformers, 20 kV sections, building boards, the typical LV block and the IT rack, with every rating; zoom here or download the PDF.', '本设计的一张综合单线图——PLN接入、GIS间隔或串、变压器、20 kV母线段、楼宇开关柜、典型低压模块及IT机柜，并标注各元件额定；可在此缩放或下载PDF。'],
+    el: ['Tier and standards, the critical power chain, the single-line diagram (view and PDF), electrical sizing, backup autonomy and BESS.', '等级与标准、关键供电链、单线图（查看及PDF）、电气容量、后备时间及储能。'],
     me: ['Cooling decision matrix, selected design and reasoning, plant sizing, PUE, WUE and renewables.', '制冷决策矩阵、选定方案及依据、设备容量、PUE、WUE及可再生能源。'],
     sp: ['Building areas, structure, floor loading and the site requirement.', '建筑面积、结构、楼面荷载及用地需求。'],
     fs: ['Fire protection and suppression, security layers and monitoring points.', '消防与灭火、安防层级及监控点位。'],
@@ -363,24 +362,18 @@
       else h = pageResult(s);
     } catch (e) { console.error(e); h = '<div class="card">' + esc(String(e)) + '</div>'; }
     el.innerHTML = h;
-    if (s === 'sld') mountSLD();
+    if (s === 'el') mountSLD();
   }
   /* single-line diagram (assets/js/sld.js): drawn from the current design every time the page opens */
   function sldOpt(r) { r = r || curRef(); return { name: r ? Lt(r.en, r.zh) : (curName() || 'Untitled'), basis: r ? r.id : Lt('Project', '项目'), code: r ? r.id : safeName(curName() || 'PRJ').slice(0, 12).toUpperCase() }; }
   function mountSLD() { var host = $('#sldHost'); if (!host) return; if (!window.DCSLD) { host.textContent = Lt('SLD module not loaded', '单线图模块未加载'); return; } try { window.DCSLD.mount(host, S.x, sldOpt()); } catch (e) { console.error(e); host.textContent = String(e); } }
-  function pSLD(x) {
-    var el = x.R.el, hv = el.hv, mp = E.mvPlan(x.R), db = el.mvdb, it = [], nD = hv.ibt ? (hv.bays.diam || Math.ceil((hv.circ + hv.ibt.total) / 2)) : 0;
-    if (hv.ibt) it.push([hv.name + ' GIS, breaker-and-a-half: ' + nD + ' diameters, ' + hv.circ + ' lines, ' + hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA interbus transformers', hv.name + ' GIS一个半断路器：' + nD + '串，' + hv.circ + '回线路，' + hv.ibt.total + '台' + hv.ibt.mva + ' MVA联络变']);
-    if (hv.ht) it.push([(hv.ibt ? '150 kV' : hv.name) + ' GIS, ' + (hv.ibt ? 'double busbar' : hv.scheme[0].toLowerCase()) + ', ' + hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' ' + hv.ht.vg + ' transformers (' + hv.ht.lab + ')', (hv.ibt ? '150 kV' : hv.name) + ' GIS，' + (hv.ibt ? '双母线' : hv.scheme[1]) + '，' + hv.ht.total + '台' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' ' + hv.ht.vg + '主变（' + hv.ht.lab + '）']);
-    it.push(['20 kV switchgear: ' + hv.mv.boards + ' sections, ' + F(hv.mv.busA) + ' A, ' + hv.mv.ik + ' kA, ' + mp.panels + ' panels', '20 kV开关柜：' + hv.mv.boards + '段，' + F(hv.mv.busA) + ' A，' + hv.mv.ik + ' kA，' + mp.panels + '面']);
-    if (db) it.push([db.n + ' building 20 kV boards (main-tie-main), ' + db.txPer + ' transformers' + (db.genPer ? ' + ' + db.genPer + ' generators' : '') + ' each', db.n + '套楼宇20 kV开关柜（双进线+分段），每套' + db.txPer + '台变压器' + (db.genPer ? '+' + db.genPer + '台发电机' : '')]);
-    it.push(['Typical MV/LV block: ' + el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + '), UPS ' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW, generators ' + el.genTotal + ' × ' + F(el.genSize) + ' kWe', '典型中/低压模块：' + el.txTotal + '台' + F(el.txSize) + ' kVA（' + el.txLabel + '），UPS ' + el.upsTotal + '台' + F(el.upsSize) + ' kW，发电机' + el.genTotal + '台' + F(el.genSize) + ' kWe']);
-    return '<div class="card">' + ptitle('Drawing set', '图册内容') + '<ul class="small" style="margin:0 0 8px 18px;padding:0">' + it.map(function (q) { return '<li>' + L(q[0], q[1]) + '</li>'; }).join('') + '</ul>' +
-      '<div class="small muted">' + L('One drawing from HV to MV to LV (the building board and the MV/LV block are typical, repeated as listed). Drawn by the assessment engine from this design — every change to the inputs or in the simulation redraws it. Ratings follow IEC 62271 / 60076 / 61869 / 60099-4 and PLN practice; bilingual labels, colour by voltage level, zone frame and title block (AutoCAD drawing conventions).', '高压、中压、低压一张图（楼宇开关柜及中/低压模块为典型，按所列数量重复）。由评估引擎按本设计绘制——输入或模拟中的任何修改都会重新生成。额定参数按IEC 62271/60076/61869/60099-4及PLN惯例；双语标注、按电压等级着色、分区图框及标题栏（AutoCAD制图惯例）。') + '</div></div>' +
-      '<div class="card"><div id="sldHost" class="sldhost">' + L('Generating the drawing…', '正在生成图纸…') + '</div></div>';
+  function sldCard(x) {
+    return '<div class="card" id="sldCard">' + ptitle('Single-line diagram', '单线图') + '<div class="small muted" style="margin:-4px 0 10px">' + L('One integrated drawing of this design from the PLN connection to the IT rack (HV, MV and LV), in the selected language; the building board and the MV/LV block are typical, repeated as listed. Export it as PDF with the button.', '本设计从PLN接入到IT机柜的一张综合图（高压、中压及低压），按所选语言显示；楼宇开关柜及中/低压模块为典型，按所列数量重复。可用按钮导出PDF。') + '</div>' +
+      '<div id="sldHost" class="sldhost">' + L('Drawing the single-line diagram…', '正在绘制单线图…') + '</div></div>';
   }
+
   function pageResult(id) {
-    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, sld: pSLD, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
+    var panels = { sum: pSummary, site: pSite, it: pIT, el: pPower, me: pCooling, sp: pSpace, fs: pFS, boq: pBOQ, fin: pFin, sch: pSched, risk: pRisk, std: pStd, reg: pReg };
     var ids = RTABS.map(function (t) { return t[0]; }), i = ids.indexOf(id), t = RTABS[i], prev = RTABS[i - 1], next = RTABS[i + 1];
     return phead(t[1], t[2], RDESC[id][0], RDESC[id][1], '<span class="pnum">' + (i + 1) + ' / ' + RTABS.length + '</span>') +
       '<div class="rpanel">' + panels[id](S.x) + '</div>' + pager(prev, next || ['export', 'Export proposal report', '导出项目建议书']);
@@ -689,13 +682,15 @@
     var html = '<div class="card">' + ptitle('Resilience level & standards', '韧性等级与标准') + why('tier') + '<div class="tblw" style="margin-top:8px"><table class="t"><thead><tr><th>' + L('Standard', '标准') + '</th><th>' + L('Level', '等级') + '</th><th>' + L('Key requirements', '主要要求') + '</th></tr></thead><tbody>' +
       x.tierStd.map(function (r) { return '<tr><td><b>' + esc(r[0]) + '</b></td><td>' + esc(r[1]) + '</td><td>' + L(r[2], r[3]) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
     html += '<div class="card">' + ptitle('Critical power chain', '关键供电链') + powerDiagram(R) + '</div>';
+    html += sldCard(x);
     html += '<div class="grid g2"><div class="card">' + ptitle('Electrical sizing', '电气容量') + kv([
       ['IT load / UPS-protected load', 'IT负载/UPS保护负载', F(R.cap.itKW) + ' / ' + F(el.upsLoad) + ' kW'], ['Facility maximum demand', '设施最大需量', F(el.demandKW) + ' kW | ' + F(el.demandKVA) + ' kVA'],
       ['PLN connection', 'PLN接入', F(el.mva, 1) + ' MVA | ' + L(el.volt[0], el.volt[1]) + ' | ' + el.hv.circ + ' ' + L('circuit(s)', '回进线') + ' | ' + asmChip(el.hv)],
       ['Fault level at the connection point', '接入点短路水平', F(el.hv.pccIk, 1) + ' kA | ' + F(el.hv.ssc) + ' MVA (' + L('planning value — PLN confirms', '规划值——以PLN确认为准') + ')'],
       ['HV substation & transformers', '高压变电站及主变', el.hv.gis ? el.hv.name + ' GIS (Ur ' + el.hv.ur + ' kV) | ' + el.hv.ik + ' kA | ' + F(el.hv.busA) + ' A' + (el.hv.ibt ? ' | ' + el.hv.ibt.total + ' × ' + el.hv.ibt.mva + ' MVA ' + el.hv.ibt.ratio : '') + ' | ' + el.hv.ht.total + ' × ' + el.hv.ht.mva + ' MVA ' + el.hv.ht.ratio + ' (' + el.hv.ht.lab + ')' + ' | uk ' + el.hv.ht.uk + ' % | ONAN ' + el.hv.ht.onan + ' / ONAF ' + el.hv.ht.mva + ' MVA | NGR 40 Ω' : L('none — 20 kV supply', '无——20 kV供电')],
-      ['20 kV switchgear', '20 kV开关柜', el.hv.mv.boards + ' × ' + F(el.hv.mv.busA) + ' A | ' + el.hv.mv.ik + ' kA' + (el.hv.ht ? ' (' + L('calculated', '计算') + ' ' + F(el.hv.mv.ikCalc, 1) + ' kA)' : '')], ['MV/LV transformers', '中/低压变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA' + (el.chTx ? ' + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV' : '') + ' (' + el.txLabel + ', ≈ ' + el.txIT + ' for IT) | LV ' + F(el.lv.acb) + ' A / ' + el.lv.icw + ' kA | ' + L('alternatives', '其他方案') + ': ' + el.txAlt.map(function (a) { return F(a.kva) + ' kVA ' + a.N1 + ' / ' + a.DR + ' / ' + a['2N']; }).join(' | ') + ' (block N+1 / 3N/2 / 2N)'],
-      ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC | ' + (el.genV === 'MV' ? L('20 kV paralleled plant', '20 kV并机') : '400 V')], ['Fuel at max demand / storage', '耗油/储油', F(el.fuelLph) + ' L/h | ' + F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) | ' + el.tanks + ' × ' + el.tankSize + ' m³'],
+      ['20 kV switchgear', '20 kV开关柜', el.hv.mv.boards + ' × ' + F(el.hv.mv.busA) + ' A | ' + el.hv.mv.ik + ' kA' + (el.hv.ht ? ' (' + L('calculated', '计算') + ' ' + F(el.hv.mv.ikCalc, 1) + ' kA)' : '')], ['MV/LV transformers', '中/低压变压器', el.txTotal + ' × ' + F(el.txSize) + ' kVA 20/' + F((el.lvV || 400) / 1000, 2).replace(/0$/, '') + ' kV — ' + blkTxt(el) + (el.chTx ? ' | + ' + el.chTx.total + ' × ' + F(el.chTx.kva) + ' kVA 20/6.6 kV ' + L('for the chillers', '冷机用') : '')],
+      ['LV system | main switchboard per transformer', '低压系统 | 每台变压器的总配电柜', (el.lvV || 400) + ' V (IEC 60038) | ' + F(el.lv.i) + ' A → ' + F(el.lv.acb) + ' A ' + L('ACB and busbar', '框架断路器及母线') + ', ' + F(el.lv.ik, 1) + ' kA → ' + el.lv.icw + ' kA' + (el.lv.over ? ' ✗' : '')],
+      ['Diesel generators', '柴油发电机', el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + '), COP/DCC | ' + (el.genV === 'MV' ? L('20 kV paralleled plant', '20 kV并机') : (el.lvV || 400) + ' V')], ['Fuel at max demand / storage', '耗油/储油', F(el.fuelLph) + ' L/h | ' + F(el.fuelL / 1000) + ' m³ (' + p.fuelH + ' h) | ' + el.tanks + ' × ' + el.tankSize + ' m³'],
       ['UPS systems', 'UPS系统', el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')'], ['UPS batteries', 'UPS电池', F(el.battKWh) + ' kWh ' + (p.battery === 'LI' ? 'Li-ion LFP' : 'VRLA') + ' | ' + p.upsMin + ' min'],
       ['IT distribution', 'IT配电', el.useBusway ? el.busways + ' × ' + el.bwA + ' A' + (el.bwHdA && el.bwHdA !== el.bwA ? ' / HD ' + el.bwHdA + ' A' : '') + ' ' + L('busway', '母线') : el.pdus + ' × 150 kVA PDU'], ['Rack power', '机柜供电', L(el.rStd[0], el.rStd[1]) + (el.rHd ? ' | HD: ' + L(el.rHd[0], el.rHd[1]) : '')]]) + '</div>' +
       '<div class="card">' + ptitle('Backup autonomy & storage', '后备时间与储能') + '<h4>' + L('Generator fuel', '发电机燃油') + ' — ' + p.fuelH + ' h</h4>' + why('fuelH') + '<h4>UPS — ' + p.upsMin + ' min, ' + (p.battery === 'LI' ? 'LFP' : 'VRLA') + '</h4>' + why('upsMin') + why('battery') +
@@ -704,6 +699,8 @@
     html += gridImpactCard(R);
     return html + eqLinks((el.hv.kv > 20 ? ['EL-24', 'EL-25', 'EL-26', 'EL-27', 'EL-28'] : []).concat(['EL-01', 'EL-02', 'EL-03', 'EL-04', 'EL-06', 'EL-09', p.battery === 'LI' ? 'EL-10' : 'EL-11', 'EL-23', el.useBusway ? 'EL-13' : 'EL-12', 'EL-14'], R.gimp && R.gimp.ahf ? ['EL-17'] : []));
   }
+  /* MV/LV arrangement in words: identical blocks (N duty + 1 reserve), 3N/2 groups or 2N pairs */
+  function blkTxt(el) { var b = el.txBlk || { b: 1, per: el.txTotal }; return el.txArch === '2N' ? L(b.b + ' A/B pairs (2N)', b.b + '对A/B（2N）') : (el.txArch === 'DR' ? L(b.b + ' groups of 3 (3N/2)', b.b + '组每组3台（3N/2）') : (el.txR ? L(b.b + ' identical blocks × (' + (b.per - 1) + ' duty + 1 reserve)', b.b + '个相同模块 ×（' + (b.per - 1) + '用1备）') : L('no reserve (N)', '无备用（N）'))); }
   /* connection assessment of the selected voltage (engine): standard / possible with conditions / not practical */
   function asmChip(hv) { var c = hv.asm.c; return '<span class="chip ' + (c === 'std' ? 'green' : (c === 'opt' ? 'amber' : 'coral')) + '" title="' + esc(L(hv.asm.en, hv.asm.zh)) + '">' + (c === 'std' ? L('standard solution', '标准方案') : (c === 'opt' ? L('possible — conditions', '可行——有条件') : L('not practical', '不可行'))) + '</span>'; }
   /* PLN grid impact indicators (Grid Code Permen ESDM 20/2020; engine R.gimp) */

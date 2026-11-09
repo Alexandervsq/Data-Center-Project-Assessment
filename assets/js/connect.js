@@ -36,7 +36,7 @@
     m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A | ' + hv.mv.ik + ' kA');
     m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')');
     m('P', 'lv', ['LV main breaker | fault level', '低压主断路器 | 短路水平'], F(el.lv.acb) + ' A | ' + el.lv.icw + ' kA');
-    m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + (el.genV === 'MV' ? '20 kV' : '400 V'));
+    m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + (el.genV === 'MV' ? '20 kV' : (el.lvV || 400) + ' V'));
     m('P', 'fuel', ['Fuel storage', '燃油储存'], F(el.fuelL / 1000) + ' m³ | ' + el.tanks + ' × ' + el.tankSize + ' m³ | ' + p.fuelH + ' h');
     m('P', 'ups', ['UPS', 'UPS'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW (' + el.upsLabel + ')');
     m('P', 'batt', ['Batteries', '蓄电池'], F(el.battKWh) + ' kWh | ' + p.upsMin + ' min | ' + (p.battery === 'LI' ? 'LFP' : 'VRLA'));
@@ -97,12 +97,13 @@
       { g: 'P', k: 'hvKm', l: ['HV connection cable route length', '高压接入电缆路径长度'], u: 'km', min: 0, max: 60, st: 0.1, v: R.gimp ? R.gimp.km : 5, r: hv.kv <= 150 ? 5 : 1, off: hv.kv <= 20 },
       { g: 'P', k: 'htMVA', l: ['HV/MV transformer rating', '高压/中压主变容量'], u: 'MVA', min: 10, max: 500, st: 1, v: hv.ht ? hv.ht.mva : 60, r: hv.ht ? hv.ht.rule : null, off: !hv.ht },
       { g: 'P', k: 'htUk', l: ['HV/MV transformer impedance', '主变短路阻抗'], u: '%', min: 6, max: 30, st: 0.5, v: hv.ht ? hv.ht.uk : 12.5, r: hv.ht ? hv.ht.ukRule : null, off: !hv.ht },
-      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating (20/0.4 kV)', '中/低压变压器容量（20/0.4 kV）'], u: 'kVA', min: 100, max: 6300, st: 5, v: el.txSize, r: el.txRule },
+      { g: 'P', k: 'lvV', l: ['LV system voltage', '低压系统电压'], o: [[400, ['230/400 V — IEC 60038 / SNI standard', '230/400 V——IEC 60038/SNI标准']], [415, ['240/415 V', '240/415 V']], [480, ['277/480 V — 4,000 kVA units', '277/480 V——4,000 kVA单台']], [690, ['400/690 V — mechanical; IT via 690/400 V', '400/690 V——机械负荷；IT经690/400 V']]], v: el.lvV || 400, r: 400 },
+      { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating (20 kV / LV)', '中/低压变压器容量（20 kV/低压）'], u: 'kVA', min: 100, max: 6300, st: 5, v: el.txSize, r: el.txRule },
       { g: 'P', k: 'txArch', l: ['MV/LV redundancy architecture', '中/低压变压器冗余架构'], o: [['N1', ['Block redundant N+1 (a reserve unit in every block)', '块冗余N+1（每块设一台备用）']], ['DR', ['Distributed redundant 3N/2 (any two of three carry the load)', '分布式冗余3N/2（三台中任意两台可承担负荷）']], ['2N', ['2N (A / B)', '2N（A/B）']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
-      { g: 'P', k: 'chV', l: ['Chiller supply voltage', '冷机供电电压'], o: [['LV', ['400 V chillers', '400 V冷机']], ['MV', ['6.6 kV chillers via 20/6.6 kV transformers', '经20/6.6 kV变压器的6.6 kV冷机']]], v: el.chV, r: el.chVRule, off: !(el.chKWe > 0) },
+      { g: 'P', k: 'chV', l: ['Chiller supply voltage', '冷机供电电压'], o: [['LV', ['chillers on the LV system', '冷机接低压系统']], ['MV', ['6.6 kV chillers via 20/6.6 kV transformers', '经20/6.6 kV变压器的6.6 kV冷机']]], v: el.chV, r: el.chVRule, off: !(el.chKWe > 0) },
       { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
       { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
-      { g: 'P', k: 'genV', l: ['Generator voltage', '发电机电压'], o: [['LV', ['400 V sets with ATS', '400 V机组+ATS']], ['MV', ['20 kV paralleled plant', '20 kV并机电站']]], v: el.genV, r: el.demandKW > 6000 ? 'MV' : 'LV' },
+      { g: 'P', k: 'genV', l: ['Generator voltage', '发电机电压'], o: [['LV', ['LV sets with ATS', '低压机组+ATS']], ['MV', ['20 kV paralleled plant', '20 kV并机电站']]], v: el.genV, r: el.demandKW > 6000 ? 'MV' : 'LV' },
       { g: 'P', k: 'fuelH', l: ['Fuel autonomy', '燃油自持时间'], u: 'h', min: 4, max: 120, st: 1, v: p.fuelH, r: pr.fuelH },
       { g: 'P', k: 'upsKW', l: ['UPS system rating', 'UPS单系统容量'], o: kOpts([300, 500, 800, 1000, 1200, 1500, 1600], 'kW'), v: el.upsSize, r: el.upsRule },
       { g: 'P', k: 'battery', l: ['Battery chemistry', '电池类型'], o: [['LI', ['Li-ion LFP', '磷酸铁锂']], ['VRLA', ['VRLA', '阀控铅酸']]], v: p.battery, r: pr.battery },
@@ -161,10 +162,11 @@
     twAppr: ['Condenser-water temperature → chiller COP and tower fan power → PUE and maximum demand', '冷却水温度→冷机COP及冷却塔风机功率→PUE及最大需量'],
     txKVA: ['Number of MV/LV transformers, impedance, LV main breaker and fault level, LV line-ups, meters, transformer losses (annual PUE)', '中/低压变压器台数、阻抗、低压主断路器及短路水平、低压配电柜组数、电表、变压器损耗（年均PUE）'],
     txLoad: ['Number of MV/LV transformers', '中/低压变压器台数'],
-    chV: ['Load on the 400 V system → number of MV/LV transformers, ACBs and LV feeders; 20/6.6 kV transformers and a 6.6 kV chiller switchboard; chiller motors and starters', '400 V系统负荷→中/低压变压器、框架断路器及低压馈线数量；20/6.6 kV变压器及6.6 kV冷机配电；冷机电机及启动方式'],
+    chV: ['Load on the LV system → number of MV/LV transformers, ACBs and LV feeders; 20/6.6 kV transformers and a 6.6 kV chiller switchboard; chiller motors and starters', '低压系统负荷→中/低压变压器、框架断路器及低压馈线数量；20/6.6 kV变压器及6.6 kV冷机配电；冷机电机及启动方式'],
+    lvV: ['Largest economic MV/LV unit (400 / 415 V: 3,150 kVA; 480 V: 4,000 kVA; 690 V: 5,000 kVA), number of transformers and LV switchboards, LV main breaker and busbar current, fault level, busway currents; 690 V adds 690/400 V transformers in the IT path', '最大经济中/低压单台容量（400/415 V：3,150 kVA；480 V：4,000 kVA；690 V：5,000 kVA）、变压器及低压配电柜数量、低压主断路器及母线电流、短路水平、母线槽电流；690 V时IT路径增加690/400 V变压器'],
     txArch: ['Number of MV/LV transformers and LV line-ups, their normal and failure loading, transformer losses, LV room and yard area', '中/低压变压器及低压配电柜组数、正常及故障负载率、变压器损耗、低压配电室及场地面积'],
     genKW: ['Number of generators, paralleling, yard area', '发电机台数、并机、场地面积'],
-    genV: ['20 kV generator incomers or 400 V ATS, MV switchgear panels', '20 kV发电机进线或400 V ATS、中压开关柜面数'],
+    genV: ['20 kV generator incomers or LV ATS, MV switchgear panels', '20 kV发电机进线或低压ATS、中压开关柜面数'],
     fuelH: ['Fuel volume, tanks, refuelling, water storage', '燃油量、储罐、补油、储水'],
     upsKW: ['Number of UPS systems, module loading and losses (PUE, maximum demand), battery energy, meters', 'UPS台数、模块负载率及损耗（PUE、最大需量）、电池能量、电表'],
     battery: ['UPS autonomy rule, battery room criteria (NFPA 855 / IEC 62485-2), electrical room area', 'UPS后备时间规则、电池室要求（NFPA 855/IEC 62485-2）、电气房间面积'],
