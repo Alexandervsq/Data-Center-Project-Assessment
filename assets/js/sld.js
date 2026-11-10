@@ -5,10 +5,11 @@
    Drawing practice: black and white; graphical symbols IEC 60617; device numbers IEEE C37.2; lettering ISO 3098 / IEC 61082-1 (2.5 mm ratings and
    notes, 3.5 mm designations, 5 mm title) without down-scaling — the sheet size (ISO 216 A2 / A1 / A0) follows the drawing; one language at a time
    (the website language); zone frame and title block (ISO 5457 / ISO 7200); hops where conductors cross; dashed lines for typical (repeated)
-   connections; text interrupts the lines it is written over. Output: SVG (website) and PDF (export) through DCSvg / DCPdf. */
+   connections; text interrupts the lines it is written over. Output: SVG (website), PDF and DWG (export) through DCSvg / DCPdf / DCDwg — in the DWG
+   each sheet is a block (BEDIT), the frame a block per sheet size and the title block a block with attributes. */
 (function (g) {
   'use strict';
-  var E = g.DCEngine, PDF = g.DCPdf, SVG = g.DCSvg;
+  var E = g.DCEngine, PDF = g.DCPdf, SVG = g.DCSvg, DWG = g.DCDwg;
   var INK = '#000000', PAPER = '#ffffff', H1 = 5, H2 = 3.5, H3 = 2.5, LH = 3.5, LANG = 'en';
   function T(en, zh) { return LANG === 'zh' && zh ? zh : en; }
   function F(x, d) { return E.fmt(x, d || 0); }
@@ -23,9 +24,9 @@
   S.ln = function (x1, y1, x2, y2, w, dash) { this.pg.line(x1, y1, x2, y2, { c: INK, w: w || 0.35, dash: dash }); };
   /* text; o.k = knock-out (the text interrupts the lines under it) */
   S.t = function (x, y, s, h, o) {
-    if (s === undefined || s === null || s === '') return; o = o || {}; h = h || H3; s = String(s);
+    o = o || {}; if ((s === undefined || s === null || s === '') && !o.tag) return; h = h || H3; s = String(s === undefined || s === null ? '' : s);
     if (o.k) { var w = this.w(s, h, o.b), x0 = o.a === 'c' ? x - w / 2 : (o.a === 'r' ? x - w : x); this.pg.rect(x0 - 0.6, y - 0.82 * h, w + 1.2, 1.12 * h, { fill: PAPER, stroke: false }); }
-    this.pg.text(x, y, s, { h: h, a: o.a, v: o.v, b: o.b, c: INK, rot: o.rot });
+    this.pg.text(x, y, s, { h: h, a: o.a, v: o.v, b: o.b, c: INK, rot: o.rot, tag: o.tag, prompt: o.prompt });   /* tag: attribute of the title block in the DWG */
   };
   S.w = function (s, h, b) { return this.pg.textW(String(s), h || H3, b); };
   /* wrap into lines no wider than w (words; Chinese and over-long words by character) */
@@ -117,23 +118,29 @@
 
   /* ------------------------------------------------------------------ sheet frame (ISO 5457), title block (ISO 7200), notes, legend, schedules */
   function fit(s, str, h, w, b) { str = String(str); if (s.w(str, h, b) <= w) return str; while (str.length > 3 && s.w(str + '…', h, b) > w) str = str.slice(0, -1); return str + '…'; }
+  /* groups for the DWG: 'frame' (border and zones, a block per sheet size) and 'title' (title block, a block whose variable fields are attributes) */
   function frame(pg, meta, no, total, title, W, H) {
-    var s = new Sym(pg); if (meta.titles) meta.titles.push(title);
+    var s = new Sym(pg), grp = pg.group ? function (n, b) { pg.group(n, b); } : function () {}; if (meta.titles) meta.titles.push(title);
+    grp('frame');
     pg.rect(5, 5, W - 10, H - 10, { c: INK, w: 0.35 }); pg.rect(10, 10, W - 20, H - 20, { c: INK, w: 0.7 });
     var nc = Math.max(4, Math.round((W - 20) / 50)), zw = (W - 20) / nc, nr = Math.max(4, Math.round((H - 20) / 50)), zh = (H - 20) / nr, LET = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     for (var i = 0; i < nc; i++) { var zx = 10 + i * zw; if (i) { s.ln(zx, 5, zx, 10, 0.25); s.ln(zx, H - 10, zx, H - 5, 0.25); } s.t(zx + zw / 2, 8.4, String(i + 1), H3, { a: 'c' }); s.t(zx + zw / 2, H - 6.6, String(i + 1), H3, { a: 'c' }); }
     for (var j = 0; j < nr; j++) { var zy = 10 + j * zh; if (j) { s.ln(5, zy, 10, zy, 0.25); s.ln(W - 10, zy, W - 5, zy, 0.25); } s.t(7.5, zy + zh / 2, LET.charAt(j), H3, { a: 'c', v: 'm' }); s.t(W - 7.5, zy + zh / 2, LET.charAt(j), H3, { a: 'c', v: 'm' }); }
     var X = W - 10 - 180, Y = H - 10 - 56, Wt = 180;
+    grp('title', [X + Wt, Y + 56]);
     pg.rect(X, Y, Wt, 56, { c: INK, w: 0.7, fill: PAPER });
     [9, 19, 32, 44].forEach(function (d) { s.ln(X, Y + d, X + Wt, Y + d, 0.3); });
     s.ln(X + 118, Y + 44, X + 118, Y + 56, 0.3); s.ln(X + 146, Y + 44, X + 146, Y + 56, 0.3);
     s.t(X + 2.5, Y + 6.2, 'PT CCEPC INDONESIA', H2, { b: true }); s.t(X + Wt - 2.5, Y + 6.2, T('Data Center Project Assessment', '数据中心项目评估'), H3, { a: 'r' });
-    s.t(X + 2.5, Y + 12.6, T('PROJECT', '项目'), H3); s.t(X + 25, Y + 16.4, fit(s, meta.project, H2, Wt - 28, true), H2, { b: true });
-    s.t(X + 2.5, Y + 22.6, T('TITLE', '图名'), H3); s.para(X + 25, Y + 23.4, title, H3, Wt - 28, { b: true });
-    s.t(X + 2.5, Y + 36.2, fit(s, meta.basis, H3, Wt - 5), H3); s.t(X + 2.5, Y + 41.2, T('Status: FOR PLANNING — NOT FOR CONSTRUCTION', '状态：规划用图——不得用于施工'), H3, { b: true });
-    s.t(X + 2.5, Y + 48, T('DWG No.', '图号'), H3); s.t(X + 2.5, Y + 53.6, meta.dwg + '-' + ('0' + no).slice(-2) + '  |  ' + meta.date + (meta.rev ? '  |  KB Rev. ' + meta.rev : ''), H3, { b: true });
-    s.t(X + 120.5, Y + 48, T('SCALE', '比例'), H3); s.t(X + 120.5, Y + 53.6, 'NTS', H2, { b: true });
-    s.t(X + 148.5, Y + 48, T('SHEET', '张次'), H3); s.t(X + 148.5, Y + 53.6, no + ' / ' + total, H2, { b: true });
+    s.t(X + 2.5, Y + 12.6, T('PROJECT', '项目'), H3); s.t(X + 25, Y + 16.4, fit(s, meta.project, H2, Wt - 28, true), H2, { b: true, tag: 'PROJECT', prompt: 'Project' });
+    var tl = s.wrap(title, H3, Wt - 28, true);
+    s.t(X + 2.5, Y + 22.6, T('TITLE', '图名'), H3);
+    [tl[0], tl[1], tl.slice(2).join(' ')].forEach(function (l, i) { s.t(X + 25, Y + 23.4 + i * LH, l || '', H3, { b: true, tag: 'TITLE' + (i + 1), prompt: 'Title, line ' + (i + 1) }); });
+    s.t(X + 2.5, Y + 36.2, fit(s, meta.basis, H3, Wt - 5), H3, { tag: 'BASIS', prompt: 'Design basis' }); s.t(X + 2.5, Y + 41.2, T('Status: FOR PLANNING — NOT FOR CONSTRUCTION', '状态：规划用图——不得用于施工'), H3, { b: true, tag: 'STATUS', prompt: 'Status' });
+    s.t(X + 2.5, Y + 48, T('DWG No.', '图号'), H3); s.t(X + 2.5, Y + 53.6, meta.dwg + '-' + ('0' + no).slice(-2) + '  |  ' + meta.date + (meta.rev ? '  |  KB Rev. ' + meta.rev : ''), H3, { b: true, tag: 'DWG_NO', prompt: 'Drawing number | date | revision' });
+    s.t(X + 120.5, Y + 48, T('SCALE', '比例'), H3); s.t(X + 120.5, Y + 53.6, 'NTS', H2, { b: true, tag: 'SCALE', prompt: 'Scale' });
+    s.t(X + 148.5, Y + 48, T('SHEET', '张次'), H3); s.t(X + 148.5, Y + 53.6, no + ' / ' + total, H2, { b: true, tag: 'SHEET', prompt: 'Sheet' });
+    grp(null);
     return s;
   }
   function notes(s, items, x, y, w) {
@@ -651,7 +658,7 @@
   function layout(d) { var P = plan(d, true); if (P.cw + 16 > 841) P = plan(d, false); return P; }
   function sheetAll(doc, d, P, no, total) {
     var el = d.el, sh = sheetFor(P), W = sh.W, H = sh.H, chain = chainOf(d);
-    var pg = doc.page(W, H), s = frame(pg, d.meta, no, total, T('Integrated single-line diagram', '综合单线图') + ' — ' + chain, W, H);
+    var pg = doc.page(W, H, sh.name), s = frame(pg, d.meta, no, total, T('Integrated single-line diagram', '综合单线图') + ' — ' + chain, W, H);
     s.t(16, 24, T('INTEGRATED SINGLE-LINE DIAGRAM', '综合单线图') + '  |  ' + chain, H1, { b: true });
     s.t(16, 31, T(F(el.mva, 1) + ' MVA maximum demand, IT ' + F(d.R.cap.itMW, 1) + ' MW, Tier ' + d.p.tier + '; MV/LV ' + el.txTotal + ' × ' + F(el.txSize) + ' kVA = ' + blk(el) + '; equipment and rating schedule on sheet 2', '最大需量' + F(el.mva, 1) + ' MVA，IT ' + F(d.R.cap.itMW, 1) + ' MW，Tier ' + d.p.tier + '；中/低压' + el.txTotal + '×' + F(el.txSize) + ' kVA = ' + blk(el) + '；设备及额定参数见第2张'), H3);
     drawMargin(s, d, P);
@@ -682,7 +689,7 @@
       items.forEach(function (it) { var c = col.indexOf(Math.min.apply(null, col)), h = schedBox(meas, 0, 0, cw, it[0], it[1], false); pos.push([c, col[c]]); col[c] += h + 4; });
       if (Math.max.apply(null, col) <= H - 98 || i === SHEETS.length - 1) lay = { W: W, H: Math.max(H, Math.ceil((Math.max.apply(null, col) + 98) / 10) * 10), cw: cw, pos: pos, name: SHEETS[i][2] };
     }
-    var pg = doc.page(lay.W, lay.H), s = frame(pg, d.meta, no, total, T('Equipment and rating schedule (electrical)', '电气设备及额定参数表'), lay.W, lay.H);
+    var pg = doc.page(lay.W, lay.H, lay.name), s = frame(pg, d.meta, no, total, T('Equipment and rating schedule (electrical)', '电气设备及额定参数表'), lay.W, lay.H);
     s.t(16, 24, T('EQUIPMENT AND RATING SCHEDULE', '设备及额定参数表') + '  |  ' + chainOf(d), H1, { b: true });
     s.t(16, 31, T('Ratings, feeders, cables and protection of the integrated single-line diagram (sheet 1); planning quantities from the assessment engine', '综合单线图（第1张）的额定值、馈线、电缆及保护；规划数量取自评估引擎'), H3);
     items.forEach(function (it, k) { schedBox(s, 16 + lay.pos[k][0] * (lay.cw + 4), lay.pos[k][1], lay.cw, it[0], it[1]); });
@@ -711,6 +718,13 @@
     pdf.titles = meta.titles; pdf.size = [r.W, r.H]; pdf.sheet = r.name; pdf.lang = LANG;
     return pdf;
   }
+  /* AutoCAD drawing (DWG R2000): the same two sheets side by side in model space, 1:1 in millimetres */
+  function buildDWG(x, opt) {
+    opt = opt || {}; setLang(opt);
+    var meta = metaOf(x, opt), d = design(x, meta), P = layout(d), doc = DWG.create({ lang: LANG, block: meta.dwg });
+    sheetAll(doc, d, P, 1, 2); sheetSchedule(doc, d, P, 2, 2); doc.titles = meta.titles; doc.lang = LANG;
+    return doc;
+  }
   function buildSVG(x, opt) {
     opt = opt || {}; setLang(opt);
     var meta = metaOf(x, opt), d = design(x, meta), P = layout(d), doc = SVG.create({ title: T('Single-line diagram', '单线图') + ' — ' + meta.project });
@@ -722,20 +736,20 @@
   /* ------------------------------------------------------------------ viewer (website): sheet tabs, zoom and pan, export as PDF; texts in the website language */
   function Lx(en, zh) { return g.I18N && g.I18N.lang && g.I18N.lang() === 'zh' ? zh : en; }
   function escH(v) { return String(v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
-  function fileName(opt) { if (opt && opt.file) return opt.file.replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) + '.pdf'; return ('SLD_' + (opt.code || 'design') + '_' + (opt.name || '')).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/_$/, '').slice(0, 90) + '.pdf'; }
-  function downloadPDF(x, opt) {
-    var blob = build(x, opt).blob(), a = document.createElement('a');
-    a.href = URL.createObjectURL(blob); a.download = fileName(opt); document.body.appendChild(a); a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
-  }
+  function fileName(opt, ext) { ext = '.' + (ext || 'pdf'); if (opt && opt.file) return opt.file.replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 120) + ext; return ('SLD_' + (opt.code || 'design') + '_' + (opt.name || '')).replace(/[^A-Za-z0-9._-]+/g, '_').replace(/_+/g, '_').replace(/_$/, '').slice(0, 90) + ext; }
+  function save(blob, name) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000); }
+  function downloadPDF(x, opt) { save(build(x, opt).blob(), fileName(opt, 'pdf')); }
+  function downloadDWG(x, opt) { save(new Blob([buildDWG(x, opt).output()], { type: 'application/acad' }), fileName(opt, 'dwg')); }
   var IC = { dl: '<svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>', full: '<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>' };
-  var ZOOM = [1, 1.5, 2, 3, 4, 6, 8];
+  /* zoom: 100 % = sheet width fitted to the view; − / + step through this ladder, the percentage can be typed (10–1000 %), Ctrl + wheel zooms smoothly at the pointer */
+  var ZOOM = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3, 3.5, 4, 5, 6, 8, 10], ZMIN = 0.1, ZMAX = 10;
   function sheetInfo(pg) { return (pg.name ? pg.name + ' ' : '') + Math.round(pg.w) + ' × ' + Math.round(pg.h) + ' mm'; }
   function viewerHTML(r, mode, pi) {
     var pg = r.pages[pi] || r.pages[0];
     return '<div class="sld-bar"><button type="button" class="sld-b pri" data-sld-pdf>' + IC.dl + escH(Lx('Export PDF', '导出PDF')) + '</button>' +
+      (DWG ? '<button type="button" class="sld-b pri" data-sld-dwg title="' + escH(Lx('AutoCAD drawing (DWG 2000): each sheet is a block (BEDIT); the title block fields are attributes', 'AutoCAD图纸（DWG 2000）：每张图为一个块（BEDIT），图签字段为属性')) + '">' + IC.dl + escH(Lx('Export DWG', '导出DWG')) + '</button>' : '') +
       (r.pages.length > 1 ? '<span class="sld-tabs" role="tablist">' + r.pages.map(function (q, i) { return '<button type="button" role="tab" class="sld-b' + (i === pi ? ' on' : '') + '" aria-selected="' + (i === pi) + '" data-sld-pg="' + i + '">' + escH(i ? Lx('Sheet 2 · schedule', '第2张·设备表') : Lx('Sheet 1 · diagram', '第1张·单线图')) + '</button>'; }).join('') + '</span>' : '') +
-      '<span class="sld-zoom"><button type="button" class="sld-b" data-sld-z="-1" aria-label="' + escH(Lx('Zoom out', '缩小')) + '">−</button><b data-sld-zl>100%</b><button type="button" class="sld-b" data-sld-z="1" aria-label="' + escH(Lx('Zoom in', '放大')) + '">+</button><button type="button" class="sld-b" data-sld-z="0">' + escH(Lx('Fit', '适应宽度')) + '</button><button type="button" class="sld-b" data-sld-z="r" title="' + escH(Lx('Actual paper size', '实际图纸尺寸')) + '">1:1</button></span>' +
+      '<span class="sld-zoom"><button type="button" class="sld-b" data-sld-z="-1" aria-label="' + escH(Lx('Zoom out', '缩小')) + '">−</button><label class="sld-zl" title="' + escH(Lx('Type a zoom (10–1000 %) and press Enter; 100 % = sheet width fitted to the view', '输入缩放比例（10–1000%）后按回车；100% = 图纸宽度适应视图')) + '"><input type="number" inputmode="decimal" data-sld-zin min="10" max="1000" step="5" value="100" aria-label="' + escH(Lx('Zoom, %', '缩放，%')) + '"><span>%</span></label><button type="button" class="sld-b" data-sld-z="1" aria-label="' + escH(Lx('Zoom in', '放大')) + '">+</button><button type="button" class="sld-b" data-sld-z="0">' + escH(Lx('Fit', '适应宽度')) + '</button><button type="button" class="sld-b" data-sld-z="r" title="' + escH(Lx('Actual paper size', '实际图纸尺寸')) + '">1:1</button></span>' +
       (mode === 'page' ? '<button type="button" class="sld-b" data-sld-full>' + IC.full + escH(Lx('Full screen', '全屏')) + '</button>' : '') +
       '<span class="sld-info" data-sld-info>' + escH(sheetInfo(pg)) + '</span><span class="sld-sp"></span>' +
       (mode === 'modal' ? '<button type="button" class="sld-b" data-sldx>✕ ' + escH(Lx('Close', '关闭')) + '</button>' : '') + '</div>' +
@@ -745,8 +759,8 @@
     var st = host.__sld, view = host.querySelector('[data-sld-view]'), cv0 = host.querySelector('[data-sld-canvas]'); if (!st || !view || !cv0) return;
     var fx = cx === undefined ? 0.5 : cx, fy = cy === undefined ? 0.5 : cy;
     var px = (view.scrollLeft + fx * view.clientWidth) / Math.max(1, cv0.offsetWidth), py = (view.scrollTop + fy * view.clientHeight) / Math.max(1, cv0.offsetHeight);
-    st.z = z; cv0.style.width = (z * 100) + '%';
-    var zl = host.querySelector('[data-sld-zl]'); if (zl) zl.textContent = Math.round(z * 100) + '%';
+    z = Math.max(ZMIN, Math.min(ZMAX, z)); st.z = z; cv0.style.width = (z * 100) + '%';
+    var zi = host.querySelector('[data-sld-zin]'); if (zi) zi.value = Math.round(z * 100);
     view.scrollLeft = px * cv0.offsetWidth - fx * view.clientWidth; view.scrollTop = py * cv0.offsetHeight - fy * view.clientHeight;
   }
   function showPage(host, pi) {
@@ -760,24 +774,39 @@
     host.addEventListener('click', function (ev) {
       var t = ev.target.closest('button'); if (!t || !host.contains(t)) return; var st = host.__sld; if (!st) return;
       if (t.hasAttribute('data-sld-pdf')) { try { downloadPDF(st.x, st.opt); } catch (e) { console.error(e); } return; }
+      if (t.hasAttribute('data-sld-dwg')) { try { downloadDWG(st.x, st.opt); } catch (e) { console.error(e); } return; }
       if (t.hasAttribute('data-sld-full')) { open(st.x, st.opt, st.pg); return; }
       if (t.hasAttribute('data-sld-pg')) { showPage(host, +t.getAttribute('data-sld-pg')); return; }
       if (t.hasAttribute('data-sld-z')) {
-        var v = t.getAttribute('data-sld-z'), i = ZOOM.indexOf(st.z), view = host.querySelector('[data-sld-view]');
+        var v = t.getAttribute('data-sld-z'), view = host.querySelector('[data-sld-view]');
         if (v === 'r') { var pg = st.r.pages[st.pg || 0]; setZoom(host, Math.max(0.25, pg.w * 96 / 25.4 / Math.max(1, view.clientWidth))); }
         else if (v === '0') setZoom(host, 1);
-        else { var j = i >= 0 ? i : ZOOM.reduce(function (a, q, k) { return q <= st.z ? k : a; }, 0); setZoom(host, ZOOM[Math.max(0, Math.min(ZOOM.length - 1, j + (+v)))]); }
+        else setZoom(host, stepZoom(st.z, +v));
       }
     });
     host.addEventListener('wheel', function (ev) {
       if (!ev.ctrlKey) return; var view = host.querySelector('[data-sld-view]'); if (!view || !view.contains(ev.target)) return; ev.preventDefault();
-      var st = host.__sld, i = ZOOM.indexOf(st.z), j = i >= 0 ? i : ZOOM.reduce(function (a, q, k) { return q <= st.z ? k : a; }, 0), r = view.getBoundingClientRect(), nz = ZOOM[Math.max(0, Math.min(ZOOM.length - 1, j + (ev.deltaY < 0 ? 1 : -1)))];
+      var st = host.__sld, r = view.getBoundingClientRect(), nz = st.z * Math.pow(1.0015, -Math.max(-240, Math.min(240, ev.deltaY)));
       setZoom(host, nz, (ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height);
     }, { passive: false });
+    function typed(inp) { var v = parseFloat(String(inp.value).replace(',', '.')); if (!isFinite(v) || v <= 0) { inp.value = Math.round(host.__sld.z * 100); return; } setZoom(host, v / 100); inp.value = Math.round(host.__sld.z * 100); }
+    host.addEventListener('change', function (ev) { var inp = ev.target.closest && ev.target.closest('[data-sld-zin]'); if (inp && host.__sld) typed(inp); });
+    host.addEventListener('keydown', function (ev) { var inp = ev.target.closest && ev.target.closest('[data-sld-zin]'); if (!inp || !host.__sld) return; if (ev.key === 'Enter') { ev.preventDefault(); typed(inp); inp.select(); } else if (ev.key === 'Escape') { inp.value = Math.round(host.__sld.z * 100); inp.blur(); } ev.stopPropagation(); });
     var drag = null;
-    host.addEventListener('pointerdown', function (ev) { var view = ev.target.closest('[data-sld-view]'); if (!view || ev.button !== 0 || ev.pointerType === 'touch') return; drag = { v: view, x: ev.clientX, y: ev.clientY, l: view.scrollLeft, t: view.scrollTop }; view.classList.add('drag'); });
+    host.addEventListener('pointerdown', function (ev) { var view = ev.target.closest('[data-sld-view]'); if (!view || ev.button !== 0 || ev.pointerType === 'touch' || ev.target.closest('input, button')) return; drag = { v: view, x: ev.clientX, y: ev.clientY, l: view.scrollLeft, t: view.scrollTop }; view.classList.add('drag'); });
     window.addEventListener('pointermove', function (ev) { if (!drag) return; drag.v.scrollLeft = drag.l - (ev.clientX - drag.x); drag.v.scrollTop = drag.t - (ev.clientY - drag.y); });
     window.addEventListener('pointerup', function () { if (drag) { drag.v.classList.remove('drag'); drag = null; } });
+  }
+  function stepZoom(z, d) { var i; if (d > 0) { for (i = 0; i < ZOOM.length; i++) if (ZOOM[i] > z + 0.001) return ZOOM[i]; return ZOOM[ZOOM.length - 1]; } for (i = ZOOM.length - 1; i >= 0; i--) if (ZOOM[i] < z - 0.001) return ZOOM[i]; return ZOOM[0]; }
+  /* live view (simulation): redraw the sheets of the changed design in place, keeping the sheet, zoom and scroll position */
+  function update(host, x, opt) {
+    var st = host.__sld, view = st && host.querySelector('[data-sld-view]'), cv0 = st && host.querySelector('[data-sld-canvas]');
+    if (!st || !view || !cv0 || (opt && opt.lang) !== (st.opt && st.opt.lang)) return mount(host, x, opt, 'page');
+    var r = buildSVG(x, opt || {}), pi = st.pg < r.pages.length ? st.pg : 0, sl = view.scrollLeft, stp = view.scrollTop;
+    st.x = x; st.opt = opt || {}; st.r = r; st.pg = pi; cv0.innerHTML = r.pages[pi].svg;
+    var inf = host.querySelector('[data-sld-info]'); if (inf) inf.textContent = sheetInfo(r.pages[pi]);
+    view.scrollLeft = sl; view.scrollTop = stp;
+    return r;
   }
   function mount(host, x, opt, mode) {
     opt = opt || {};
@@ -799,6 +828,6 @@
     document.addEventListener('keydown', escKey, true); document.body.appendChild(d); MODAL = d; document.documentElement.classList.add('sld-lock');
     var b = d.querySelector('[data-sldx]'); if (b) b.focus();
   }
-  g.DCSLD = { design: designOf, build: build, buildSVG: buildSVG, mount: mount, open: open, close: close, downloadPDF: downloadPDF, fileName: fileName };
+  g.DCSLD = { design: designOf, build: build, buildSVG: buildSVG, buildDWG: buildDWG, mount: mount, update: update, open: open, close: close, downloadPDF: downloadPDF, downloadDWG: downloadDWG, fileName: fileName };
   if (typeof module !== 'undefined' && module.exports) module.exports = g.DCSLD;
 })(typeof window !== 'undefined' ? window : globalThis);

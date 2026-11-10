@@ -497,12 +497,15 @@ button.lnk:hover { text-decoration: underline; }
 .sld-b svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .sld-zoom { display: inline-flex; align-items: center; gap: 4px; }
 .sld-zoom .sld-b { padding: 6px 10px; min-width: 34px; justify-content: center; }
-.sld-zoom b { min-width: 46px; text-align: center; font-size: .8rem; color: var(--deep, #17153f); }
+.sld-zl { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; height: 32px; border: 1px solid var(--line, #d9dcec); border-radius: 8px; background: #fff; font-size: .8rem; color: var(--deep, #17153f); }
+.sld-zl input { width: 52px; border: 0; outline: 0; background: transparent; font: inherit; font-weight: 700; text-align: right; color: inherit; -moz-appearance: textfield; }
+.sld-zl input::-webkit-outer-spin-button, .sld-zl input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.sld-zl:focus-within { border-color: var(--indigo, #3f3cbb); box-shadow: 0 0 0 2px rgba(63, 60, 187, .15); }
 .sld-info { font-size: .8rem; color: var(--muted, #5d6280); }
 .sld-sp { flex: 1; }
 .sld-view { overflow: auto; max-height: 80vh; border: 1px solid var(--line, #d9dcec); border-radius: 10px; background: #eef0f7; cursor: grab; }
 .sld-view.drag { cursor: grabbing; user-select: none; }
-.sld-canvas { width: 100%; }
+.sld-canvas { width: 100%; margin: 0 auto; }
 .sld-canvas svg { display: block; width: 100%; height: auto; background: #fff; }
 .sld-note { margin-top: 8px; font-size: .76rem; color: var(--muted, #5d6280); }
 .sldhost { min-height: 120px; }

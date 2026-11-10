@@ -37,8 +37,21 @@
 .tc-stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; transform: translate(var(--x, 0px), var(--y, 0px)) scale(var(--s, .5));
   background: linear-gradient(180deg, #FAFBFE 0%, #F2F3FA 58%, #E9EBF6 100%); overflow: hidden; contain: layout paint; font-family: var(--tc-f); color: var(--tc-ink);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .35); }
-.tc-sldp { min-height: 200px; }
-.tc-sldp .sld-view { max-height: 76vh; }
+/* single-line diagram under the simulation (live) */
+.tc-sld { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--tc-line, #e3e5f0); scroll-margin-top: 72px; }
+.tc-sld.flash .sld-view { animation: tcSldFlash 1.4s ease-out; }
+@keyframes tcSldFlash { 0% { box-shadow: 0 0 0 4px rgba(63, 60, 187, .45); } 100% { box-shadow: 0 0 0 0 rgba(63, 60, 187, 0); } }
+.tc-sldh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 10px; }
+.tc-sldh h3 { margin: 0; font-size: 1.15rem; color: var(--deep, #17153f); }
+.tc-sldn { font-weight: 700; color: var(--deep, #17153f); font-size: .9rem; }
+.tc-sldl { font-size: .8rem; color: #3b7a3b; } .tc-sldl::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; background: #3fae49; vertical-align: 1px; }
+.tc-sldl.on { color: #8a5a00; } .tc-sldl.on::before { background: #f2a93b; }
+.tc-sldx { flex-basis: 100%; font-size: .78rem; color: var(--tc-muted, #5d6280); }
+.tc-sldhost { min-height: 160px; }
+.tc-sldhost .sld-view { max-height: 78vh; min-height: 260px; }
+.tc-sldwait { padding: 40px 0; text-align: center; color: var(--tc-muted, #5d6280); }
+.tc-sldgpu { margin-top: 12px; } .tc-sldgpu summary { cursor: pointer; font-weight: 700; color: var(--indigo, #3f3cbb); font-size: .9rem; }
+.tc-wrap.tc-focus ~ .tc-sld { display: none; }
 .tc-ctl { position: absolute; z-index: 5; display: flex; gap: 10px; }
 .tcv [hidden] { display: none !important; }
 .tc-ctl[data-place="side"] { top: 50%; transform: translateY(-50%); flex-direction: column; }

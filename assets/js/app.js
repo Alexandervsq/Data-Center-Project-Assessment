@@ -433,7 +433,8 @@
     if (r) h += '<div class="whybox" style="margin-bottom:14px">' + L('This is a read-only example. Its report can be exported as it is; use it as a template to edit the values first.', '此为只读示例，可直接导出其报告；如需修改参数，请先用作模板。') + '</div>';
     h += '<div class="grid g3">' + [['file', '#2b579a', 'Word report (.docx)', 'Word报告（.docx）', 'Complete proposal with all sections, tables, diagrams and the parameter register — ready to edit.', '完整建议书，含全部章节、表格、图示及参数登记——可直接编辑。', 'docx'],
       ['grid', '#217346', 'Excel workbook (.xlsx)', 'Excel工作簿（.xlsx）', 'Summary, parameters, equipment, CAPEX / OPEX, cash flow, schedule and risks on separate sheets.', '摘要、参数、设备、投资/运营成本、现金流、进度及风险分表列示。', 'xlsx'],
-      ['sld', '#1B7F2A', 'Single-line diagram (.pdf)', '单线图（.pdf）', 'Integrated single-line diagram (A2–A0 by size of the design, HV → MV → LV) plus the A3 equipment and rating schedule.', '综合单线图（按设计规模A2–A0，高压→中压→低压）及A3设备与额定参数表。', 'sldpdf'],
+      ['sld', '#1B7F2A', 'Single-line diagram (.pdf)', '单线图（.pdf）', 'Integrated single-line diagram (A2–A0 by size of the design, HV → MV → LV) plus the equipment and rating schedule.', '综合单线图（按设计规模A2–A0，高压→中压→低压）及设备与额定参数表。', 'sldpdf'],
+      ['sld', '#7a4b00', 'Single-line diagram (.dwg)', '单线图（.dwg）', 'The same two sheets as an AutoCAD drawing (DWG 2000, 1:1 mm): each sheet is a block you can edit with BEDIT, the title block carries attributes.', '同样两张图的AutoCAD图纸（DWG 2000，1:1毫米）：每张图为可用BEDIT编辑的块，图签为属性块。', 'slddwg'],
       ['print', '#b42318', 'PDF (print)', 'PDF（打印）', 'Printable report in a new window — choose “Save as PDF” in the print dialog.', '在新窗口打开可打印报告——在打印对话框中选择“另存为PDF”。', 'pdf']].map(function (e) {
         return '<div class="card exp-card"><div class="ficon" style="background:' + e[1] + '">' + ic(e[0]) + '</div><h3>' + L(e[2], e[3]) + '</h3><div class="small muted">' + L(e[4], e[5]) + '</div><button type="button" class="btn" data-act="' + e[6] + '">' + ic('download') + L('Export', '导出') + '</button></div>'; }).join('') + '</div>';
     h += '<div class="grid g2"><div class="card">' + ptitle('Data files', '数据文件') + '<div class="row" style="gap:8px"><button type="button" class="btn ghost" data-act="json">' + ic('download') + L('Project file (.json)', '项目文件（.json）') + '</button><button type="button" class="btn ghost" data-act="csv">' + ic('download') + L('Equipment list (.csv)', '设备清单（.csv）') + '</button><button type="button" class="btn ghost" data-act="fincsv">' + ic('download') + L('Cash flow (.csv)', '现金流（.csv）') + '</button></div>' +
@@ -566,7 +567,8 @@
       if (a === 'pdf') { if (!RP.openPrint(S.x, ropt(), reportName())) toast(Lt('Allow pop-ups to open the printable report', '请允许弹出窗口以打开打印报告')); }
       if (a === 'docx') { toast(Lt('Building Word report…', '正在生成Word报告…')); RP.docx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Word export failed', 'Word导出失败')); }); }
       if (a === 'xlsx') { toast(Lt('Building Excel workbook…', '正在生成Excel…')); RP.xlsx(S.x, ropt(), reportName()).catch(function (e) { console.error(e); toast(Lt('Excel export failed', 'Excel导出失败')); }); }
-      if (a === 'sldpdf' && window.DCSLD) { var so = sldOpt(); download(window.DCSLD.fileName(so), window.DCSLD.build(S.x, so).output(), 'application/pdf'); }
+      if (a === 'sldpdf' && window.DCSLD) { var so = sldOpt(); download(window.DCSLD.fileName(so, 'pdf'), window.DCSLD.build(S.x, so).output(), 'application/pdf'); }
+      if (a === 'slddwg' && window.DCSLD && window.DCSLD.buildDWG) { var sd = sldOpt(); download(window.DCSLD.fileName(sd, 'dwg'), window.DCSLD.buildDWG(S.x, sd).output(), 'application/acad'); }
       if (a === 'sldref' && window.DCSLD) { var rr = find(DB.references, id), rx = resolveRef(rr); window.DCSLD.open(rx, sldOpt(rr, rx)); return; }
       if (a === 'csv') exportBOQ();
       if (a === 'fincsv') exportFin();
