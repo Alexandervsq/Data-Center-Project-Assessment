@@ -96,6 +96,25 @@
     return out + '<div><h3>' + L.te(['GPU parameters that act on the substation', '影响变电站的GPU参数']) + '</h3>' + L.ptable([['Parameter', '参数'], ['This design', '本设计'], ['Effect', '影响']], p2) + '</div>';
   }
   L.gpuTable = gpuTable;
+
+  /* CRAC or CRAH (Rev. 18): the two families of air-side units, what the standards regulate, typical choices, and the choice of this design */
+  function cracCrahVerdict(c) {
+    var R = c.R, me = R.me, a = R.cool.airTech, tm = me.term, liq = R.cool.tech === 'DLC' || R.cool.tech === 'IMM';
+    if (a === 'DX') return ['This design uses <b>CRAC units</b>: ' + (me.cracN + me.cracR) + ' × ' + me.cracSize + ' kW DX (' + E.redLabel(me.cracN, me.cracR) + ') with outdoor condensers — the engine keeps DX for small facilities (≤ ≈ 1.5 MW, ≤ 10 kW per rack). No CRAH and no chilled-water plant.',
+      '本设计采用<b>CRAC</b>：' + (me.cracN + me.cracR) + '台' + me.cracSize + ' kW直膨机组（' + E.redLabel(me.cracN, me.cracR) + '）配室外冷凝器——评估引擎仅在小型设施（约≤1.5 MW、单柜≤10 kW）采用直膨。无CRAH及冷冻水系统。'];
+    if (a === 'IEC') return ['This design uses <b>neither</b>: ' + (me.iecN + me.iecR) + ' indirect evaporative air handlers with DX trim.', '本设计<b>二者均未采用</b>：' + (me.iecN + me.iecR) + '台间接蒸发冷却机组配直膨补冷。'];
+    var nm = tm ? (tm.id === 'ME-10' ? ['chilled-water in-row coolers', '冷冻水列间空调'] : tm.id === 'ME-07' ? ['CRAH units', 'CRAH'] : ['fan walls', '风墙']) : ['CRAH units', 'CRAH'];
+    return ['This design uses the <b>CRAH family</b>: ' + (tm ? (tm.n + tm.r) + ' × ' + tm.cap + ' kW ' + nm[0] + ' (' + E.redLabel(tm.n, tm.r) + ')' : nm[0]) + ' fed by ' + (a === 'WCCH' ? 'water-cooled chillers and cooling towers' : 'air-cooled chillers') + (liq ? ', for the residual air of a liquid-cooled hall' : '') + '. No CRAC units — DX would need ' + Math.ceil((R.cool.airKW || 0) / 100) + ' or more compressor units in the hall.',
+      '本设计采用<b>CRAH类</b>：' + (tm ? (tm.n + tm.r) + '台' + tm.cap + ' kW ' + nm[1] + '（' + E.redLabel(tm.n, tm.r) + '）' : nm[1]) + '，由' + (a === 'WCCH' ? '水冷冷机及冷却塔' : '风冷冷机') + '供冷' + (liq ? '，承担液冷机房的余热风冷' : '') + '。未采用CRAC——若用直膨需在机房内设置' + Math.ceil((R.cool.airKW || 0) / 100) + '台以上压缩机机组。'];
+  }
+  function cracCrah(c) {
+    var cc = DB.cracCrah || { rows: [], std: [], typ: [] }, rows = cc.rows, std = cc.std, typ = cc.typ;
+    return '<div><h3>' + L.te(['CRAC or CRAH — side by side', 'CRAC与CRAH对比']) + '</h3>' + L.ptable([['Aspect', '方面'], ['CRAC — computer room air conditioner (DX)', 'CRAC——机房精密空调（直膨）'], ['CRAH — computer room air handler (chilled water)', 'CRAH——机房空气处理机（冷冻水）']], rows.map(function (r) { return [L.te(r[0]), L.te(r[1]), L.te(r[2])]; })) + '</div>' +
+      '<div class="tc-basisbox" style="margin-top:12px">' + L.t(cracCrahVerdict(c)) + '</div>' +
+      '<div><h3>' + L.te(['What the standards regulate — not the unit type', '标准规定的内容——而非末端类型']) + '</h3>' + L.ptable([['Standard', '标准'], ['What it sets for cooling', '对制冷的规定']], std.map(function (r) { return [L.te(r[0]), L.te(r[1])]; })) + '</div>' +
+      '<div><h3>' + L.te(['Typical choice by project', '按项目的典型选型']) + '</h3>' + L.ptable([['Project', '项目'], ['Air side', '风侧'], ['Plant', '冷源']], typ.map(function (r) { return [L.te(r[0]), L.te(r[1]), L.te(r[2])]; })) + '</div>';
+  }
+  L.cracCrah = cracCrah; L.cracCrahVerdict = cracCrahVerdict;
   /* worked reference: how a 1,050 MVA data-center campus steps down (anonymised) */
   var REFCASE = [
     [['Contracted demand', '合同容量'], ['1,050 MVA', '1,050 MVA'], ['4,041 A at 150 kV, 1,212 A at 500 kV: above what a 150 kV connection can bring', '150 kV时4,041 A，500 kV时1,212 A：超出150 kV接入能力']],
@@ -804,6 +823,17 @@
         'AI训练集群在任务同步时可在数秒内波动数十兆瓦。通常按IT功率10–25%、时长1–2 h配置的储能可吸收波动、削减PLN峰值需量并稳定光伏。约3.5–5 MWh的LFP集装箱经UL 9540A测试，并按NFPA 855布置间距。'],
       formula: ['MWh = MW × hours | containers = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉', 'MWh = MW × 小时 | 集装箱 = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉'],
       ex: function (c) { var b = c.R.el.bess; return b ? ['This basis: <b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b> in ' + b.containers + ' containers, ≈ ' + usd(b.capex) + '. Basis of the proposal: ' + t(c.x.why.bessOn), '本基准：<b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b>，' + b.containers + '个集装箱，约' + usd(b.capex) + '。建议依据：' + t(c.x.why.bessOn)] : ['No BESS is proposed for this basis: ' + t(c.x.why.bessOn), '本基准未建议储能：' + t(c.x.why.bessOn)]; } },
+    cracrah: { title: ['CRAC or CRAH? — the units that cool the air', 'CRAC还是CRAH？——冷却空气的末端设备'],
+      body: ['Both stand in or next to the white space and blow cold air to the servers; they differ in where the cold comes from. A <b>CRAC</b> (computer room air conditioner) is a self-contained direct-expansion unit: its own compressor and refrigerant circuit cool the coil and reject the heat to an outdoor condenser. A <b>CRAH</b> (computer room air handler) has no compressor: a chilled-water coil and EC fans take their cold from a central chiller plant — fan walls and chilled-water in-row coolers are bigger or closer-coupled members of the same family. A data center does not need both: it uses the family that suits its size, rack density, climate and water, and the standards regulate the result — temperatures, redundancy, efficiency, refrigerants — not the unit type. "Chilled-water air cooling" (the CHW simulation) means exactly the CRAH route: the servers are cooled by air, and that air is cooled by chilled water.',
+        '二者都位于白区内或旁边，向服务器送冷风；区别在于冷量来源。<b>CRAC</b>（机房精密空调）为自带压缩机的直膨机组：机内压缩机与冷媒回路冷却盘管，并将热量排至室外冷凝器。<b>CRAH</b>（机房空气处理机）无压缩机：冷冻水盘管与EC风机的冷量来自集中冷站——风墙及冷冻水列间空调是同一类中更大或更靠近热源的形式。数据中心无需二者兼用：按规模、机柜密度、气候及水资源选择其一，标准规定的是结果——温湿度、冗余、能效、冷媒——而非末端类型。“冷冻水风冷”（CHW模拟）正是CRAH路线：服务器由空气冷却，空气再由冷冻水冷却。'],
+      formula: ['CRAC: room air → evaporator coil → compressor → refrigerant → outdoor condenser → air\nCRAH: room air → chilled-water coil → CHW pumps → chiller → cooling tower / dry cooler → air', 'CRAC：室内空气 → 蒸发盘管 → 压缩机 → 冷媒 → 室外冷凝器 → 大气\nCRAH：室内空气 → 冷冻水盘管 → 冷冻水泵 → 冷机 → 冷却塔/干冷器 → 大气'],
+      ex: function (c) { return L.cracCrahVerdict ? L.cracCrahVerdict(c) : ''; },
+      visual: function () {
+        var o = '', row = function (y, col, lab, items) { var x = 18; o += L.text(14, y - 30, lab, 'tc-lt', ' style="font-size:14px"'); items.forEach(function (it, i) { var w = it[2] || 112; o += L.R(x, y - 18, w, 44, it[1], ' rx="9"') + L.text(x + w / 2, y + 9, it[0], 'tc-lw', ' text-anchor="middle" style="font-size:12px;font-weight:700"'); if (i < items.length - 1) o += '<path d="M' + (x + w + 3) + ' ' + (y + 4) + 'H' + (x + w + 19) + '" stroke="' + col + '" stroke-width="4"/>' + L.arrowHead(x + w + 24, y + 4, 'r', col, 7); x += w + 26; }); };
+        row(66, '#7C3AED', ['CRAC (DX) — one loop per unit', 'CRAC（直膨）——每台一个回路'], [[['room air', '室内空气'], '#52A9C9', 92], [['CRAC: coil + compressor', 'CRAC：盘管+压缩机'], '#7C3AED', 170], [['refrigerant', '冷媒'], '#9B7BE0', 92], [['outdoor condenser', '室外冷凝器'], '#5D6280', 128]]);
+        row(176, '#0EA5C6', ['CRAH (chilled water) — central plant', 'CRAH（冷冻水）——集中冷站'], [[['room air', '室内空气'], '#52A9C9', 74], [['CRAH: coil + fans', 'CRAH：盘管+风机'], '#0B7F99', 122], [['chilled water', '冷冻水'], '#0EA5C6', 92], [['chiller', '冷机'], '#3F3CBB', 64], [['tower / dry cooler', '冷却塔/干冷器'], '#5D6280', 112]]);
+        return L.illSvg(o, '0 0 560 220'); },
+      table: function (c) { return L.cracCrah ? L.cracCrah(c) : ''; }, calc: false },
     air: { title: ['Heat & airflow', '热量与风量'],
       body: ['Every kilowatt of IT becomes heat, and air can carry it only in large volumes. With a 12 K rise across the servers, 1 kW needs ≈ 250 m³/h of air — which is why air cooling stops being practical above ≈ 25–40 kW per rack.',
         'IT的每千瓦都会变成热量，而空气只能以大风量带走热量。服务器温升12 K时，1 kW约需250 m³/h风量——这就是单柜约25–40 kW以上风冷不再实用的原因。'],

@@ -980,6 +980,26 @@
   function closeModal() { $('#modalRoot').innerHTML = ''; }
 
   /* ========================================================== EQUIPMENT & RACKS */
+  /* Rev. 18: the detail pane renders on its own, so choosing an item keeps the section list where the reader left it */
+  function equipDetail(e) {
+    var s = find(DB.systems, e.sys), n = 0;
+    return '<div class="card"><div class="row" style="align-items:flex-start;gap:14px"><div class="ficon" style="background:' + s.color + '">' + ic(SYS_IC[e.sys]) + '</div><div style="flex:1"><div class="small muted">' + e.id + ' | ' + L(s.en, s.zh) + ' | ' + (e.cls === 'M' ? '<span class="chip coral">' + L('Major', '主要设备') + '</span>' : '<span class="chip">' + L('Secondary', '次要设备') + '</span>') + '</div><h3 style="font-size:1.2rem;margin-top:4px">' + L(e.en, e.zh) + '</h3></div><button class="btn small ghost" id="tpgCsv">' + ic('download') + 'TPG CSV</button></div>' +
+      '<h4>' + L('Function', '功能') + '</h4><div>' + Lp(e.fn) + '</div><h4>' + L('Typical ratings', '典型规格') + '</h4><div>' + Lp(e.ty) + '</div><h4>' + L('Technical requirements', '技术要求') + '</h4>' + e.s.map(function (c, i) { return '<div class="clause"><span class="no">' + (i + 1) + '</span><div>' + L(c[0], c[1]) + '</div></div>'; }).join('') +
+      '<h4>' + L('Applicable standards', '适用标准') + '</h4><div class="row" style="gap:6px">' + e.std.map(function (x) { return '<span class="chip ind">' + esc(x) + '</span>'; }).join('') + '</div>' + (e.t ? '<h4>' + L('Inspection & testing', '检验与试验') + '</h4><ul style="padding-left:20px">' + e.t.map(function (x) { return '<li>' + L(x[0], x[1]) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
+      '<div class="card"><h3>' + L('Technical Particulars & Guarantees — TPG-' + e.id, '技术参数保证表——TPG-' + e.id) + '</h3><div class="tblw"><table class="t"><thead><tr><th>' + L('No.', '序号') + '</th><th>' + L('Description', '描述') + '</th><th>' + L('Unit', '单位') + '</th><th>' + L('Required', '要求值') + '</th><th>' + L('Guaranteed', '保证值') + '</th></tr></thead><tbody>' +
+      e.tpg.map(function (r) { if (r.g) return '<tr class="grp"><td colspan="5">' + L(r.g[0], r.g[1]) + '</td></tr>'; n++; return '<tr><td>' + n + '</td><td>' + L(r[0], r[1]) + '</td><td class="nowrap">' + esc(r[2]) + '</td><td class="req-col">' + esc(r[3]) + '</td><td class="bid-col"></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  }
+  function bindTpg(e) { var cb = $('#tpgCsv'); if (cb) cb.onclick = function () { var k = 0; download('TPG-' + e.id + '.csv', csv([['No', 'Description', '描述', 'Unit', 'Required', 'Guaranteed', 'Remarks']].concat(e.tpg.map(function (r) { return r.g ? ['', r.g[0], r.g[1], '', '', '', ''] : [++k, r[0], r[1], r[2], r[3], '', '']; }))), 'text/csv;charset=utf-8'); }; }
+  function equipSelect(id) {
+    var box = $('#eqDetail'), e = find(DB.equipment, id);
+    if (!box || !e.id) { S.eq.sel = id; renderEquip(); return; }
+    S.eq.sel = id;
+    Array.prototype.forEach.call(document.querySelectorAll('#view-equip .libitem'), function (el) { el.classList.toggle('on', el.dataset.eq === id); });
+    box.innerHTML = equipDetail(e); bindTpg(e);
+    /* bring the top of the new detail into view only when it is above the screen (desktop) or below the list (phone); the list itself does not move */
+    var list = $('#view-equip .liblist'), stacked = list && getComputedStyle(list).position !== 'sticky', top = box.getBoundingClientRect().top, hdr = 150;
+    if (stacked || top < hdr) window.scrollTo({ top: Math.max(0, window.scrollY + top - (stacked ? 70 : hdr)), behavior: 'smooth' });
+  }
   function renderEquip() {
     var tabs = '<div class="seg" style="max-width:520px;margin-bottom:14px"><button class="' + (S.eqTab === 'eq' ? 'on' : '') + '" data-eqtab="eq">' + L('Equipment & TPG', '设备与TPG') + '</button><button class="' + (S.eqTab === 'plat' ? 'on' : '') + '" data-eqtab="plat">' + L('IT platforms & cabinets', 'IT平台与机柜') + '</button></div>';
     var head = '<h2 class="sec">' + L('Equipment, IT platforms & racks', '设备、IT平台与机柜') + '</h2><div class="sec-sub">' + L(DB.equipment.length + ' equipment items with specification clauses and TPG; ' + DB.platforms.length + ' IT rack platforms and ' + DB.cabinets.length + ' cabinet ranges.', DB.equipment.length + '项设备规范及TPG；' + DB.platforms.length + '种IT机柜平台及' + DB.cabinets.length + '类机柜。') + '</div>' + tabs;
@@ -990,20 +1010,19 @@
         DB.cabinets.map(function (cb) { return '<tr><td><b>' + L(cb.en, cb.zh) + '</b></td><td>' + esc(cb.brand) + '</td><td>' + cb.w.join(' / ') + ' mm</td><td>' + cb.d.join(' / ') + ' mm</td><td>' + cb.u.join(' / ') + 'U</td><td class="r">' + F(cb.kg) + ' kg</td><td class="small">' + Lp(cb.note) + (cb.src ? ' <a href="' + esc(cb.src) + '" target="_blank" rel="noopener">↗</a>' : '') + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
       return;
     }
+    var prev = $('#view-equip .liblist'), keep = prev ? prev.scrollTop : 0;
     var f = S.eq, q = f.q.toLowerCase();
     var match = function (e) { return (!q || (e.id + e.en + e.zh + e.fn.join(' ') + e.std.join(' ')).toLowerCase().indexOf(q) >= 0) && (f.sys === 'all' || e.sys === f.sys); };
     var list = '<div class="liblist">' + DB.systems.map(function (s) { var items = DB.equipment.filter(function (e) { return e.sys === s.id && match(e); }); if (!items.length) return '';
       return '<div class="libgrp"><i style="background:' + s.color + '"></i>' + L(s.en, s.zh) + '</div>' + items.map(function (e) { return '<div class="libitem' + (e.id === f.sel ? ' on' : '') + '" data-eq="' + e.id + '"><span class="id">' + e.id + '</span><span>' + L(e.en, e.zh) + '</span></div>'; }).join(''); }).join('') + '</div>';
     var e = find(DB.equipment, f.sel); if (!e.id) e = DB.equipment[0];
-    var s = find(DB.systems, e.sys), n = 0;
-    var detail = '<div><div class="card"><div class="row" style="align-items:flex-start;gap:14px"><div class="ficon" style="background:' + s.color + '">' + ic(SYS_IC[e.sys]) + '</div><div style="flex:1"><div class="small muted">' + e.id + ' | ' + L(s.en, s.zh) + ' | ' + (e.cls === 'M' ? '<span class="chip coral">' + L('Major', '主要设备') + '</span>' : '<span class="chip">' + L('Secondary', '次要设备') + '</span>') + '</div><h3 style="font-size:1.2rem;margin-top:4px">' + L(e.en, e.zh) + '</h3></div><button class="btn small ghost" id="tpgCsv">' + ic('download') + 'TPG CSV</button></div>' +
-      '<h4>' + L('Function', '功能') + '</h4><div>' + Lp(e.fn) + '</div><h4>' + L('Typical ratings', '典型规格') + '</h4><div>' + Lp(e.ty) + '</div><h4>' + L('Technical requirements', '技术要求') + '</h4>' + e.s.map(function (c, i) { return '<div class="clause"><span class="no">' + (i + 1) + '</span><div>' + L(c[0], c[1]) + '</div></div>'; }).join('') +
-      '<h4>' + L('Applicable standards', '适用标准') + '</h4><div class="row" style="gap:6px">' + e.std.map(function (x) { return '<span class="chip ind">' + esc(x) + '</span>'; }).join('') + '</div>' + (e.t ? '<h4>' + L('Inspection & testing', '检验与试验') + '</h4><ul style="padding-left:20px">' + e.t.map(function (x) { return '<li>' + L(x[0], x[1]) + '</li>'; }).join('') + '</ul>' : '') + '</div>' +
-      '<div class="card"><h3>' + L('Technical Particulars & Guarantees — TPG-' + e.id, '技术参数保证表——TPG-' + e.id) + '</h3><div class="tblw"><table class="t"><thead><tr><th>' + L('No.', '序号') + '</th><th>' + L('Description', '描述') + '</th><th>' + L('Unit', '单位') + '</th><th>' + L('Required', '要求值') + '</th><th>' + L('Guaranteed', '保证值') + '</th></tr></thead><tbody>' +
-      e.tpg.map(function (r) { if (r.g) return '<tr class="grp"><td colspan="5">' + L(r.g[0], r.g[1]) + '</td></tr>'; n++; return '<tr><td>' + n + '</td><td>' + L(r[0], r[1]) + '</td><td class="nowrap">' + esc(r[2]) + '</td><td class="req-col">' + esc(r[3]) + '</td><td class="bid-col"></td></tr>'; }).join('') + '</tbody></table></div></div></div>';
+    var detail = '<div id="eqDetail">' + equipDetail(e) + '</div>';
     $('#view-equip').innerHTML = head + '<div class="filters"><input class="search" id="eqQ" placeholder="' + esc(Lt('Search equipment or standard (e.g. UPS, BESS, IEC 62040)…', '搜索设备或标准（如UPS、储能、IEC 62040）…')) + '" value="' + esc(f.q) + '"><select class="fsel" id="eqSys"><option value="all">' + esc(Lt('All systems', '全部系统')) + '</option>' +
       DB.systems.map(function (x) { return '<option value="' + x.id + '"' + (f.sys === x.id ? ' selected' : '') + '>' + esc(Lt(x.en, x.zh)) + '</option>'; }).join('') + '</select></div><div class="lib">' + list + detail + '</div>';
-    var cb = $('#tpgCsv'); if (cb) cb.onclick = function () { var k = 0; download('TPG-' + e.id + '.csv', csv([['No', 'Description', '描述', 'Unit', 'Required', 'Guaranteed', 'Remarks']].concat(e.tpg.map(function (r) { return r.g ? ['', r.g[0], r.g[1], '', '', '', ''] : [++k, r[0], r[1], r[2], r[3], '', '']; }))), 'text/csv;charset=utf-8'); };
+    bindTpg(e);
+    var nl = $('#view-equip .liblist'), on = nl && nl.querySelector('.libitem.on');
+    if (nl && keep) nl.scrollTop = keep;
+    if (nl && on && (on.offsetTop < nl.scrollTop || on.offsetTop + on.offsetHeight > nl.scrollTop + nl.clientHeight)) nl.scrollTop = Math.max(0, on.offsetTop - nl.clientHeight / 3);
   }
 
   /* ========================================================== KNOWLEDGE */
@@ -1122,7 +1141,7 @@
     var gl = ev.target.closest('[data-go]'); if (gl) { var gp = gl.dataset.go; leaveAssess(viewOf(gp), function () { navTo(gp); }); return; }
     var anc = ev.target.closest('[data-anchor]'); if (anc) { ev.preventDefault(); var el = document.getElementById(anc.dataset.anchor); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 150, behavior: 'smooth' }); return; }
     var et = ev.target.closest('[data-eqtab]'); if (et) { S.eqTab = et.dataset.eqtab; renderEquip(); return; }
-    var li = ev.target.closest('[data-eq]'); if (li) { S.eq.sel = li.dataset.eq; renderEquip(); history.replaceState(null, '', '#equip/' + li.dataset.eq); window.scrollTo({ top: 0 }); return; }
+    var li = ev.target.closest('[data-eq]'); if (li) { equipSelect(li.dataset.eq); history.replaceState(null, '', '#equip/' + li.dataset.eq); return; }
     if (S.view !== 'assess') { var np = ev.target.closest('[data-act="newproj"]'); if (np) { newProject(); go('in1'); return; } var op = ev.target.closest('[data-open]'); if (op) { openProject(op.dataset.open); return; } }
     if (ev.target.id === 'menuBtn') $('#tabs').classList.toggle('open');
   });

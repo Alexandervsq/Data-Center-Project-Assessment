@@ -1,4 +1,6 @@
-/* Technology card: Critical Power Chain (utility → MV → transformers → LV/generators → UPS/batteries → busway → racks; BESS). */
+/* Technology card: Critical Power Chain (utility → MV → transformers → LV/generators → UPS/batteries → busway → racks; BESS).
+   Rev. 18: full-width illustration (1860 × 840) — path A and path B to the dual-corded rack, the generator bus feeding both ATS, back-up and protection,
+   and the PLN-outage sequence; 14-step process flow. */
 (function (g) {
   'use strict';
   var TC = g.TC, L = TC.lib, X = g.TCX, DB = g.DCDB, E = g.DCEngine, K = E.K, F = L.F, t = L.t;
@@ -43,42 +45,138 @@
     [['Why busway instead of cables to each rack?', '为什么用母线而不是逐柜敷设电缆？'], ['Busway runs once above each row; racks plug in tap-off boxes wherever needed, so densities can change without new cables. It is faster to install, easier to meter and frees floor and tray space.', '母线只需在每排上方敷设一次；机柜按需插接取电，密度变化时无需重新敷设电缆。安装更快、计量更方便，并节省地面与桥架空间。']]
   ];
 
-  function band() {
-    var s = L.R(0, 513, 1470, 107, 'url(#tcSoil)') + L.R(0, 513, 1470, 107, 'url(#tcEarth)');
-    [544, 572].forEach(function (y, i) { s += L.pipe('M0 ' + y + 'H1470', i ? 'lv' : 'mv', 6, true, i === 1); });
-    for (var x = 60; x < 1470; x += 180) s += '<path d="M' + x + ' 513V588" stroke="#B9874A" stroke-width="3"/><circle cx="' + x + '" cy="590" r="4" fill="#B9874A"/>';
-    return s + L.text(735, 612, ['Underground: MV and LV cable duct banks on separate A / B routes | earthing grid with electrodes (≤ 1 Ω)', '地下：A/B分路由的中压及低压电缆排管 | 带接地极的接地网（≤1 Ω）'], 'tc-ls', ' text-anchor="middle" style="font-weight:700;fill:#5C4523"');
+  /* ---------------------------------------------------------------- illustration (1860 × 840), Rev. 18
+     row 1: path A and path B from PLN to the dual-corded rack, EPMS and harmonics | row 2: generators + fuel, BESS, load banks, earthing, cables |
+     row 3: what happens in a PLN outage (0 s → 10 s → 15 s → hours → PLN back) */
+  function noSmoke(s) { return s.replace(/<circle[^>]*opacity="0"><animate[\s\S]*?<\/circle>/g, ''); }
+  var LANE = [{ id: 'A', y: 44, col: '#E8A93A', bg: '#FFF8EC', st: '#F1D9A8' }, { id: 'B', y: 232, col: '#3F8FD0', bg: '#EEF4FD', st: '#C4D7F2' }];
+  var ATSX = 590;
+  function laneBg(L1) {
+    var y = L1.y, k = L1.id;
+    return L.R(232, y, 1268, 176, L1.bg, ' rx="14" stroke="' + L1.st + '" stroke-width="1.5"') + L.R(232, y, 24, 176, L1.col, ' rx="12"') +
+      '<text x="244" y="' + (y + 54) + '" transform="rotate(-90 244 ' + (y + 54) + ')" text-anchor="middle" style="font-size:13px;font-weight:900;fill:#fff;letter-spacing:.12em">' + L.te(['PATH ' + k, k + '路']) + '</text>';
+  }
+  function lane(c, L1, first) {
+    var R = c.R, el = R.el, p = c.p, y = L1.y, cy = y + 108, li = p.battery === 'LI', o = '', k = L1.id;
+    /* cables of this path */
+    o += L.fl('mvsg tx', L.pipe('M390 ' + cy + 'H450', 'mv', 6)) + L.fl('tx lv', L.pipe('M532 ' + cy + 'H650', 'lv', 6)) + L.fl('lv ups', L.pipe('M770 ' + cy + 'H820', 'lv', 6));
+    o += L.fl('ups bwy', L.pipe('M920 ' + (y + 72) + 'H1070', 'lv', 6)) + L.fl('battu ups o1 o4', L.pipe('M940 ' + (y + 132) + 'H920', 'dc', 5, true, true));
+    var id = function (x, s) { return L.text(x, y + 30, s, 'tc-ls', ' text-anchor="middle" style="font-size:12px;font-weight:800;fill:' + (k === 'A' ? '#A86A08' : '#2C6CA8') + '"'); };
+    var mv = L.switchgear(270, y + 58, 4, 120, 100), tx = L.dryTx(450, y + 64, 82, 94), lv = L.lvBoard(650, y + 58, 4, 120, 100), ups = L.upsCab(820, y + 58, 3, 100, 100), bat = L.battRack(940, y + 84, 3, 90, 74, li);
+    var bw = L.busway(1070, y + 66, 220, 6, 16) + L.rackRow(1078, y + 112, 6, 32, 48);
+    if (first) {
+      mv += L.label(330, y + 30, '02', ['MV switchgear', '中压开关柜'], [el.hv.mv.boards + ' × 24 kV | ' + el.hv.mv.ik + ' kA', el.hv.mv.boards + '段24 kV | ' + el.hv.mv.ik + ' kA']);
+      tx += L.label(491, y + 30, '03', ['Transformers', '变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA');
+      lv += L.label(710, y + 30, '04', ['LV + ATS', '低压+ATS'], [(el.lvV || 400) + ' V | ' + F(el.lv.acb) + ' A', (el.lvV || 400) + ' V | ' + F(el.lv.acb) + ' A']);
+      ups += L.label(808, y + 30, '07', ['UPS', 'UPS'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW', 'start');
+      bat += L.label(946, y + 30, '08', ['Batteries', '电池'], F(el.battKWh) + ' kWh', 'start');
+      bw += L.label(1180, y + 30, '09', ['Busway', '母线'], el.useBusway ? el.busways + ' × ' + el.bwA + ' A' : el.pdus + ' × PDU');
+    } else { mv += id(330, 'MV-B'); tx += id(491, 'TX-B'); lv += id(710, 'LV-B'); ups += id(870, 'UPS-B'); bat += id(985, ['Batt-B', '电池B']); bw += id(1180, ['Busway B', 'B母线']); }
+    o += L.hot('mvsg', ['MV switchgear', '中压开关柜'], 262, y + 4, 136, 168, mv, [el.hv.mv.boards + ' sections × ' + F(el.hv.mv.busA) + ' A | ' + el.hv.mv.ik + ' kA | bus sections N.O.', el.hv.mv.boards + '段 × ' + F(el.hv.mv.busA) + ' A | ' + el.hv.mv.ik + ' kA | 分段常开']);
+    o += L.hot('tx', ['Transformers', '变压器'], 438, y + 4, 106, 168, tx, [el.txLabel + ' | ' + F(el.txSize) + ' kVA cast resin | uk ' + el.lv.uk + ' %', el.txLabel + ' | ' + F(el.txSize) + ' kVA干式 | uk ' + el.lv.uk + ' %']);
+    o += L.hot('lv', ['LV switchboards + ATS', '低压配电柜+ATS'], 562, y + 4, 216, 168, lv + L.R(ATSX - 20, cy - 14, 40, 28, '#fff', ' rx="5" stroke="#17153F" stroke-width="1.6"') + L.text(ATSX, cy + 5, 'ATS', 'tc-lt', ' text-anchor="middle" style="font-size:12px"'),
+      [F(el.lv.acb) + ' A ACB | ' + el.lv.icw + ' kA | ATS: PLN ↔ generators', F(el.lv.acb) + ' A框架断路器 | ' + el.lv.icw + ' kA | ATS：市电↔发电机']);
+    o += L.hot('ups', ['UPS systems', 'UPS系统'], 806, y + 4, 124, 168, ups, [el.upsLabel + ' | double conversion' + (c.p.eco ? ' + eco mode' : ''), el.upsLabel + ' | 双变换' + (c.p.eco ? ' + 节能模式' : '')]);
+    o += L.hot('battu', ['Batteries', '电池'], 932, y + 4, 106, 168, bat, [F(el.battKWh) + ' kWh ' + (li ? 'LFP' : 'VRLA') + ' | ' + p.upsMin + ' min at full load', F(el.battKWh) + ' kWh ' + (li ? '磷酸铁锂' : '铅酸') + ' | 满载' + p.upsMin + ' min']);
+    o += L.hot('bwy', ['Busway', '母线'], 1060, y + 4, 240, 168, bw, [el.busways + ' runs × ' + el.bwA + ' A | tap-off boxes per rack', el.busways + '条 × ' + el.bwA + ' A | 每柜插接箱']);
+    o += L.fl('mvsg tx', L.tag(420, cy - 22, '20 kV', 'mv', null, 11.5)) + L.fl('tx lv', L.tag(552, cy + 26, (el.lvV || 400) + ' V', 'lv', null, 11.5));
+    return o;
   }
   function pfd(c) {
-    var R = c.R, el = R.el, cap = R.cap, p = c.p, o = '';
-    o += L.ground(132, 232, 1330) + L.R(132, 242, 1330, 40, 'url(#tcSoil)', ' opacity=".5"') + L.R(0, 497, 1470, 16, 'url(#tcGround)') + band();
-    o += '<path d="M24 112Q66 128 104 146M74 112Q94 124 120 146M50 96Q82 118 136 146" fill="none" stroke="#D58A12" stroke-width="1.6"/>';
-    o += L.pipe('M168 205H200', 'mv', 7) + L.pipe('M322 205H350', 'mv', 7) + L.pipe('M534 205H570', 'lv', 7) + L.pipe('M725 205H690', 'gen', 7);
-    o += L.pipe('M300 232V278H1048V236', 'mv', 4, true, true) + L.thin('M800 250V232', 'fuel', 3, '4 4');
-    o += L.pipe('M630 140V112H1462V446H1418', 'lv', 7);
-    o += L.pipe('M1262 470H1236', 'dc', 6, true, true) + L.pipe('M1270 404V388H1032', 'lv', 6);
-    o += L.banner(140, 0, 1310, ['① UTILITY, TRANSFORMATION & BACK-UP | 市电、变压与备用', '① 市电、变压与备用 | UTILITY & BACK-UP'], ['two PLN feeders, transformers, generators and storage', '两路PLN进线、变压器、发电机及储能'], null, 'tcZone3') + (g.DCSLD ? L.sldBtn(1254, 3) : '');
-    o += L.banner(560, 290, 900, ['② CRITICAL POWER | 关键供电', '② 关键供电 | CRITICAL POWER'], ['UPS + batteries → busway → rack PDUs, on A and B paths', 'UPS+电池 → 母线 → 机柜PDU，A、B双路'], null, 'tcZone');
-    o += L.banner(130, 290, 410, ['③ PROTECTION | 保护与监控', '③ 保护与监控 | PROTECTION'], ['earthing | monitoring', '接地 | 监控'], null, 'tcZone5');
-    /* row 1 */
-    o += L.hot('grid', UNITS[0].name, 14, 38, 160, 200, L.pylon(50, 232, 150) + L.powerTx(80, 232, .92) + L.label(95, 60, '01', ['PLN grid', 'PLN电网'], el.hv.name + ' | ' + F(el.mva, 1) + ' MVA'));
-    o += L.hot('mvsg', ['MV switchgear', '中压开关柜'], 194, 38, 140, 200, L.switchgear(200, 140, 5, 122, 92) + L.label(262, 60, '02', ['MV switchgear', '中压开关柜'], el.hv.kv > 20 ? ['GIS ' + el.hv.ur + ' kV | ' + el.hv.mv.boards + ' × 24 kV', 'GIS ' + el.hv.ur + ' kV | ' + el.hv.mv.boards + '段24 kV'] : [el.hv.circ + ' feeders | 24 kV', el.hv.circ + '路进线 | 24 kV']));
-    o += L.hot('tx', ['Transformers', '变压器'], 344, 38, 196, 200, L.dryTx(350, 130, 86, 102) + L.dryTx(446, 130, 86, 102) + L.text(393, 126, 'A', 'tc-lt', ' text-anchor="middle"') + L.text(489, 126, 'B', 'tc-lt', ' text-anchor="middle"') + L.label(442, 60, '03', ['Transformers', '变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA'));
-    o += L.hot('lv', ['LV switchboard', '低压配电柜'], 562, 38, 150, 200, L.lvBoard(572, 140, 4, 118, 92) + L.label(628, 60, '04', ['LV + ATS', '低压+ATS'], [el.txTotal + ' line-ups', el.txTotal + '组']));
-    o += L.hot('gen', ['Generators', '发电机'], 720, 38, 196, 200, L.genset(725, 160, 180, 72) + L.label(815, 60, '05', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe'));
-    var bx = L.bessBox(960, 172, 150, 60) + L.bessBox(1124, 172, 150, 60) + L.R(1288, 182, 44, 50, '#3A3F63', ' rx="3"') + L.text(1310, 212, 'PCS', 'tc-lw', ' text-anchor="middle"');
-    o += L.hot('bess', ['BESS', '储能'], 952, 38, 390, 200, bx + L.label(1118, 60, '06', ['BESS (LFP)', '储能（LFP）'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : ['optional | peak shaving', '可选 | 削峰']));
-    o += L.hot('fuelsys', ['Fuel system', '燃油系统'], 726, 244, 200, 36, L.fuelTank(730, 250, 160, 24) + L.text(900, 266, ['A | fuel', 'A | 燃油'], 'tc-lc'));
-    /* row 2 */
-    o += L.hot('ups', ['UPS systems', 'UPS系统'], 1250, 330, 196, 170, L.upsCab(1262, 394, 4, 156, 104) + L.label(1340, 352, '07', ['UPS systems', 'UPS系统'], el.upsTotal + ' × ' + F(el.upsSize) + ' kW | ' + el.upsLabel));
-    o += L.hot('battu', ['Batteries', '电池'], 1070, 330, 172, 170, L.battRack(1080, 404, 5, 154, 94, p.battery === 'LI') + L.label(1156, 352, '08', ['Batteries', '电池'], F(el.battKWh) + ' kWh | ' + p.upsMin + ' min'));
-    var row = L.rackRow(640, 434, 9, 40, 64, { blink: true });
-    o += L.hot('bwy', ['Busway', '母线'], 610, 330, 440, 98, L.busway(620, 388, 410, 9, 14) + L.label(720, 352, '09', ['Busway A + B', '母线A+B'], el.useBusway ? el.busways + ' × ' + el.bwA + ' A' : el.pdus + ' × PDU'));
-    o += L.hot('rpdu', ['Rack PDUs', '机柜PDU'], 630, 430, 380, 70, row + L.label(946, 352, '10', ['Rack PDUs', '机柜PDU'], F(cap.racks) + ' × ' + F(cap.avgDens, 1) + ' kW'));
-    var lp = L.building(160, 440, 120, 58, '#5D6280') + '<path d="M220 420V426M220 426L214 440M220 426L226 440" stroke="#5E6484" stroke-width="2.4"/><path d="M276 440V500" stroke="#B9874A" stroke-width="2.5"/>';
-    o += L.hot('earth', ['Earthing & lightning', '接地与防雷'], 140, 330, 180, 170, lp + L.label(232, 352, '11', ['Earthing & SPD', '接地与浪涌'], ['≤ 1 Ω | LPL I/II', '≤1 Ω | 防雷I/II级']));
-    o += L.hot('epms', ['EPMS', '电力监控'], 340, 330, 210, 170, L.nocWall(360, 404, 180, 94) + L.label(450, 352, '12', ['EPMS', '电力监控'], ['≈ ' + F(R.fs.meters) + ' meters', '约' + F(R.fs.meters) + '块电表']));
-    return '<svg class="tc-pfd tc-abs" viewBox="0 0 1470 620" role="img" aria-label="' + L.te(['Critical power chain', '关键供电链']) + '">' + o + '</svg>';
+    var R = c.R, el = R.el, hv = el.hv, p = c.p, cap = R.cap, o = '', li = p.battery === 'LI';
+    o += L.banner(20, 0, 1820, ['① A + B POWER PATHS | A+B双路供电', '① A+B双路供电 | A + B POWER PATHS'], ['PLN → 20 kV → transformers → LV + ATS → UPS → busway → rack, once for each path', 'PLN → 20 kV → 变压器 → 低压+ATS → UPS → 母线 → 机柜，每路各一套'], null, 'tcZone3') + (g.DCSLD ? L.sldBtn(1630, 3) : '');
+    o += laneBg(LANE[0]) + laneBg(LANE[1]);
+    /* generator riser to both ATS, BESS to MV-B (over the path backgrounds, under the equipment) */
+    o += L.fl('gen lv o3 o5', L.pipe('M' + ATSX + ' 512V' + (LANE[0].y + 122), 'gen', 6, true, true));
+    o += L.fl('bess mvsg', L.pipe('M305 570V' + (LANE[1].y + 158), el.bess ? 'mv' : '#B9BED2', 5, !!el.bess));
+    /* PLN */
+    var gr = L.pylon(64, 404, 250) + '<path d="M40 176Q90 200 130 236M96 172Q120 196 150 236" fill="none" stroke="#D58A12" stroke-width="1.6"/>';
+    gr += hv.kv > 20 ? L.powerTx(98, 404, .95) + L.tag(150, 270, 'GIS ' + (hv.ur || hv.kv) + ' kV', 'mv', null, 11.5) : L.building(104, 330, 100, 70, '#5D6280') + L.text(154, 392, 'PLN', 'tc-lt', ' text-anchor="middle" style="font-size:13px"');
+    o += L.fl('grid mvsg', L.pipe('M200 ' + (LANE[0].y + 108) + 'H270', 'mv', 7) + L.pipe('M200 ' + (LANE[1].y + 108) + 'H270', 'mv', 7) + L.pipe('M200 ' + (LANE[0].y + 108) + 'V' + (LANE[1].y + 108), 'mv', 7, false));
+    o += L.hot('grid', ['PLN grid', 'PLN电网'], 20, 40, 206, 380, gr + L.label(118, 74, '01', ['PLN grid', 'PLN电网'], hv.name + ' | ' + hv.circ + ' ' + t(['circuits', '回'])) + L.tag(118, 116, F(el.mva, 1) + ' MVA', 'mv', null, 12.5),
+      [t(el.volt) + ' | PCC ≈ ' + F(hv.pccIk, 1) + ' kA', el.volt[1] + ' | 接入点约' + F(hv.pccIk, 1) + ' kA']);
+    /* the two paths */
+    o += lane(c, LANE[0], true) + lane(c, LANE[1], false);
+    /* bus coupler between MV-A and MV-B (normally open) */
+    o += L.fl('mvsg', '<path d="M284 202V290" stroke="#D58A12" stroke-width="3" stroke-dasharray="6 4"/>' + L.R(275, 216, 18, 20, '#fff', ' stroke="#17153F" stroke-width="1.6"') + '<path d="M278 233L290 219" stroke="#17153F" stroke-width="1.6"/>' + L.text(300, 231, ['N.O. coupler', '常开母联'], 'tc-ls', ' style="font-size:11px;font-weight:800"'));
+    /* the dual-corded rack where the paths meet */
+    var rk = L.rack(1350, 112, 80, 226, { blink: true }) + L.R(1338, 120, 7, 208, '#E8A93A', ' rx="3"') + L.R(1435, 120, 7, 208, '#3F8FD0', ' rx="3"');
+    rk += L.R(1352, 214, 76, 18, '#fff', ' rx="3" stroke="#17153F" stroke-width="1.2"') + L.R(1356, 218, 10, 10, '#E8A93A', ' rx="2"') + L.R(1414, 218, 10, 10, '#3F8FD0', ' rx="2"') + L.text(1390, 228, 'PSU A | B', 'tc-ls', ' text-anchor="middle" style="font-size:9.5px;font-weight:800"');
+    o += L.fl('bwy rpdu', L.pipe('M1290 ' + (LANE[0].y + 70) + 'H1341V120', 'lv', 5) + L.pipe('M1290 ' + (LANE[1].y + 70) + 'H1312V364H1438V328', '#3F8FD0', 5));
+    o += L.hot('rpdu', ['Rack PDUs', '机柜PDU'], 1320, 40, 140, 380, rk + L.label(1390, 74, '10', ['Rack PDUs', '机柜PDU'], [F(cap.racks) + ' × ' + F(cap.avgDens, 1) + ' kW', F(cap.racks) + ' × ' + F(cap.avgDens, 1) + ' kW']) + L.text(1390, 392, ['dual-corded server', '双电源服务器'], 'tc-ls', ' text-anchor="middle" style="font-size:12px;font-weight:800"'),
+      [el.rpdus + ' rack PDUs | ' + el.feedsPerRack + ' per rack (A + B)', el.rpdus + '个机柜PDU | 每柜' + el.feedsPerRack + '个（A+B）']);
+    /* EPMS and harmonics */
+    o += L.hot('epms', ['EPMS', '电力监控'], 1520, 40, 320, 182, L.nocWall(1560, 116, 236, 92) + L.label(1680, 74, '12', ['EPMS', '电力监控'], ['≈ ' + F(R.fs.meters) + ' meters | 1 s logging', '约' + F(R.fs.meters) + '块电表 | 1 s记录']), ['every breaker, UPS and generator reports to the NOC', '每台断路器、UPS及发电机均上传NOC']);
+    var hw = '<path d="M1662 330c8-34 14 30 22 0s14-30 22 0 14 30 22 0 14-30 22 0 14 30 22 0" fill="none" stroke="#E5534B" stroke-width="2.4"/><path d="M1662 380c12-26 22-26 34 0s22 26 34 0 22-26 34 0" fill="none" stroke="#16A34A" stroke-width="2.4"/>';
+    hw += L.text(1806, 334, ['before', '滤波前'], 'tc-ls', ' style="font-size:11px;fill:#B0302A;font-weight:800"') + L.text(1806, 384, ['after', '滤波后'], 'tc-ls', ' style="font-size:11px;fill:#16A34A;font-weight:800"');
+    o += L.hot('harm', ['Harmonic filters', '谐波滤波器'], 1520, 230, 320, 190, L.cab(1556, 300, 76, 104, '#E9EBF4', { door: false, cap: '#7C3AED' }) + L.R(1564, 312, 60, 16, '#17153F', ' rx="2"') + '<path d="M1568 324l8-8 8 6 8-8 8 8 8-6" stroke="#5BE0B0" stroke-width="1.6" fill="none"/>' + hw + L.label(1680, 262, 'B', ['Harmonic filters', '谐波滤波器'], ['IEEE 519 | THDi ≤ 5–8 %', 'IEEE 519 | THDi ≤ 5–8%']),
+      ['active filters cancel the harmonics of UPS rectifiers and IT power supplies', '有源滤波器抵消UPS整流器及IT电源谐波']);
+    /* row 2: back-up, storage, protection */
+    o += L.banner(20, 430, 1820, ['② BACK-UP, STORAGE & PROTECTION | 备用、储能与保护', '② 备用、储能与保护 | BACK-UP & PROTECTION'], ['generators + fuel | BESS | load banks | earthing | cables', '发电机+燃油 | 储能 | 负载箱 | 接地 | 电缆'], null, 'tcZone4');
+    o += L.ground(20, 622, 1820);
+    var bs = L.bessBox(34, 562, 120, 56) + L.bessBox(164, 562, 120, 56) + L.R(292, 570, 26, 48, '#3A3F63', ' rx="3"') + L.text(305, 598, 'PCS', 'tc-lw', ' text-anchor="middle" style="font-size:9px"');
+    o += L.hot('bess', ['BESS', '储能'], 24, 466, 304, 160, (el.bess ? bs : '<g opacity=".45">' + bs + '</g>') + L.label(176, 482, '06', ['BESS (LFP)', '储能（LFP）'], el.bess ? F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh' : ['optional here | peak shaving', '本设计可选 | 削峰']),
+      el.bess ? [el.bess.containers + ' containers | buffers AI load swings, peak shaving', el.bess.containers + '个集装箱 | 缓冲AI负荷波动、削峰'] : ['not required for this design; useful for AI swings and peak shaving', '本设计无需；可用于AI负荷波动及削峰']);
+    var gs = '', gx = [354, 530, 706];
+    gx.forEach(function (x, i) { gs += noSmoke(L.genset(x, 560, 150, 58)) + '<path d="M' + (x + 100) + ' 519V560" stroke="#B8740B" stroke-width="4"/>' + L.text(x + 100, 552, i === 2 ? 'G' + el.genTotal : 'G' + (i + 1), 'tc-ls', ' text-anchor="end" style="font-size:11px;font-weight:800" dx="-6"'); });
+    gs += L.R(352, 512, 520, 7, '#B8740B', ' rx="3"') + L.text(696, 552, '…', 'tc-lt', ' text-anchor="middle"');
+    o += L.hot('gen', ['Generators', '发电机'], 340, 466, 548, 160, gs + L.label(760, 482, '05', ['Generators', '发电机'], [el.genTotal + ' × ' + F(el.genSize) + ' kWe | ' + el.genLabel, el.genTotal + ' × ' + F(el.genSize) + ' kWe | ' + el.genLabel]),
+      ['start ≈ 10 s, on load ≈ 15 s (ISO 8528-5, NFPA 110 Type 10) | paralleled on one bus', '约10 s启动、约15 s带载（ISO 8528-5，NFPA 110 10型）| 并机母线']);
+    o += L.fl('fuelsys gen o5', L.thin('M912 600H850', 'fuel', 3, '4 4'));
+    o += L.hot('fuelsys', ['Fuel system', '燃油系统'], 896, 466, 236, 160, L.fuelTank(912, 586, 150, 30) + L.cylV(1080, 560, 36, 54, 'tcWhite') + L.R(1082, 586, 32, 22, '#4A4F6A', ' opacity=".6"') + L.label(1012, 482, 'A', ['Fuel system', '燃油系统'], [F(el.fuelL / 1000) + ' m³ | ' + p.fuelH + ' h', F(el.fuelL / 1000) + ' m³ | ' + p.fuelH + ' h']),
+      [el.tanks + ' bulk tanks + day tanks | ≈ ' + F(el.fuelLph) + ' L/h at full load', el.tanks + '个储罐 + 日用油箱 | 满载约' + F(el.fuelLph) + ' L/h']);
+    o += L.fl('ldb gen', L.thin('M872 515H1150V590H1166', 'sig', 2.4, '6 5'));
+    o += L.hot('ldb', ['Load banks', '负载箱'], 1146, 466, 210, 160, L.cab(1166, 554, 150, 62, '#E9EBF4', { door: false, cap: '#E39B1B' }) + L.R(1176, 566, 92, 40, 'url(#tcLouvre)', ' rx="2"') + L.fan(1292, 586, 16, 1, true) + L.label(1250, 482, 'C', ['Load banks', '负载箱'], ['commissioning L4–L5', '调试L4–L5']),
+      ['simulate the IT load before servers arrive; yearly generator tests ≥ 80 %', '服务器进场前模拟IT负载；每年发电机≥80%负载测试']);
+    var ea = L.building(1404, 562, 116, 56, '#5D6280') + '<path d="M1462 520V546M1462 520l-6 10M1462 520l6 10" stroke="#5E6484" stroke-width="2.4"/><path d="M1526 546V640" stroke="#B9874A" stroke-width="2.5"/>';
+    [1420, 1470, 1526].forEach(function (x) { ea += '<path d="M' + x + ' 626V644" stroke="#B9874A" stroke-width="3"/><circle cx="' + x + '" cy="645" r="3.5" fill="#B9874A"/>'; });
+    o += L.hot('earth', ['Earthing & lightning', '接地与防雷'], 1370, 466, 230, 182, ea + '<path d="M1420 630H1526" stroke="#B9874A" stroke-width="2"/>' + L.label(1484, 482, '11', ['Earthing & SPD', '接地与浪涌'], ['≤ 1 Ω | LPL I/II', '≤1 Ω | 防雷I/II级']), ['earthing grid, lightning protection (IEC 62305) and surge protection at every board', '接地网、防雷（IEC 62305）及各配电柜浪涌保护']);
+    var dk = L.R(1632, 548, 196, 70, 'url(#tcConc)', ' rx="4" stroke="#17153F" stroke-opacity=".3"');
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 2; j++) { dk += '<circle cx="' + (1652 + i * 22) + '" cy="' + (568 + j * 28) + '" r="9" fill="#fff" stroke="#E8A93A" stroke-width="3"/><circle cx="' + (1764 + i * 22) + '" cy="' + (568 + j * 28) + '" r="9" fill="#fff" stroke="#3F8FD0" stroke-width="3"/>'; }
+    dk += '<path d="M1730 552V614" stroke="#5E6484" stroke-width="2" stroke-dasharray="4 3"/>';
+    o += L.hot('cable', ['Cables', '电缆'], 1616, 466, 224, 160, dk + L.label(1728, 482, 'D', ['Cables & duct banks', '电缆与排管'], ['A and B on separate routes', 'A、B分路由']), ['XLPE MV cables in duct banks; A and B never share a route or fire compartment', '中压XLPE电缆穿排管；A、B不共用路由或防火分区']);
+    /* row 3: outage sequence */
+    o += outage(c);
+    return '<svg class="tc-pfd tc-abs" viewBox="0 0 1860 840" role="img" aria-label="' + L.te(['Critical power chain: two paths, back-up and the outage sequence', '关键供电链：双路、备用及停电过程']) + '">' + o + '</svg>';
+  }
+  function outage(c) {
+    var p = c.p, el = c.R.el, o = '', y = 760, used = Math.max(1, Math.round(15 / (p.upsMin * 60) * 100));
+    o += L.banner(20, 650, 1820, ['③ WHEN PLN FAILS | PLN停电时', '③ PLN停电时 | WHEN PLN FAILS'], ['the chain switches by itself — the IT never sees the break', '供电链自动切换——IT不会感知断电'], null, 'tcZone2');
+    var seg = [[60, 300, '#D58A12', ['PLN', 'PLN'], 'o6'], [300, 820, '#9A6FD6', ['UPS batteries', 'UPS电池'], 'o1 o2'], [820, 1640, '#B8740B', ['generators (diesel)', '发电机（柴油）'], 'o3 o4 o5'], [1640, 1800, '#D58A12', ['PLN', 'PLN'], 'o6']];
+    o += L.text(60, 704, ['source feeding the IT', '向IT供电的电源'], 'tc-ls', ' style="font-size:12px;font-weight:800;fill:#6A6EA0"');
+    seg.forEach(function (s) { o += L.fl(s[4], L.R(s[0], 714, s[1] - s[0] - 4, 22, s[2], ' rx="6"') + L.text((s[0] + s[1]) / 2, 730, s[3], 'tc-lw', ' text-anchor="middle" style="font-size:12px"')); });
+    o += '<path d="M60 ' + y + 'H1800" stroke="#17153F" stroke-width="2.2"/>' + L.arrowHead(1810, y, 'r', '#17153F', 9);
+    var ev = [
+      [300, 'o1', ['0 s — PLN lost', '0 s — PLN失电'], ['UPS → batteries, no break', 'UPS转电池，无中断']],
+      [560, 'o2', ['≈ 10 s — generators start', '约10 s — 发电机启动'], [el.genTotal + ' sets reach speed', el.genTotal + '台达到额定转速']],
+      [820, 'o3', ['≈ 15 s — ATS → generators', '约15 s — ATS转发电机'], ['UPS back on its input', 'UPS恢复输入供电']],
+      [1080, 'o4', ['minutes — batteries recharge', '数分钟 — 电池再充电'], ['used ≈ ' + used + ' % of ' + p.upsMin + ' min', '仅用约' + used + '%（' + p.upsMin + ' min）']],
+      [1360, 'o5', ['hours — on diesel', '数小时 — 柴油运行'], [F(el.fuelL / 1000) + ' m³ = ' + p.fuelH + ' h + refuelling', F(el.fuelL / 1000) + ' m³ = ' + p.fuelH + ' h + 补油']],
+      [1640, 'o6', ['PLN back — retransfer', 'PLN恢复 — 回切'], ['after ≥ 5 min stable', '稳定≥5 min后']]
+    ];
+    ev.forEach(function (e, i) { o += L.fl(e[1], '<circle cx="' + e[0] + '" cy="' + y + '" r="13" fill="#fff" stroke="#3F3CBB" stroke-width="3"/>' + L.text(e[0], y + 5, String(i + 1), 'tc-lt', ' text-anchor="middle" style="font-size:13px"') + L.text(e[0], y + 34, e[2], 'tc-lt', ' text-anchor="middle" style="font-size:13.5px"') + L.text(e[0], y + 54, e[3], 'tc-ls', ' text-anchor="middle" style="font-size:12.5px"')); });
+    o += L.text(60, y + 34, ['normal', '正常'], 'tc-ls', ' style="font-size:12.5px;font-weight:800"') + L.text(60, y + 54, ['on PLN', '市电供电'], 'tc-ls', ' style="font-size:12.5px"');
+    return o;
+  }
+  function steps(c) {
+    var R = c.R, el = R.el, hv = el.hv, p = c.p, li = p.battery === 'LI', lvV = el.lvV || 400, cap = R.cap, used = Math.max(1, Math.round(15 / (p.upsMin * 60) * 100));
+    var s = [
+      { k: ['grid'], t: ['PLN supply', 'PLN供电'], d: ['PLN delivers <b>' + F(el.mva, 1) + ' MVA</b> at ' + hv.name + ' over ' + hv.circ + ' circuit(s) — ' + t(el.volt) + '. Two incomers split the load onto path A and path B.', 'PLN经' + hv.circ + '回线路以' + hv.name + '供电<b>' + F(el.mva, 1) + ' MVA</b>——' + el.volt[1] + '。两路进线分别接入A路与B路。'] },
+      { k: ['mvsg'], t: ['MV switchgear A | B', '中压开关柜A|B'], d: ['20 kV switchgear in ' + hv.mv.boards + ' sections (' + F(hv.mv.busA) + ' A, ' + hv.mv.ik + ' kA). The coupler between the sections is <b>normally open</b>, so a fault on one section never reaches the other path.', '20 kV开关柜共' + hv.mv.boards + '段（' + F(hv.mv.busA) + ' A，' + hv.mv.ik + ' kA）。分段母联<b>常开</b>，一段故障不会波及另一路。'] },
+      { k: ['tx'], t: ['Transformers', '变压器'], d: ['<b>' + el.txTotal + ' × ' + F(el.txSize) + ' kVA</b> cast-resin transformers (' + el.txLabel + ') step 20 kV down to ' + lvV + ' V. Path A and path B come from different blocks, so each block can lose a transformer and still carry its load.', '<b>' + el.txTotal + ' × ' + F(el.txSize) + ' kVA</b>干式变压器（' + el.txLabel + '）将20 kV降至' + lvV + ' V。A、B两路取自不同模块，每个模块失去一台变压器仍可带载。'] },
+      { k: ['lv'], t: ['LV switchboards + ATS', '低压配电+ATS'], d: ['Each LV main switchboard (' + F(el.lv.acb) + ' A ACB, ' + el.lv.icw + ' kA for 1 s) has an <b>automatic transfer switch</b> that chooses PLN or the generator bus.', '每面低压总柜（' + F(el.lv.acb) + ' A框架断路器，1 s ' + el.lv.icw + ' kA）配<b>自动转换开关</b>，在市电与发电机母线间选择电源。'] },
+      { k: ['ups', 'battu'], t: ['UPS + batteries', 'UPS+电池'], d: ['<b>' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW</b> UPS (' + el.upsLabel + ') convert AC → DC → AC so the IT sees clean power; ' + F(el.battKWh) + ' kWh of ' + (li ? 'LFP' : 'VRLA') + ' batteries on the DC bus hold the load for <b>' + p.upsMin + ' min</b>.', '<b>' + el.upsTotal + ' × ' + F(el.upsSize) + ' kW</b> UPS（' + el.upsLabel + '）经交流→直流→交流变换，为IT提供纯净电源；直流母线上' + F(el.battKWh) + ' kWh' + (li ? '磷酸铁锂' : '铅酸') + '电池可支撑<b>' + p.upsMin + ' min</b>。'] },
+      { k: ['bwy', 'rpdu'], t: ['Busway → rack PDUs', '母线 → 机柜PDU'], d: ['Busway A and B (' + el.busways + ' runs × ' + el.bwA + ' A) run over the rows; tap-off boxes feed ' + el.rpdus + ' rack PDUs. Every server has <b>two power supplies</b>, one on A and one on B.', 'A、B母线（' + el.busways + '条 × ' + el.bwA + ' A）沿机柜排敷设，插接箱为' + el.rpdus + '个机柜PDU供电。每台服务器有<b>两个电源</b>，分别接A与B。'] },
+      { k: ['o1', 'ups', 'battu'], t: ['0 s: PLN fails', '0 s：PLN停电'], d: ['PLN is lost. The UPS rectifiers stop and the batteries take over through the inverter <b>with no break</b> — the servers notice nothing.', 'PLN失电。UPS整流器停止，电池经逆变器<b>无间断</b>接管——服务器毫无感知。'] },
+      { k: ['o2', 'gen'], t: ['≈ 10 s: generators start', '约10 s：发电机启动'], d: ['<b>' + el.genTotal + ' × ' + F(el.genSize) + ' kWe</b> generators (' + el.genLabel + ') start, reach rated speed and voltage and synchronise on the generator bus — ≈ 10 s (ISO 8528-5 G3, NFPA 110 Type 10).', '<b>' + el.genTotal + ' × ' + F(el.genSize) + ' kWe</b>发电机（' + el.genLabel + '）启动、达到额定转速及电压并在并机母线同步——约10 s（ISO 8528-5 G3，NFPA 110 10型）。'] },
+      { k: ['o3', 'gen', 'lv'], t: ['≈ 15 s: ATS transfers', '约15 s：ATS切换'], d: ['The ATS of every LV switchboard moves to the generator bus; UPS rectifiers restart and ramp up gradually (walk-in) so the generators are not shocked; chillers and pumps restart in steps.', '各低压总柜ATS切至发电机母线；UPS整流器重启并缓慢加载（软启动），避免冲击发电机；冷机及水泵分步重启。'] },
+      { k: ['o4', 'battu', 'ups'], t: ['Batteries recharge', '电池再充电'], d: ['The outage used only ≈ ' + used + ' % of the ' + p.upsMin + '-minute autonomy. The chargers refill the batteries — ' + (li ? 'LFP in ≈ 1–2 h' : 'VRLA in ≈ 6–10 h') + ' — ready for the next event.', '本次停电仅用约' + used + '%的' + p.upsMin + '分钟后备。充电器为电池补电——' + (li ? '磷酸铁锂约1–2 h' : '铅酸约6–10 h') + '——为下次事件做好准备。'] },
+      { k: ['o5', 'gen', 'fuelsys'], t: ['Hours on diesel', '柴油运行数小时'], d: ['At full load the site burns ≈ ' + F(el.fuelLph) + ' L/h; the ' + F(el.fuelL / 1000) + ' m³ in ' + el.tanks + ' bulk tanks give <b>' + p.fuelH + ' h</b>, and refuelling contracts extend it as long as needed.', '满载耗油约' + F(el.fuelLph) + ' L/h；' + el.tanks + '个储罐共' + F(el.fuelL / 1000) + ' m³可运行<b>' + p.fuelH + ' h</b>，加油合同可按需延长。'] },
+      { k: ['o6', 'grid', 'lv'], t: ['PLN returns', 'PLN恢复'], d: ['When PLN has been stable for ≥ 5 min the ATS returns the load to PLN, and the generators run unloaded ≈ 5 min to cool down before stopping.', 'PLN稳定≥5 min后，ATS将负载切回市电，发电机空载运行约5 min冷却后停机。'] },
+      { k: ['bess', 'harm'], t: ['BESS & power quality', '储能与电能质量'], d: [el.bess ? 'A <b>' + F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh</b> LFP BESS buffers synchronised GPU load swings and shaves peaks; active harmonic filters keep the current distortion within IEEE 519 at the PLN connection.' : 'No BESS is needed for this design (it is optional for peak shaving); active harmonic filters keep the current distortion within IEEE 519 at the PLN connection.', el.bess ? '<b>' + F(el.bess.mw, 1) + ' MW / ' + F(el.bess.mwh, 1) + ' MWh</b>磷酸铁锂储能缓冲GPU同步负荷波动并削峰；有源滤波器使PLN接入点电流畸变满足IEEE 519。' : '本设计无需储能（削峰可选）；有源滤波器使PLN接入点电流畸变满足IEEE 519。'] },
+      { k: ['epms', 'earth', 'cable', 'ldb'], t: ['Protect, monitor, test', '保护、监控、测试'], d: ['≈ ' + F(R.fs.meters) + ' EPMS meters report every breaker, UPS and generator to the NOC; earthing ≤ 1 Ω, lightning and surge protection; A and B cables on separate routes; load banks prove the chain at full load before go-live.', '约' + F(R.fs.meters) + '块EPMS电表将每台断路器、UPS及发电机状态上传NOC；接地≤1 Ω，配防雷及浪涌保护；A、B电缆分路由；负载箱在投运前满载验证供电链。'] }
+    ];
+    return s;
   }
   function principleSvg() {
     var o = '<svg viewBox="0 0 340 196" role="img" aria-label="2N">';
@@ -121,6 +219,7 @@
   var card = {
     id: 'PWR', abbr: null, title: ['Critical Power Chain', '关键供电链'], short: ['Critical Power Chain', '关键供电链'], icon: 'bolt',
     blurb: ['PLN, transformers, generators, UPS, BESS, busway', 'PLN、变压器、发电机、UPS、储能、母线'], badge: ['Electrical power', '电气供电'], basis: 'A05', calc: X.CALC, units: UNITS, faq: FAQ,
+    steps: steps,
     gloss: [['PCS', '功率变换系统', 'Power conversion system — the inverter of a BESS.', '储能系统的逆变器。'], ['XLPE', '交联聚乙烯', 'Cross-linked polyethylene cable insulation.', '交联聚乙烯电缆绝缘。'], ['VLF', '超低频', 'Very-low-frequency cable test.', '超低频电缆试验。'], ['LPL', '防雷等级', 'Lightning protection level (IEC 62305).', '防雷保护等级（IEC 62305）。']],
     sources: [['Uptime Institute Tier Standard: Topology', 'Uptime Institute等级标准：拓扑'], 'ANSI/TIA-942-C', 'IEC 62040-3', 'IEC 62271', 'ISO 8528', ['NFPA 855, UL 9540A', 'NFPA 855、UL 9540A'], ['PLN tariff adjustment Q4 2026', 'PLN 2026年第四季度电价'], ['Assessment engine (DCEngine.K constants)', '评估引擎（DCEngine.K常数）']],
     stage: function (c) {

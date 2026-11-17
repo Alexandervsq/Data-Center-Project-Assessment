@@ -190,10 +190,22 @@
     return s;
   }
   function labelSpan(cx, name, anchor) { var est = tw(t(name), 15.5, true) + 34, x0 = anchor === 'start' ? cx : cx - est / 2; return [x0, x0 + est]; }
-  function hot(key, name, x, y, w, h, body) {
-    return '<g class="tc-hot" data-tco="' + key + '" tabindex="0" role="button" aria-label="' + te(name) + '"><rect x="' + Math.round(x) + '" y="' + Math.round(y) + '" width="' + Math.round(w) + '" height="' + Math.round(h) + '" fill="none" pointer-events="all"/>' + body + '</g>';
+  function hot(key, name, x, y, w, h, body, tip) {
+    return '<g class="tc-hot" data-tco="' + key + '" tabindex="0" role="button" aria-label="' + te(name) + '"' + (tip ? ' data-tip="' + te(tip) + '"' : '') + '><rect x="' + Math.round(x) + '" y="' + Math.round(y) + '" width="' + Math.round(w) + '" height="' + Math.round(h) + '" fill="none" pointer-events="all"/>' + body + '</g>';
   }
   function sldBtn(x, y) { var nm = ['Single-line diagram', '单线图'], w = 190, sx = x + 14, cy = y + 12; return hot('sld', nm, x, y, w, 24, '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="24" rx="12" fill="#fff"/><path d="M' + sx + ' ' + (cy - 6) + 'V' + (cy - 2) + 'M' + (sx - 4) + ' ' + (cy - 2) + 'H' + (sx + 4) + 'M' + sx + ' ' + (cy - 2) + 'V' + (cy + 2) + 'M' + (sx - 3) + ' ' + (cy + 6) + 'H' + (sx + 3) + 'M' + sx + ' ' + (cy + 2) + 'V' + (cy + 6) + '" fill="none" stroke="#3F3CBB" stroke-width="1.8" stroke-linecap="round"/><text x="' + (x + w / 2 + 8) + '" y="' + (y + 17) + '" text-anchor="middle" font-size="14" font-weight="800" fill="#3F3CBB">' + te(nm) + '</text>'); }
+  /* process-flow drawing helpers (Rev. 18): fl = a flow group lit by the process-flow explorer (keys = the steps it belongs to), tag = value tag on a line,
+     dbox = data box with rows of key | value, zbox = shaded zone, num = step number */
+  function fl(keys, body) { return '<g class="tc-fl" data-fk="' + e(keys) + '">' + body + '</g>'; }
+  function tag(x, y, s, col, anchor, size) { var tx = t(s), fz = size || 13.5, w = tw(tx, fz, true) + 18, x0 = anchor === 'start' ? x : (anchor === 'end' ? x - w : x - w / 2); col = PIPE[col] || col || '#3F3CBB';
+    return '<g class="tc-tagv"><rect x="' + f1(x0) + '" y="' + f1(y - fz * .95) + '" width="' + f1(w) + '" height="' + f1(fz * 1.55) + '" rx="' + f1(fz * .77) + '" fill="#fff" stroke="' + col + '" stroke-width="1.8"/>' +
+      '<text x="' + f1(x0 + w / 2) + '" y="' + f1(y + fz * .2) + '" text-anchor="middle" style="font-size:' + fz + 'px;font-weight:800;fill:' + col + '">' + e(tx) + '</text></g>'; }
+  function dbox(x, y, w, title, rows, col) { col = col || '#3F3CBB'; var h = 30 + rows.length * 21, s = '<g class="tc-dbox"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="10" fill="#fff" fill-opacity=".94" stroke="' + col + '" stroke-opacity=".45"/>' +
+      '<rect x="' + x + '" y="' + y + '" width="6" height="' + h + '" rx="3" fill="' + col + '"/>' + text(x + 16, y + 20, title, 'tc-lt', ' style="font-size:14px"');
+    rows.forEach(function (r, i) { var yy = y + 41 + i * 21; s += text(x + 16, yy, r[0], 'tc-ls', ' style="font-size:12.5px"') + text(x + w - 12, yy, r[1], 'tc-ls', ' text-anchor="end" style="font-size:12.5px;font-weight:800;fill:#17153F"'); });
+    return s + '</g>'; }
+  function zbox(x, y, w, h, fill, stroke) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="14" fill="' + (fill || '#F3F4FB') + '" stroke="' + (stroke || '#D9DCEC') + '" stroke-width="1.5"/>'; }
+  function num(x, y, n, zone) { return '<circle cx="' + x + '" cy="' + y + '" r="13" fill="url(#' + (zone || 'tcZone') + ')"/><text x="' + x + '" y="' + (y + 4.5) + '" text-anchor="middle" class="tc-ln">' + e(n) + '</text>'; }
   function unit(key, name, x, y, body, wh, lab, zone) {
     var sp = labelSpan(lab[0], lab[3], lab[5]), X0 = Math.min(x, sp[0]) - 4;
     return hot(key, name, X0, lab[1] - 22, Math.max(x + wh[0], sp[1]) - X0 + 8, y + wh[1] - lab[1] + 26, G(x, y, body) + label(lab[0], lab[1], lab[2], lab[3], lab[4], lab[5], zone));
@@ -489,25 +501,35 @@
     return '<div class="tc-foot tc-abs"><span>' + te(note) + '</span><span class="tc-sp"></span>' + links.map(function (l) { return '<a data-tco="' + l[0] + '" tabindex="0" role="button">' + te(l[1]) + '</a>'; }).join('') + '<span>' + te(UI.click) + '</span></div>';
   }
   function principle(key, ic, title, svg, caption) {
-    return '<div class="tc-panel tc-tile tc-abs" data-tco="' + key + '" tabindex="0" role="button" style="left:1515px;top:150px;width:370px;height:300px;padding:16px 16px 10px;display:grid;gap:6px;align-content:start">' +
-      '<div class="tc-ph">' + icon(ic) + te(title) + '<em>' + te(o(title)) + '</em></div>' + svg.replace('<svg ', '<svg style="height:180px;width:100%" ') +
+    return '<div class="tc-panel tc-tile tc-abs" data-tco="' + key + '" tabindex="0" role="button" style="left:40px;top:' + ROW_Y + 'px;width:600px;height:290px;padding:16px 18px 10px;display:grid;gap:6px;align-content:start">' +
+      '<div class="tc-ph">' + icon(ic) + te(title) + '<em>' + te(o(title)) + '</em></div>' + svg.replace('<svg ', '<svg style="height:172px;width:100%" ') +
       '<div style="font-size:13px;color:#4A4F72;line-height:1.4">' + t(caption) + '</div></div>';
   }
   function chips(list) {
-    return '<div class="tc-panel tc-abs" style="left:1515px;top:462px;width:370px;height:94px;padding:8px 10px"><div class="tc-chips">' +
+    return '<div class="tc-panel tc-abs" style="left:1280px;top:' + ROW_Y + 'px;width:600px;height:290px;padding:14px"><div class="tc-chips tc-chips2">' +
       list.map(function (c) { return '<div class="tc-chip tc-tile" data-tco="' + c[0] + '" tabindex="0" role="button">' + svgIcon(c[1]) + te(c[2]) + '</div>'; }).join('') + '</div></div>';
   }
   function kpis(list) {
     return list.map(function (k, i) {
-      var v = t(k[1]), fs = v.length > 8 ? 21 : 26;
-      return '<div class="tc-panel tc-tile tc-kpi tc-abs" data-tco="' + k[0] + '" tabindex="0" role="button" style="left:' + (1515 + (i % 2) * 190) + 'px;top:' + (568 + Math.floor(i / 2) * 106) + 'px;width:180px;height:98px">' +
+      var v = t(k[1]), fs = v.length > 9 ? 27 : 33;
+      return '<div class="tc-panel tc-tile tc-kpi tc-abs" data-tco="' + k[0] + '" tabindex="0" role="button" style="left:' + (656 + (i % 2) * 312) + 'px;top:' + (ROW_Y + Math.floor(i / 2) * 150) + 'px;width:296px;height:140px;padding:16px 18px">' +
         '<div class="v" style="font-size:' + fs + 'px">' + e(v) + '<small>' + te(k[2]) + '</small></div><div class="k">' + te(k[3]) + '</div><div class="d">' + te(k[4]) + '</div></div>';
     }).join('');
   }
+  /* stage geometry (Rev. 18): the slide is fitted to the page width; illustration 1860 × 840 under the header, the process-flow explorer under it,
+     then the dashboard row (principle | 4 KPIs | quick links) and the five tiles */
+  var SW = 1920, SH = 1792, FLOW_Y = 1000, ROW_Y = 1194, TILE_Y = 1500;
   var TILE_X = [40, 411, 782, 1153, 1524];
   function tile(i, key, ic, title, em, body, bg) {
-    return '<div class="tc-panel tc-tile tc-bt tc-abs" data-tco="' + key + '" tabindex="0" role="button" style="left:' + TILE_X[i] + 'px;top:792px;width:356px;height:236px">' +
+    return '<div class="tc-panel tc-tile tc-bt tc-abs" data-tco="' + key + '" tabindex="0" role="button" style="left:' + TILE_X[i] + 'px;top:' + TILE_Y + 'px;width:356px;height:236px">' +
       '<div class="tc-ph">' + icon(ic, bg) + te(title) + '<em>' + te(em) + '</em></div>' + body + '</div>';
+  }
+  function flowBar(steps) {
+    if (!steps || !steps.length) return '';
+    return '<div class="tc-flowbar tc-abs" style="left:40px;top:' + FLOW_Y + 'px;width:1840px;height:178px"><div class="tc-fb-l"><div class="tc-fb-row"><span class="tc-fb-ttl">' + te(['Process flow', '流程']) + '</span>' +
+      '<button type="button" class="tc-fb-btn pri" data-flow="play">▶ ' + te(['Play', '播放']) + '</button><button type="button" class="tc-fb-btn" data-flow="prev" aria-label="' + te(UI.prev) + '">‹</button><button type="button" class="tc-fb-btn" data-flow="next" aria-label="' + te(UI.next) + '">›</button><button type="button" class="tc-fb-btn" data-flow="all">' + te(['Show all', '全部显示']) + '</button>' +
+      '</div><div class="tc-fb-txt" data-flow-txt></div></div>' +
+      '<div class="tc-fb-steps">' + steps.map(function (s, i) { return '<button type="button" class="tc-fb-st" data-flow-step="' + i + '" title="' + te(s.t) + '"><b>' + (i + 1) + '</b><span>' + te(s.t) + '</span></button>'; }).join('') + '</div></div>';
   }
   function miniBars(rows, vmax, unitTxt) {
     return '<div class="tc-mini">' + rows.map(function (r) {
@@ -792,6 +814,9 @@
     DIFF = PREV_X ? diffM(metrics(PREV_X), metrics(CTX.x)) : null; PREV_X = null;
     var stage0 = null; if (CTX.c0) try { stage0 = card.stage(CTX.c0, LIB); } catch (x) { stage0 = null; }
     var stage = card.stage(CTX, LIB);
+    if (FLOW.card !== card.id) { flowPlay(false, true); FLOW.card = card.id; FLOW.i = -1; }
+    FLOW.steps = card.steps ? card.steps(CTX, LIB) : []; if (FLOW.i >= FLOW.steps.length) FLOW.i = -1;
+    stage += flowBar(FLOW.steps);
     /* a card whose technology the selected design does not use can add it to that design (card.fallFix → one design change) */
     FALLFIX = null;
     if (CTX.fell && card.fallFix) try { FALLFIX = card.fallFix(resolveWith(JSON.stringify(basisInput(card, CTX.key).input), ST.chg[CTX.key] || {})); } catch (x) { FALLFIX = null; }
@@ -806,7 +831,7 @@
       (FALLFIX ? '<button type="button" class="tc-btn tc-fix" data-fallfix title="' + te(['Adds this change to the selected design: every card and panel follows', '将此修改加入所选设计：所有卡片及面板随之联动']) + '">' + LINK_SVG + te(FALLFIX.label) + '</button>' : '') +
       (nCh ? '<button type="button" class="tc-btn tc-rsall" data-resetall>↺ ' + te(UI.resetAll) + ' <b>' + nCh + '</b></button><button type="button" class="tc-chgk" data-tco="basis"><i></i>' + te(UI.chgKey) + '</button>' : '') +
       '<span class="tc-sp"></span><button type="button" class="tc-btn" data-expand>' + BTN_EXPAND + te(['Expand', '放大']) + ' <small style="color:#8387A6">(F)</small></button></div>';
-    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><main class="tc-stage"></main><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>' +
+    if (!VIEW.querySelector('.tc-wrap')) VIEW.innerHTML = '<div class="tc-head"></div><div class="tc-wrap"><div class="tc-bg"></div><div class="tc-scr"><div class="tc-size"></div><main class="tc-stage"></main></div><div class="tc-tip" hidden></div><div class="tc-ctl" hidden></div><div class="tc-ov" hidden></div></div><div class="tc-hint"></div>' +
       '<section class="tc-sld" id="sim-sld"><div class="tc-sldh"></div><div class="tc-sldhost" data-sld-live></div><details class="tc-sldgpu"></details></section>';
     VIEW.querySelector('.tc-head').innerHTML = '<div class="tc-top"><div class="tc-intro"><h2 class="sec">' + te(['Project Technology Simulation', '项目技术模拟']) + '</h2><div class="sec-sub" style="margin-bottom:0">' +
       te(['Interactive one-slide simulations of data center systems, driven by the knowledge base and the assessment engine. All five systems share one design: choose a design basis, open any part of the slide and change a linked input (link symbol) in its calculator — every connected parameter in every other panel and card is re-sized at once by its code / standard rule, and what changed is outlined in amber. ← → move between panels, Esc closes, F expands.', '以一页交互幻灯片模拟数据中心各系统，由知识库与评估引擎驱动。五个系统共用同一设计：选择设计基准，点击幻灯片任意部分，在其计算器中修改带链接符号的输入——其他所有面板及卡片中的相关参数即按规范/标准规则同步重新选型，变化部分以琥珀色标示。← → 切换面板，Esc关闭，F放大。']) + '</div></div></div>' + sel + bar;
@@ -817,7 +842,7 @@
     VIEW.querySelector('.tc-hint').textContent = t(['Figures are indicative planning values computed for the selected design basis; equipment panels read the specification & TPG library (links open in a new tab).', '数值为针对所选设计基准计算的规划参考值；设备面板读取技术规范及TPG库（链接在新标签页打开）。']);
     if (!DEFS_ADDED) { document.body.insertAdjacentHTML('beforeend', DEFS); DEFS_ADDED = true; }
     if (ST.focus) document.documentElement.style.overflow = 'hidden';
-    fit(); motion();
+    fit(); motion(); flowRender();
     renderSld();
     if (ST.open) openPanel(ST.open, true); else syncHash();
   }
@@ -831,26 +856,22 @@
 
   function fit() {
     if (!VIEW) return;
-    var wrap = VIEW.querySelector('.tc-wrap'), st = VIEW.querySelector('.tc-stage'), ctl = VIEW.querySelector('.tc-ctl'); if (!wrap) return;
-    var root = document.documentElement, vw = root.clientWidth || g.innerWidth, vh = root.clientHeight || g.innerHeight, W, H, rot = false, place = '';
+    var wrap = VIEW.querySelector('.tc-wrap'), st = VIEW.querySelector('.tc-stage'), ctl = VIEW.querySelector('.tc-ctl'), sz = VIEW.querySelector('.tc-size'); if (!wrap) return;
+    var root = document.documentElement, vw = root.clientWidth || g.innerWidth, vh = root.clientHeight || g.innerHeight, W, H, rot = false, s;
     if (ST.focus) {
       rot = ST.userRot === 'on' ? vh > vw : ST.userRot === 'off' ? false : (TOUCH && vh > vw && vw < 700);
       W = rot ? vh : vw; H = rot ? vw : vh;
       wrap.style.width = W + 'px'; wrap.style.height = H + 'px'; wrap.style.transform = rot ? 'translate(' + vw + 'px,0) rotate(90deg)' : 'none';
+      s = W / SW;
+      ctl.hidden = false; ctl.setAttribute('data-place', 'corner'); ctl.style.right = ''; ctl.style.bottom = '';
+      ctl.querySelector('[data-rot]').hidden = !(TOUCH && (vh > vw || rot));
     } else {
       wrap.style.transform = 'none'; wrap.style.width = '';
-      W = wrap.clientWidth || VIEW.clientWidth || 800;
-      var hdr = document.querySelector('header'), hh = hdr && g.getComputedStyle(hdr).position === 'sticky' ? hdr.getBoundingClientRect().height : 0;
-      H = Math.min(W * 1080 / 1920, Math.max(240, vh - hh - 28)); wrap.style.height = Math.round(H) + 'px';
+      W = wrap.clientWidth || VIEW.clientWidth || 800; s = W / SW; wrap.style.height = Math.ceil(SH * s) + 'px';
+      ctl.hidden = true;
     }
-    var s = Math.min(W / 1920, H / 1080), gx = (W - 1920 * s) / 2, gy = (H - 1080 * s) / 2;
-    if (ST.focus) {
-      if (gx >= 46) place = 'side'; else if (gy >= 50) place = 'bottom'; else { s = Math.min((W - 92) / 1920, H / 1080); gx = (W - 1920 * s) / 2; gy = (H - 1080 * s) / 2; place = 'side'; }
-      ctl.hidden = false; ctl.setAttribute('data-place', place);
-      ctl.style.right = (place === 'side' ? Math.max(4, (gx - 38) / 2) : 12) + 'px'; ctl.style.bottom = place === 'bottom' ? Math.max(6, (gy - 38) / 2) + 'px' : '';
-      ctl.querySelector('[data-rot]').hidden = !(TOUCH && (vh > vw || rot));
-    } else ctl.hidden = true;
-    st.style.setProperty('--s', s); st.style.setProperty('--x', gx + 'px'); st.style.setProperty('--y', gy + 'px');
+    if (sz) sz.style.height = Math.ceil(SH * s) + 'px';
+    st.style.setProperty('--s', s); st.style.setProperty('--x', '0px'); st.style.setProperty('--y', '0px');
     /* Chromium caches the raster scale of SVG text when it is first laid out; when the stage scale changes the text
        would paint at the old scale. Re-lay-out the slide's SVGs whenever the scale changes. */
     if (st.__s !== s) {
@@ -861,6 +882,22 @@
       list.forEach(function (el) { el.style.display = ''; });
     }
   }
+  /* process-flow explorer: each card lists its steps (keys of the hotspots and flows they light); play cycles through them */
+  var FLOW = { card: null, i: -1, steps: [], timer: null };
+  function flowRender() {
+    if (!VIEW) return; var bar = VIEW.querySelector('.tc-flowbar'), svg = VIEW.querySelector('.tc-stage .tc-pfd'); if (!bar) return;
+    var i = FLOW.i, st = FLOW.steps[i];
+    Array.prototype.forEach.call(bar.querySelectorAll('[data-flow-step]'), function (b) { var on = +b.getAttribute('data-flow-step') === i; b.classList.toggle('on', on); });
+    var pb = bar.querySelector('[data-flow="play"]'); if (pb) pb.innerHTML = FLOW.timer ? '❚❚ ' + te(['Pause', '暂停']) : '▶ ' + te(['Play', '播放']);
+    var txt = bar.querySelector('[data-flow-txt]');
+    if (!st) { if (svg) svg.classList.remove('tc-fmode'); if (svg) Array.prototype.forEach.call(svg.querySelectorAll('.tc-fon'), function (el) { el.classList.remove('tc-fon'); });
+      txt.innerHTML = te(['Press Play, or pick a step, to follow the process through the illustration; hover any equipment for its values, click it for the full panel.', '点击播放或选择步骤，沿插图了解完整流程；鼠标悬停查看设备数值，点击打开完整面板。']); return; }
+    if (svg) { svg.classList.add('tc-fmode'); Array.prototype.forEach.call(svg.querySelectorAll('[data-tco], [data-fk]'), function (el) { var ks = (el.getAttribute('data-fk') || el.getAttribute('data-tco') || '').split(' '); el.classList.toggle('tc-fon', ks.some(function (k) { return st.k.indexOf(k) >= 0; })); }); }
+    var pk = st.k.filter(function (k) { return panelIdx(k) >= 0; })[0];
+    txt.innerHTML = '<b>' + (i + 1) + ' / ' + FLOW.steps.length + ' | ' + te(st.t) + '</b> ' + t(st.d) + (pk ? ' <a class="tc-fb-more" data-tco="' + pk + '" tabindex="0" role="button">' + te(['Details', '详情']) + ' →</a>' : '');
+  }
+  function flowSet(i) { var n = FLOW.steps.length; if (!n) return; FLOW.i = i < 0 ? -1 : i % n; flowRender(); }
+  function flowPlay(on, quiet) { if (FLOW.timer) { clearInterval(FLOW.timer); FLOW.timer = null; } if (on && FLOW.steps.length) { if (FLOW.i < 0) FLOW.i = 0; FLOW.timer = setInterval(function () { if (!visible || ST.open) return; flowSet(FLOW.i + 1); }, 5200); } if (!quiet) flowRender(); }
   function refit() { fit(); setTimeout(fit, 150); setTimeout(fit, 500); }
 
   /* motion: pause the slide when hidden or while a panel covers it; touch devices step motion at ≈ 12 frames/s */
@@ -1086,6 +1123,8 @@
       if (tg.closest('[data-fallfix]')) { applyFallFix(); return; }
       if (tg.closest('[data-resetall]')) { resetAll(); return; }
       var gr = tg.closest('[data-gr]'); if (gr) { ev.preventDefault(); commit(gr.getAttribute('data-gr'), null, 'basis'); return; }
+      var fb = tg.closest('[data-flow]'); if (fb) { var fa = fb.getAttribute('data-flow'); if (fa === 'play') flowPlay(!FLOW.timer); else if (fa === 'all') { flowPlay(false, true); flowSet(-1); } else { flowPlay(false, true); flowSet(FLOW.i < 0 ? (fa === 'next' ? 0 : FLOW.steps.length - 1) : FLOW.i + (fa === 'next' ? 1 : FLOW.steps.length - 1)); } return; }
+      var fsb = tg.closest('[data-flow-step]'); if (fsb) { flowPlay(false, true); var fi = +fsb.getAttribute('data-flow-step'); flowSet(fi === FLOW.i ? -1 : fi); return; }
       var op = tg.closest('[data-tco]'); if (op) { ev.preventDefault(); openPanel(op.getAttribute('data-tco')); return; }
       if (tg.closest('[data-x]')) { closePanel(); return; }
       var nv = tg.closest('[data-nav]'); if (nv) { stepPanel(+nv.getAttribute('data-nav')); return; }
@@ -1095,6 +1134,18 @@
       if (ev.target.matches('[data-basis]')) { ST.basis = { _all: ev.target.value }; save(); render(); return; }
     });
     if (g.ResizeObserver) try { new ResizeObserver(function () { if (visible && !ST.focus) fit(); }).observe(el); } catch (x) { }
+    /* hover: name, values and a hint for every hotspot of the illustration */
+    el.addEventListener('pointermove', function (ev) {
+      if (ev.pointerType === 'touch') return; var tip = el.querySelector('.tc-tip'); if (!tip) return;
+      var h = ev.target.closest && ev.target.closest('.tc-stage .tc-pfd .tc-hot');
+      if (!h || ST.open) { tip.hidden = true; return; }
+      var key = h.getAttribute('data-tco'); if (tip.__k !== key) { tip.__k = key; tip.innerHTML = '<b>' + e(h.getAttribute('aria-label') || '') + '</b>' + (h.getAttribute('data-tip') ? '<span>' + e(h.getAttribute('data-tip')) + '</span>' : '') + '<i>' + te(['Click for the full panel', '点击打开完整面板']) + '</i>'; }
+      var wr = el.querySelector('.tc-wrap').getBoundingClientRect(); tip.hidden = false;
+      var x = ev.clientX - wr.left + 18, y = ev.clientY - wr.top + 18, tw0 = tip.offsetWidth, th0 = tip.offsetHeight;
+      if (x + tw0 > wr.width - 8) x = ev.clientX - wr.left - tw0 - 14; if (y + th0 > wr.height - 8) y = ev.clientY - wr.top - th0 - 12;
+      tip.style.left = Math.max(6, x) + 'px'; tip.style.top = Math.max(6, y) + 'px';
+    });
+    el.addEventListener('pointerleave', function () { var tip = el.querySelector('.tc-tip'); if (tip) { tip.hidden = true; tip.__k = null; } });
   }
   document.addEventListener('keydown', function (ev) {
     if (!visible || !VIEW) return;
@@ -1116,13 +1167,13 @@
   function onShow(on) {
     visible = !!on;
     if (!VIEW) return;
-    if (!on) { if (ST.open) closePanel(); if (ST.focus) setFocus(false); }
+    if (!on) { if (ST.open) closePanel(); if (ST.focus) setFocus(false); flowPlay(false, true); }
     motion(); if (on) { refit(); syncHash(); if (SLD_DIRTY) renderSld(); }
   }
 
   var LIB = {
     t: t, o: o, e: e, te: te, F: F, tw: tw, ord: ord, G: G, R: R_, text: text, shadow: shadow, vessel: vessel, cylV: cylV, storageTank: storageTank, cylH: cylH, pump: pump, tankBox: tankBox,
-    sldBtn: sldBtn, building: building, city: city, bubbles: bubbles, rotor: rotor, fan: fan, waves: waves, pipe: pipe, thin: thin, air: air, arrowHead: arrowHead, banner: banner, label: label, labelSpan: labelSpan,
+    sldBtn: sldBtn, fl: fl, tag: tag, dbox: dbox, zbox: zbox, num: num, flowBar: flowBar, building: building, city: city, bubbles: bubbles, rotor: rotor, fan: fan, waves: waves, pipe: pipe, thin: thin, air: air, arrowHead: arrowHead, banner: banner, label: label, labelSpan: labelSpan,
     hot: hot, unit: unit, cab: cab, switchgear: switchgear, lvBoard: lvBoard, dryTx: dryTx, powerTx: powerTx, pylon: pylon, genset: genset, fuelTank: fuelTank, upsCab: upsCab, battRack: battRack,
     bessBox: bessBox, busway: busway, rack: rack, rackRow: rackRow, containment: containment, crah: crah, fanWall: fanWall, chiller: chiller, coolingTower: coolingTower, dryCooler: dryCooler,
     cduCab: cduCab, phe: phe, gasCyl: gasCyl, camera: camera, fence: fence, bollards: bollards, barrier: barrier, mantrap: mantrap, reader: reader, nocWall: nocWall, firePanel: firePanel,

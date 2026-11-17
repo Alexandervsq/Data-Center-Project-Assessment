@@ -277,4 +277,34 @@
     { id: 'IMM', en: 'Immersion cooling', zh: '浸没式液冷', maxDens: 200, maxMW: 200,
       d: ['Lowest PUE; specialised IT, fluid handling and floor loading considerations.', 'PUE最低；需专用IT、冷却液管理并考虑楼面荷载。'] }
   ];
+  /* Rev. 18: CRAC or CRAH — the two air-side families compared, what the standards regulate, the typical choice by project (simulation panel and knowledge documents) */
+  D.cracCrah = {
+    rows: [
+      [['What cools the coil', '盘管冷源'], ['refrigerant from the unit’s own compressor (direct expansion)', '机组自带压缩机的冷媒（直接膨胀）'], ['chilled water from the central plant; no compressor in the unit', '集中冷站的冷冻水；机组内无压缩机']],
+      [['Where the heat goes', '热量去向'], ['outdoor air-cooled condenser per unit (or glycol dry cooler, water-cooled condenser)', '每台配室外风冷冷凝器（或乙二醇干冷器、水冷冷凝器）'], ['chillers → cooling towers (water-cooled) or condenser fans (air-cooled); economiser hours', '冷机 → 冷却塔（水冷）或冷凝风机（风冷）；自然冷却时段']],
+      [['Typical unit size', '典型单机'], ['10–150 kW', '10–150 kW'], ['CRAH 50–250 kW | fan wall 300–500 kW | CW in-row 30–60 kW', 'CRAH 50–250 kW | 风墙300–500 kW | 冷冻水列间30–60 kW']],
+      [['Efficiency in Indonesia', '印尼能效'], ['COP ≈ 2.5–4 (condensing at ≈ 45–50 °C)', 'COP约2.5–4（冷凝约45–50 °C）'], ['plant COP ≈ 5–7 water-cooled, ≈ 3–4 air-cooled; 14–18 °C chilled water helps', '水冷冷站COP约5–7，风冷约3–4；14–18 °C冷冻水更节能']],
+      [['Water', '用水'], ['none', '无'], ['towers ≈ 1.8–2.0 L/kWh; air-cooled ≈ 0', '冷却塔约1.8–2.0 L/kWh；风冷约0']],
+      [['Refrigerant', '冷媒'], ['in every unit and field pipe run (HFC phase-down)', '每台机组及现场管路均有（HFC削减）'], ['only inside the chillers in the plant room', '仅在冷机房的冷机内']],
+      [['Best for', '适用'], ['server rooms, edge sites, UPS / battery rooms, MMR; ≤ ≈ 1–1.5 MW', '服务器机房、边缘站点、UPS/电池室、MMR；约≤1–1.5 MW'], ['halls from ≈ 1 MW to hyperscale; ≈ 25 kW/rack with containment, 40–75 kW with rear doors', '约1 MW至超大规模机房；封闭通道约25 kW/柜，背板换热40–75 kW']],
+      [['Redundancy (Tier III)', '冗余（Tier III）'], ['N+1 units per room, each an independent circuit', '每间N+1，每台独立回路'], ['N+1 units per hall + N+1 chillers and pumps + A/B or ring piping', '每厅N+1末端 + N+1冷机与水泵 + A/B或环网管路']],
+      [['Watch-outs', '注意事项'], ['many compressors to maintain; pipe-length limits; noise outdoors', '压缩机多、维护量大；管长受限；室外噪声'], ['water near the white space → leak detection; plant CAPEX', '水管靠近白区 → 漏水检测；冷站投资']]],
+    std: [
+      ['ASHRAE TC 9.9 Thermal Guidelines (5th ed.)', ['server inlet 18–27 °C recommended (classes A1–A4, H1 for high density), dew point and humidity limits', '服务器进风推荐18–27 °C（A1–A4级，高密度H1级），露点及湿度限值']],
+      ['ASHRAE 90.4', ['energy of the whole cooling system: maximum mechanical load component (MLC) by climate zone', '整个制冷系统能效：按气候区限定机械负荷分量（MLC）']],
+      ['ASHRAE 127 | AHRI 1360 / 1361', ['how computer-room air conditioners are tested and rated (net sensible capacity, NSenCOP)', '机房空调的测试与额定（净显冷量、NSenCOP）']],
+      ['ANSI/TIA-942-C', ['Rated-3: N+1 cooling units, concurrently maintainable; Rated-4: fault tolerant', 'Rated-3：N+1制冷末端、可同时维护；Rated-4：容错']],
+      ['Uptime Tier Standard: Topology', ['Tier III: every cooling component and path maintainable without stopping the IT; Tier IV: continuous cooling, fault tolerant', 'Tier III：任一制冷组件及路径可维护而不停IT；Tier IV：连续制冷、容错']],
+      ['EN 50600-2-3', ['environmental-control availability classes 1–4; supply conditions per the ASHRAE / ETSI envelopes', '环境控制可用性等级1–4；送风条件按ASHRAE/ETSI范围']],
+      ['BICSI 002', ['mechanical classes F0–F4, comparable to the Tiers', '机械等级F0–F4，与Tier对应']],
+      [['Kigali Amendment | F-gas rules', '基加利修正案 | 含氟气体法规'], ['phase-down of high-GWP refrigerants (R-410A → R-32, R-454B, R-1234ze, R-513A) — favours low-charge central plants', '高GWP冷媒削减（R-410A → R-32、R-454B、R-1234ze、R-513A）——利于低充注量的集中冷站']],
+      ['SNI 8799', ['Indonesian data-center standard series, aligned with TIA-942', '印尼数据中心标准系列，与TIA-942一致']]],
+    typ: [
+      [['Edge / server room ≤ 1 MW', '边缘/服务器机房≤1 MW'], ['DX CRAC (or DX in-row)', '直膨CRAC（或直膨列间）'], ['outdoor condensers', '室外冷凝器']],
+      [['Enterprise / colocation 1–30 MW', '企业/托管1–30 MW'], ['CRAH or fan walls', 'CRAH或风墙'], ['air-cooled chillers (water-scarce) or water-cooled chillers + towers', '风冷冷机（缺水）或水冷冷机+冷却塔']],
+      [['Hyperscale 30 MW+', '超大规模30 MW+'], ['fan walls; IEC in dry climates', '风墙；干燥气候采用IEC'], ['water-cooled chillers with economisers', '带自然冷却的水冷冷机']],
+      [['AI / HPC', 'AI/HPC'], ['cold plates (CDU) + CRAH or rear doors for the residual air', '冷板（CDU）+ CRAH或背板承担余热'], ['warm-water dry coolers + trim chillers', '温水干冷器 + 补冷冷机']],
+      [['Small rooms in a chilled-water building', '冷冻水建筑中的小房间'], ['CRAH where chilled water reaches; DX units where it does not', '冷冻水可达处用CRAH；不可达处用直膨机组'], ['the building plant', '建筑冷站']]],
+    ans: ['Not every data center uses CRAC and CRAH units together: they are two families for the same job. A CRAC (computer room air conditioner) is a DX unit with its own compressor and an outdoor condenser — the choice for server rooms, edge sites and support rooms up to about 1–1.5 MW. A CRAH (computer room air handler) has a chilled-water coil and fans but no compressor; fan walls, chilled-water in-row coolers and rear-door coils belong to the same family and are fed by a central chiller plant — the choice for colocation, enterprise, hyperscale and the residual air of liquid-cooled AI halls. A building mixes them only for a reason: DX units in small rooms the chilled water does not reach, or diverse back-up in a small critical room. The standards (ASHRAE TC 9.9, ASHRAE 90.4, TIA-942-C, Uptime Tier, EN 50600-2-3, BICSI 002, SNI 8799) set temperatures, efficiency and redundancy — not the unit type.', '并非每个数据中心都同时使用CRAC与CRAH：二者是完成同一任务的两类设备。CRAC（机房精密空调）为自带压缩机及室外冷凝器的直膨机组——适用于服务器机房、边缘站点及约1–1.5 MW以内的辅助房间。CRAH（机房空气处理机）只有冷冻水盘管和风机、没有压缩机；风墙、冷冻水列间空调及背板盘管同属此类，由集中冷站供冷——适用于托管、企业、超大规模及液冷AI机房的余热风冷。只有在特定原因下才会混用：冷冻水到不了的小房间采用直膨机组，或小型关键房间的多样化备用。标准（ASHRAE TC 9.9、ASHRAE 90.4、TIA-942-C、Uptime Tier、EN 50600-2-3、BICSI 002、SNI 8799）规定的是温湿度、能效与冗余——而非末端类型。']
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
