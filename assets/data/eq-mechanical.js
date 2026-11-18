@@ -8,8 +8,8 @@
   { id: 'ME-01', sys: 'ME', cls: 'M', en: 'Water-Cooled Centrifugal Chiller (Oil-Free Magnetic Bearing)', zh: '水冷离心式冷水机组（无油磁悬浮）',
     fn: ['Produces chilled water for CRAHs/fan walls by rejecting heat to condenser water and cooling towers. Highest efficiency option for large plants in hot-humid climates.',
          '为精密空调/风墙制取冷冻水，并通过冷却水和冷却塔排热。是湿热地区大型冷站效率最高的方案。'],
-    ty: ['500 – 1,500 RT (1.75 – 5.3 MW) per unit; elevated chilled water 16–20 °C supply for data centres; N+1 or 2N.',
-         '单台500–1,500冷吨（1.75–5.3 MW）；数据中心采用16–20 °C高温冷冻水供水；N+1或2N。'],
+    ty: ['90 – 2,800 RT per unit (data-centre selections 400 – 1,600 RT, 1.4 – 5.6 MW); elevated chilled water 16–20 °C supply; COP ≈ 6.8–7.5 at AHRI 550/590 and ≈ 9.5–11.3 at 20 °C chilled water (≤ 0.37 kW/RT); N+1 or 2N.',
+         '单台90–2,800冷吨（数据中心常用400–1,600冷吨，1.4–5.6 MW）；16–20 °C高温冷冻水供水；AHRI 550/590工况COP约6.8–7.5，20 °C冷冻水时约9.5–11.3（≤0.37 kW/RT）；N+1或2N。'],
     s: [
       ['Oil-free magnetic-bearing or high-efficiency centrifugal compressors with VFD; low-GWP refrigerant (R-1234ze, R-513A or R-515B).', '无油磁悬浮或高效变频离心压缩机；采用低GWP冷媒（R-1234ze、R-513A或R-515B）。'],
       ['Rapid restart: ≤ 3 min to 100% capacity after power restoration (fast-restart feature mandatory for Tier III/IV).', '快速重启：恢复供电后≤3 min达到100%冷量（Tier III/IV必须具备快速重启功能）。'],
@@ -30,6 +30,10 @@
       ['Power input at design', '设计工况输入功率', 'kW', BID],
       ['COP at design conditions', '设计工况性能系数COP', 'kW/kW', '≥ 6.5'],
       ['IPLV / NPLV', '综合部分负荷性能系数', 'kW/kW', '≥ 10.0'],
+      ['COP at AHRI 550/590 standard conditions', 'AHRI 550/590标准工况COP', 'kW/kW', '≥ 6.4 (≤ 0.55 kW/RT)'],
+      ['COP at data-centre conditions (20/30 °C chilled water, 30/36 °C condenser water)', '数据中心工况COP（冷冻水20/30 °C、冷却水30/36 °C）', 'kW/kW', '≥ 9.5 (≤ 0.37 kW/RT)'],
+      ['Maximum leaving chilled water / condenser water', '最高冷冻水出水 / 冷却水出水温度', '°C', '≥ 20 / ≥ 40'],
+      ['Ride-through / restart / 80 % / 100 % capacity after a power loss', '断电穿越 / 重启 / 80% / 100%冷量时间', 's', '≥ 20 / ≤ 35 / ≤ 90 / ≤ 180'],
       ['Minimum unloading (turndown)', '最小卸载率', '%', '≤ 15'],
       ['Restart time to 100% capacity', '重启至100%冷量时间', 's', '≤ 180'],
       {g: ['Hydraulics', '水力参数']},
@@ -52,7 +56,7 @@
   { id: 'ME-02', sys: 'ME', cls: 'M', en: 'Air-Cooled Chiller with Integrated Free Cooling', zh: '风冷冷水机组（带集成自然冷却）',
     fn: ['Produces chilled water rejecting heat directly to air (no cooling tower, no evaporative water). Integrated free-cooling coils use cool ambient air when available.',
          '直接向空气排热制取冷冻水（无冷却塔、无蒸发耗水）；环境温度低时由集成自然冷却盘管利用室外冷空气。'],
-    ty: ['300 – 2,000 kW per unit; screw or centrifugal compressor; roof or yard mounted.', '单台300–2,000 kW；螺杆或离心压缩机；屋面或室外场地安装。'],
+    ty: ['200 – 1,900 kW (60 – 550 RT) per unit; inverter screw or magnetic-bearing centrifugal; COP ≈ 2.9–3.7 at AHRI 550/590, ≈ 4.5–5.2 at 20 °C chilled water and 40 °C ambient; roof or yard mounted.', '单台200–1,900 kW（60–550冷吨）；变频螺杆或磁悬浮离心；AHRI 550/590工况COP约2.9–3.7，20 °C冷冻水、环境40 °C时约4.5–5.2；屋面或室外场地安装。'],
     s: [
       ['Variable-speed screw/centrifugal compressors, EC condenser fans, low-GWP refrigerant.', '变频螺杆/离心压缩机，EC冷凝风机，低GWP冷媒。'],
       ['Glycol free-cooling coils with automatic changeover (partial/full free cooling).', '乙二醇自然冷却盘管，自动切换（部分/完全自然冷却）。'],
@@ -65,6 +69,12 @@
       ['Design ambient (dry bulb)', '设计环境干球温度', '°C', '40 – 43'],
       ['CHW supply / return', '冷冻水供/回水温度', '°C', '18 / 26'],
       ['EER at design / SEER', '设计工况EER / SEER', 'kW/kW', '≥ 3.2 / ≥ 5.0'],
+      ['COP at AHRI 550/590 (35 °C ambient)', 'AHRI 550/590工况COP（环境35 °C）', 'kW/kW', '≥ 3.4 (screw, high class) | ≥ 3.5 (magnetic bearing)'],
+      ['IPLV / ESEER', 'IPLV / ESEER', 'kW/kW', '≥ 5.5 / ≥ 6.0'],
+      ['COP at data-centre conditions (20/30 °C chilled water, 40 °C ambient)', '数据中心工况COP（冷冻水20/30 °C、环境40 °C）', 'kW/kW', '≥ 4.5'],
+      ['Maximum leaving chilled water / maximum ambient', '最高冷冻水出水 / 最高环境温度', '°C', '≥ 20 / ≥ 46'],
+      ['Condenser coil / fans', '冷凝盘管 / 风机', '-', 'microchannel or Cu/Al V-coil / EC'],
+      ['Integrated active harmonic filter (THDi)', '集成有源滤波器（THDi）', '%', '≤ 5 (IEEE 519)'],
       ['Free-cooling start ambient', '自然冷却起始环境温度', '°C', BID],
       ['Glycol concentration', '乙二醇浓度', '%', '25 – 35 (if freezing risk)'],
       ['Restart time to full capacity', '重启至满冷量时间', 's', '≤ 180'],
@@ -177,6 +187,7 @@
       ['Fan type / quantity / total power', '风机类型 / 数量 / 总功率', '- / no. / kW', 'EC plug / ≥ 3 / BID'],
       ['Sensible heat ratio', '显热比', '-', '1.0'],
       ['Specific fan power at design', '设计工况风机单位功耗', 'W/(m³/s)', '≤ 600'],
+      ['NSenCOP (AHRI 1360, fans only)', 'NSenCOP（AHRI 1360，仅风机）', 'kW/kW', '≥ 25'],
       ['Filter class', '过滤等级', '-', 'ISO ePM10 50% (MERV 8)'],
       ['Water-side pressure drop', '水侧压降', 'kPa', '≤ 60'],
       ['Sound pressure at 2 m', '2 m处声压级', 'dB(A)', '≤ 70'],
@@ -198,7 +209,9 @@
       ['Coil face velocity', '盘管迎面风速', 'm/s', '≤ 2.5'],
       ['CHW supply / return', '冷冻水供/回水温度', '°C', '20 / 28'],
       ['Supply air temperature', '送风温度', '°C', '24 – 27'],
-      ['Total fan power at design', '设计工况风机总功率', 'kW', BID]
+      ['Total fan power at design', '设计工况风机总功率', 'kW', BID],
+      ['Specific fan power at design', '设计工况风机单位功耗', 'W/(m³/s)', '≤ 500'],
+      ['NSenCOP (AHRI 1360, fans only)', 'NSenCOP（AHRI 1360，仅风机）', 'kW/kW', '≥ 30']
     ],
     std: ['ASHRAE 127', 'EN 1886', 'AMCA 210'],
     t: [['Airflow test with heat-load banks and CFD validation.', '配合热负载进行风量测试并验证CFD。']] },
@@ -271,6 +284,8 @@
       ['Rated heat transfer capacity', '额定换热量', 'kW', '1,000 – 2,000 (row type)'],
       ['Approach temperature (FWS supply → TCS supply)', '逼近温差(FWS供液→TCS供液)', 'K', '≤ 4'],
       ['TCS supply temperature range', 'TCS供液温度范围', '°C', '25 – 45'],
+      ['Facility-water class (ASHRAE)', '设施水等级（ASHRAE）', '-', 'W32 / W40 / W45 (hyperscale e.g. 22 → 32 °C)'],
+      ['CDU pump power ÷ heat transferred', 'CDU水泵功率÷换热量', '%', '≤ 1.5'],
       ['TCS flow rate / available pressure', 'TCS流量 / 可用压头', 'L/min / kPa', 'Per IT vendor (≈1.5 L/min/kW)'],
       ['Pump configuration', '水泵配置', '-', 'N+1 variable speed, hot-swappable'],
       ['Filtration rating', '过滤精度', 'µm', '≤ 25'],
@@ -325,6 +340,8 @@
       ['Heat rejection capacity', '排热量', 'kW', 'Per design'],
       ['Fluid inlet / outlet', '流体进/出口温度', '°C', '45 / 35'],
       ['Design ambient (dry / adiabatic)', '设计环境温度(干式/绝热)', '°C', BID],
+      ['Approach to ambient dry-bulb', '对环境干球逼近度', 'K', '≤ 5 – 8'],
+      ['Fan power per MW rejected', '每MW排热风机功率', 'kW', '≤ 15'],
       ['Annual water use', '年耗水量', 'm³', BID],
       ['Fan power', '风机功率', 'kW', BID]
     ],
@@ -405,6 +422,146 @@
       ['Enclosure', '防护等级', 'IP', 'IP54 / IP21 in panel']
     ],
     std: ['IEC 61800-2', 'IEC 61800-3', 'IEC 61800-9-2'],
-    t: [['Functional test and harmonic measurement.', '功能测试及谐波测量。']] }
+    t: [['Functional test and harmonic measurement.', '功能测试及谐波测量。']] },
+  /* ------------------------------------------------------------------ Rev. 19 */
+  { id: 'ME-21', sys: 'ME', cls: 'M', en: 'Water-Cooled Centrifugal Chiller — Two-Stage, Oil Bearing (High Lift)', zh: '水冷离心式冷水机组——两级、油轴承（高提升）',
+    fn: ['Produces chilled water where the condenser runs very hot (closed-circuit coolers, heat recovery, extreme ambient) or very large units are wanted; two-stage compression with an economiser keeps the efficiency at high lift.',
+         '在冷凝侧温度很高（闭式冷却器、热回收、极端环境）或需要超大单机时制取冷冻水；两级压缩加经济器在高提升工况下保持效率。'],
+    ty: ['350 – 3,500 RT per unit; COP ≈ 6.6–7.3 at AHRI 550/590, ≈ 9.7 at 30 → 20 °C evaporator and 35 → 40 °C condenser; condenser leaving up to 57 °C, evaporator leaving up to 30 °C.',
+         '单台350–3,500冷吨；AHRI 550/590工况COP约6.6–7.3，蒸发器30→20 °C、冷凝器35→40 °C时约9.7；冷凝器出水最高57 °C，蒸发器出水最高30 °C。'],
+    s: [
+      ['Two-stage variable-speed centrifugal compressor(s) with inter-stage economiser; flooded or falling-film heat exchangers.', '两级变频离心压缩机配级间经济器；满液式或降膜式换热器。'],
+      ['Oil system with heaters, filters and differential-pressure monitoring; oil-return and oil-quality analysis included in maintenance.', '油系统带加热器、过滤器及压差监测；维护包含回油及油质分析。'],
+      ['Low-GWP refrigerant option (R-1234ze, R-1233zd(E), R-515B or R-513A); refrigerant safety per ASHRAE 15 / EN 378.', '可选低GWP冷媒（R-1234ze、R-1233zd(E)、R-515B或R-513A）；冷媒安全按ASHRAE 15/EN 378。'],
+      ['Rapid restart (0–80 % of rated current in ≤ 180 s) with controls on UPS; integrated harmonic filter THDi ≤ 5 %; dual supply via ATS where required.', '快速重启（≤180 s由0升至80%额定电流），控制系统接UPS；集成谐波滤波THDi≤5%；需要时经ATS双路供电。'],
+      ['Performance certified to AHRI 550/590; factory test at the project data-centre conditions.', '性能经AHRI 550/590认证；按项目数据中心工况进行工厂测试。']
+    ],
+    tpg: [
+      {g: ['General', '一般']},
+      ['Manufacturer / model', '制造商 / 型号', '-', BID],
+      ['Compressor stages / bearing / drive', '压缩级数 / 轴承 / 驱动', '-', '2 / oil / VSD'],
+      ['Refrigerant / GWP', '冷媒 / GWP', '- / -', 'R-1234ze / < 10 (or R-515B, R-513A)'],
+      {g: ['Performance', '性能']},
+      ['Net cooling capacity', '净制冷量', 'kW (RT)', 'Per design'],
+      ['COP at AHRI 550/590 standard conditions', 'AHRI 550/590标准工况COP', 'kW/kW', '≥ 6.6'],
+      ['COP at data-centre conditions (30 → 20 °C evap., 35 → 40 °C cond.)', '数据中心工况COP（蒸发30→20 °C、冷凝35→40 °C）', 'kW/kW', '≥ 9.0'],
+      ['IPLV / NPLV', '综合部分负荷性能', 'kW/kW', '≥ 10.0'],
+      ['Maximum condenser leaving / evaporator leaving temperature', '最高冷凝器出水 / 蒸发器出水温度', '°C', '≥ 55 / ≥ 25'],
+      ['Restart to 80 % of rated current', '重启至80%额定电流', 's', '≤ 180'],
+      {g: ['Electrical', '电气']},
+      ['Power supply', '电源', 'V/ph/Hz', '400/3/50 or 6.6 kV'],
+      ['Input current THDi', '输入电流THDi', '%', '≤ 5'],
+      ['Sound pressure at 1 m', '1 m处声压级', 'dB(A)', '≤ 82'],
+      ['Operating weight / dimensions', '运行重量 / 外形尺寸', 'kg / mm', BID]
+    ],
+    std: ['AHRI 550/590', 'ASHRAE 15', 'ASHRAE 90.1', 'EN 14511', 'EN 378', 'GB/T 18430.1', 'GB 19577'],
+    t: [['Witnessed factory performance test at AHRI and at the project data-centre conditions, 100/75/50/25 % load.', '按AHRI及项目数据中心工况见证工厂性能测试，负荷100/75/50/25%。'],
+        ['Site: rapid-restart test after a simulated power interruption; oil analysis after 500 h.', '现场：模拟断电后的快速重启测试；运行500 h后油质分析。']] },
+
+  /* ------------------------------------------------------------------ */
+  { id: 'ME-22', sys: 'ME', cls: 'S', en: 'Closed-Circuit Cooler (Evaporative Fluid Cooler)', zh: '闭式冷却器（蒸发式流体冷却器）',
+    fn: ['Cools a closed facility-water or condenser loop by spraying water over a coil: the loop never touches the air, so CDUs and heat exchangers stay clean; hybrid units run dry when the weather allows.',
+         '通过向盘管喷淋水冷却闭式设施水或冷凝水环路：环路水不接触空气，CDU及换热器保持清洁；混合型在气候允许时干式运行。'],
+    ty: ['500 – 3,000 kW per cell; e.g. facility water 44 → 32 °C at 28 °C wet-bulb (approach ≈ 4 K); induced draft, counter- or cross-flow.', '每格500–3,000 kW；如湿球28 °C下设施水44→32 °C（逼近度约4 K）；机械引风，逆流或横流。'],
+    s: [
+      ['Galvanised or stainless-steel coil for the closed loop; spray pumps N+1; drift eliminators ≤ 0.001 % of the spray flow.', '闭式环路采用镀锌或不锈钢盘管；喷淋泵N+1；飘水率≤喷淋水量的0.001%。'],
+      ['EC or VFD fans; dry operation below the switch-over ambient to save water (hybrid units).', 'EC或变频风机；低于切换环境温度时干式运行以节水（混合型）。'],
+      ['Water treatment and Legionella control per ASHRAE 188; basin and spray-water isolation for concurrent maintenance.', '水处理及军团菌控制按ASHRAE 188；水盘及喷淋水可隔离以便同时维护。'],
+      ['Thermal performance certified (CTI STD-201) and verified on site.', '热力性能经认证（CTI STD-201）并现场验证。']
+    ],
+    tpg: [
+      ['Manufacturer / model', '制造商 / 型号', '-', BID],
+      ['Heat rejection per cell', '单格排热量', 'kW', 'Per design'],
+      ['Process fluid in / out', '工艺流体进 / 出温度', '°C', '44 / 32 (typ.)'],
+      ['Design wet-bulb / approach', '设计湿球 / 逼近度', '°C / K', '28 / ≤ 4'],
+      ['Coil material / design pressure', '盘管材料 / 设计压力', '- / bar', 'HDG or SS / 10'],
+      ['Spray-water flow / pump power', '喷淋水量 / 泵功率', 'm³/h / kW', BID],
+      ['Fan power at design', '设计工况风机功率', 'kW', BID],
+      ['Water use at design (evaporation + blowdown)', '设计工况用水量（蒸发+排污）', 'm³/h', BID],
+      ['Dry-mode switch-over ambient (hybrid)', '干式切换环境温度（混合型）', '°C', BID],
+      ['Drift loss', '飘水率', '%', '≤ 0.001'],
+      ['Sound pressure at 1.5 m', '1.5 m处声压级', 'dB(A)', '≤ 75'],
+      ['CTI certification', 'CTI认证', '-', 'Required / 需要']
+    ],
+    std: ['CTI STD-201', 'CTI ATC-105', 'ASHRAE 188', 'GB/T 7190.1'],
+    t: [['Thermal performance acceptance test (CTI ATC-105) within 12 months; spray and dry-mode changeover test.', '12个月内热力性能验收测试（CTI ATC-105）；喷淋及干式切换测试。']] },
+
+  /* ------------------------------------------------------------------ */
+  { id: 'ME-23', sys: 'ME', cls: 'S', en: 'Chilled-Water Plant Instrumentation & Energy Metering', zh: '冷站仪表与能量计量',
+    fn: ['Measures temperatures, flows, pressures, power and water so the COP of every chiller, the plant kW/RT, the cooling load, its share of the PUE and the WUE are known continuously (ASHRAE Guideline 22) and the controls run on reliable values.',
+         '测量温度、流量、压力、电功率及用水，使每台冷机COP、冷站kW/RT、冷负荷、其在PUE中的占比及WUE持续可知（ASHRAE Guideline 22），并保证控制系统输入可靠。'],
+    ty: ['Per chiller: chilled- and condenser-water RTD pairs, electromagnetic flow meter, class 0.5S power meter; per header and hall: thermal-energy meter; plant: outdoor T/RH, DP transmitters, make-up / blowdown meters, conductivity, refrigerant leak detectors.',
+         '每台冷机：冷冻水及冷却水铂电阻配对、电磁流量计、0.5S级电能表；每条干管及每个机房：冷量表；冷站：室外温湿度、压差变送器、补水/排污水表、电导率、冷媒泄漏探测器。'],
+    s: [
+      ['Temperature sensors Pt100 class A or better in thermowells; supply and return sensors supplied and calibrated as matched pairs (± 0.1 K on ΔT).', '温度传感器Pt100 A级或更高，装于套管内；供回水传感器配对供货并配对校准（ΔT±0.1 K）。'],
+      ['Full-bore electromagnetic flow meters ± 0.5 % of reading with ≥ 5 D / 3 D straight pipe; thermal-energy meters EN 1434 class 2.', '满管电磁流量计读数±0.5%，直管段≥5D/3D；冷量表EN 1434 2级。'],
+      ['Power meters IEC 62053-22 class 0.5S with class 0.5S CTs on every chiller; pumps, towers and fans metered or read from their VFDs.', '每台冷机配IEC 62053-22 0.5S级电能表及0.5S级CT；水泵、冷却塔及风机单独计量或读取变频器。'],
+      ['Data logged at ≤ 1 min to the BMS and the plant manager (BACnet/IP or Modbus TCP); uncertainty of the computed plant kW/RT ≤ 5 %.', '数据≤1 min记录至BMS及冷站管理系统（BACnet/IP或Modbus TCP）；冷站kW/RT计算不确定度≤5%。'],
+      ['Calibration certificates traceable to national standards; re-calibration every 2 years or after replacement.', '校准证书可溯源至国家标准；每2年或更换后重新校准。']
+    ],
+    tpg: [
+      ['Temperature sensor type / class', '温度传感器类型 / 等级', '-', 'Pt100 / class A (IEC 60751)'],
+      ['ΔT accuracy of a matched pair', '配对传感器ΔT精度', 'K', '± 0.1'],
+      ['Flow meter type / accuracy', '流量计类型 / 精度', '- / %', 'electromagnetic / ± 0.5'],
+      ['Thermal-energy meter class', '冷量表等级', '-', 'EN 1434 class 2'],
+      ['Power meter class (chillers)', '电能表等级（冷机）', '-', 'IEC 62053-22 class 0.5S'],
+      ['Outdoor temperature / humidity accuracy', '室外温度 / 湿度精度', 'K / % RH', '± 0.2 / ± 2'],
+      ['Differential-pressure transmitter accuracy', '压差变送器精度', '% span', '± 0.25'],
+      ['Logging interval / protocol', '记录间隔 / 协议', 'min / -', '≤ 1 / BACnet/IP, Modbus TCP'],
+      ['Uncertainty of plant kW/RT', '冷站kW/RT不确定度', '%', '≤ 5'],
+      ['Calibration interval', '校准周期', 'years', '≤ 2']
+    ],
+    std: ['ASHRAE Guideline 22', 'EN 1434', 'IEC 60751', 'IEC 62053-22', 'ISO 20456', 'ISO 50001', 'ISO/IEC 30134-2'],
+    t: [['Factory calibration certificates; site loop checks; matched-pair zero check (ΔT ≈ 0 at no load).', '工厂校准证书；现场回路检查；配对传感器零点检查（空载时ΔT≈0）。'],
+        ['Compare the metered load and COP with the chiller panel within ± 5 % at three loads.', '在三个负荷点比对计量冷负荷及COP与冷机面板，偏差±5%以内。']] },
+
+  /* ------------------------------------------------------------------ */
+  { id: 'ME-24', sys: 'ME', cls: 'S', en: 'Chiller Plant Optimisation Controls (Plant Manager)', zh: '冷站优化控制系统（冷站管理）',
+    fn: ['Runs chillers, pumps and towers as one system rather than unit by unit — measure, verify, diagnose, adjust — to hold the chilled-water set-point and the redundancy at the lowest total plant kW/RT.',
+         '将冷机、水泵及冷却塔作为整体而非逐台运行——测量、验证、诊断、调整——在保持冷冻水设定值与冗余的同时使冷站总kW/RT最低。'],
+    ty: ['Dedicated plant controller with I/O, dashboards and reports; works with chillers of any make over BACnet / Modbus; embedded logic without cloud dependence.', '专用冷站控制器配I/O、看板及报表；通过BACnet/Modbus兼容各品牌冷机；嵌入式逻辑，不依赖云端。'],
+    s: [
+      ['Chiller staging on measured efficiency; condenser-water reset and tower-fan optimisation; variable primary flow with minimum-flow bypass.', '按实测效率进行冷机台数控制；冷却水温重设及冷却塔风机优化；一次泵变流量带最小流量旁通。'],
+      ['Chilled-water reset only inside the IT envelope (supply air ≤ 27 °C at the rack inlet, ASHRAE TC 9.9).', '冷冻水重设仅在IT允许范围内（机柜进风≤27 °C，ASHRAE TC 9.9）。'],
+      ['Fail-safe: if the optimiser fails the plant keeps running on the chiller and BMS controls with default set-points; redundant controller for Tier III/IV.', '故障安全：优化系统失效时冷站以冷机及BMS控制和默认设定值继续运行；Tier III/IV配冗余控制器。'],
+      ['Cyber security per IEC 62443; trends stored ≥ 2 years; monthly efficiency report and measurement & verification per IPMVP.', '网络安全按IEC 62443；趋势数据保存≥2年；月度能效报告及按IPMVP的节能量测量与验证。']
+    ],
+    tpg: [
+      ['Controller redundancy', '控制器冗余', '-', 'hot standby (Tier III/IV)'],
+      ['Protocols', '通讯协议', '-', 'BACnet/IP, Modbus TCP'],
+      ['Optimisation functions', '优化功能', '-', 'staging, CHW and CW reset, tower fans, pumps'],
+      ['Plant efficiency target (annual, water-cooled)', '冷站能效目标（全年，水冷）', 'kW/RT', '≤ 0.65'],
+      ['Fail-safe mode', '故障安全模式', '-', 'local chiller / BMS control'],
+      ['Trend storage', '趋势存储', 'years', '≥ 2'],
+      ['Cyber-security level', '网络安全等级', '-', 'IEC 62443 SL 2'],
+      ['Reports', '报表', '-', 'COP, kW/RT, CLF, WUE — monthly']
+    ],
+    std: ['ASHRAE Guideline 22', 'ASHRAE Guideline 36', 'IEC 62443', 'ISO 50001', 'IPMVP'],
+    t: [['Functional performance tests (L4) of every sequence; integrated systems test (L5) with controller failure and chiller trip.', '每个控制序列的功能性能测试（L4）；含控制器失效及冷机跳机的综合系统测试（L5）。'],
+        ['12-month measurement and verification of the plant kW/RT.', '冷站kW/RT的12个月测量与验证。']] },
+
+  /* ------------------------------------------------------------------ */
+  { id: 'ME-25', sys: 'ME', cls: 'S', en: 'Prefabricated Modular Chiller Plant (MCP)', zh: '预制模块化冷站（MCP）',
+    fn: ['Chillers, pumps, piping, valves, electrical panels and controls built and tested in a factory module, then set on site and connected: shorter construction, fewer site risks and phased growth.',
+         '冷机、水泵、管路、阀门、配电柜及控制在工厂模块内组装并测试，现场就位连接：缩短工期、降低现场风险并可分期扩容。'],
+    ty: ['500 – 3,000 RT per module, e.g. 1,300 RT in 12 × 4.2 × 4.2 m (towers separate); skid or containerised.', '每模块500–3,000冷吨，如1,300 RT装于12×4.2×4.2 m（冷却塔另设）；撬装或集装箱式。'],
+    s: [
+      ['Design for manufacture and assembly; structural analysis (FEA) for transport, lifting and the site wind and seismic loads (SNI 1726).', '面向制造与装配设计；运输、吊装及现场风荷载与地震作用的结构分析（FEA，SNI 1726）。'],
+      ['Factory acceptance test of the complete module including controls and the plant-manager sequences.', '整模块（含控制及冷站管理序列）工厂验收测试。'],
+      ['Service access to every component; refrigerant detection and ventilation per ASHRAE 15 / EN 378; fire separation as required.', '每个部件均可维护；冷媒探测及通风按ASHRAE 15/EN 378；按要求进行防火分隔。'],
+      ['Defined interfaces: water, power, controls and drainage connection points with tolerances.', '明确接口：水、电、控制及排水接驳点及允差。']
+    ],
+    tpg: [
+      ['Cooling capacity per module', '单模块冷量', 'kW (RT)', 'Per design'],
+      ['Chillers / pumps per module', '每模块冷机 / 水泵', 'no.', BID],
+      ['Module dimensions / shipping weight', '模块尺寸 / 运输重量', 'm / t', BID],
+      ['Factory acceptance test scope', '工厂验收测试范围', '-', 'hydraulic, electrical, controls, performance'],
+      ['Enclosure / corrosion protection', '外壳 / 防腐', '-', 'C4 (ISO 12944) for coastal sites'],
+      ['Electrical supply / incomers', '电源 / 进线', '-', 'A + B where Tier III/IV'],
+      ['Sound pressure at 1 m', '1 m处声压级', 'dB(A)', '≤ 80'],
+      ['Design life', '设计寿命', 'years', '≥ 20']
+    ],
+    std: ['AHRI 550/590', 'ASHRAE 15', 'EN 378', 'ISO 12944', 'SNI 1726'],
+    t: [['Factory acceptance test (L1) of the module; site acceptance and L4/L5 commissioning after connection.', '模块工厂验收测试（L1）；接驳后现场验收及L4/L5调试。']] }
   );
 })(typeof window !== 'undefined' ? window : globalThis);

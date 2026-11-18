@@ -14,7 +14,7 @@
   var UNITS = [
     U('tower', { id: 'tower', no: '01', rel: [['wue', ['Water use', '用水']], ['wtreat', ['Water treatment', '水处理']]] }),
     U('pumps', { id: 'cwp', no: '02', name: ['Condenser-water pumps', '冷却水泵'], rel: [['vfd', ['VFDs', '变频器']]] }),
-    U('chiller', { id: 'chiller', no: '03', rel: [['chw', ['Plant sizing', '冷站选型']], ['pue', ['PUE', 'PUE']]] }),
+    U('chiller', { id: 'chiller', no: '03', rel: [['coolEff', ['Chiller efficiency', '冷机能效']], ['chw', ['Plant sizing', '冷站选型']], ['pue', ['PUE', 'PUE']]] }),
     U('phe', { id: 'phe', no: '04', rel: [['ashrae', ['Climate & envelope', '气候与温湿度']]] }),
     U('tes', { id: 'tes', no: '05', rel: [['tesT', ['Ride-through', '蓄冷后备']]] }),
     U('pumps', { id: 'chwp', no: '06', name: ['Chilled-water pumps', '冷冻水泵'], rel: [['pipes', ['Piping', '管路']]] }),
@@ -25,9 +25,10 @@
     U('wtreat', { id: 'wtreat', no: '11', rel: [['tower', ['Cooling towers', '冷却塔']]] }),
     U('vfd', { id: 'vfd', no: 'A' }), U('bms', { id: 'bms', no: 'B', rel: [{ card: 'FSM', label: ['Monitoring', '监控'] }] }), U('pipes', { id: 'pipes', no: 'C' })
   ];
-  var THEORY = [['air', 'air'], ['chw', 'chw'], ['pue', 'pue'], ['wue', 'wue'], ['tesT', 'tes'], ['ashrae', 'ashrae']];
+  var THEORY = [['air', 'air'], ['chw', 'chw'], ['pue', 'pue'], ['wue', 'wue'], ['tesT', 'tes'], ['ashrae', 'ashrae'], ['coolEff', 'coolEff'], ['instr', 'instr']];
   var FAQ = [
     [['What does “chilled-water air cooling” mean — CRAC or CRAH?', '“冷冻水风冷”是什么意思——CRAC还是CRAH？'], ['The servers are cooled by air; the air is cooled by chilled-water coils in CRAH-type units (CRAH, fan walls, chilled-water in-row coolers, rear doors); the water is cooled by central chillers whose heat leaves through cooling towers or condenser fans. There is no compressor in the hall. A CRAC is the other family: a DX unit with its own compressor and an outdoor condenser, used for small rooms and edge sites.', '服务器由空气冷却；空气由CRAH类末端（CRAH、风墙、冷冻水列间空调、背板）中的冷冻水盘管冷却；冷冻水由集中冷机冷却，热量经冷却塔或冷凝风机排出。机房内没有压缩机。CRAC是另一类：自带压缩机及室外冷凝器的直膨机组，用于小机房及边缘站点。']],
+    [['What COP should a data-centre chiller reach?', '数据中心冷机COP应达到多少？'], ['At AHRI 550/590 rating conditions a good water-cooled centrifugal chiller reaches COP 6.4–7.5 (0.47–0.55 kW/RT) and an air-cooled one 3.4–3.7. With data-centre chilled water of 18–20 °C the same water-cooled chillers reach COP 9–11 (0.32–0.39 kW/RT). Indonesian plants report ≤ 0.37–0.45 kW/RT for water-cooled magnetic-bearing chillers and ≤ 0.8–1.06 kW/RT for air-cooled ones. Compare only at the same conditions, and include part load (IPLV / NPLV).', 'AHRI 550/590额定工况下，优质水冷离心冷机COP为6.4–7.5（0.47–0.55 kW/RT），风冷为3.4–3.7。数据中心冷冻水18–20 °C时，同类水冷冷机COP可达9–11（0.32–0.39 kW/RT）。印尼项目水冷磁悬浮冷机为≤0.37–0.45 kW/RT，风冷为≤0.8–1.06 kW/RT。只能在相同工况下比较，并计入部分负荷（IPLV/NPLV）。']],
     [['Why chilled water instead of DX precision units?', '为什么用冷冻水而不是直膨精密空调？'], ['Above ≈ 1 MW a central chilled-water plant is far more efficient and easier to maintain than hundreds of DX units with long refrigerant pipes, and it scales to large halls with fan walls. DX remains practical for small rooms and edge sites.', '约1 MW以上，集中冷冻水系统比数百台带长冷媒管的直膨机组效率高得多、更易维护，并可配合风墙扩展到大型机房。直膨仍适用于小机房及边缘站点。']],
     [['Why is free cooling rare in Indonesia?', '为什么印尼很少采用自然冷却？'], ['Lowland sites have a design wet-bulb of ≈ 27–28 °C all year, so towers cannot make water cold enough to replace the chillers. Highland sites (Bandung ≈ 23.5 °C) and warm-water liquid cooling change that.', '低地站点全年设计湿球约27–28 °C，冷却塔无法产生足以替代冷机的低温水。高原站点（万隆约23.5 °C）及温水液冷可改变这一点。']],
     [['How much water does a water-cooled data center use?', '水冷数据中心用水量多少？'], ['About 1.8–2.0 L per kWh of IT in the tropics: a 10 MW site at 85 % load needs ≈ 390 m³ per day. Air-cooled chillers or dry coolers use almost none but consume more electricity.', '热带地区约1.8–2.0 L/kWh IT：10 MW站点在85%负载时每日约需390 m³。风冷冷机或干冷器几乎不用水，但耗电更多。']],
@@ -130,9 +131,15 @@
     /* cooling power at full IT load */
     var rows = [[['Chillers', '冷水机组'], F(model.chiller) + ' kW'], [['Chilled-water pumps', '冷冻水泵'], F(model.chwPump) + ' kW']];
     if (wet) rows.push([['Condenser-water pumps', '冷却水泵'], F(model.cwPump) + ' kW'], [['Tower fans', '冷却塔风机'], F(model.towerFan) + ' kW']);
-    rows.push([['CRAH fans', 'CRAH风机'], F(model.fans) + ' kW'], [['Total cooling power', '制冷总功率'], F(model.total) + ' kW'], [['per kW of IT', '每kW IT'], F(model.total / itKW, 3) + ' kW']);
-    o += L.hot('pue', ['Cooling energy and PUE', '制冷能耗与PUE'], 1506, 520, 330, 292, L.dbox(1512, 530, 320, ['Cooling power at full IT load', '满载制冷功率'], rows, '#0B6F88') + L.text(1520, 730, ['Annual PUE ' + F(R.eff.pue, 2) + ' | design day ' + F(R.eff.puePeak, 2), '年均PUE ' + F(R.eff.pue, 2) + ' | 设计日' + F(R.eff.puePeak, 2)], 'tc-lt', ' style="font-size:14px"') + L.text(1520, 752, ['cooling is the largest overhead in the tropics', '热带地区制冷是最大附加能耗'], 'tc-ls', ' style="font-size:12.5px"'),
-      ['click for the PUE breakdown', '点击查看PUE构成']);
+    rows.push([['CRAH fans', 'CRAH风机'], F(model.fans) + ' kW'], [['Total cooling power', '制冷总功率'], F(model.total) + ' kW'], [['per kW of IT (CLF)', '每kW IT（CLF）'], F(model.total / itKW, 3) + ' kW'], [['Whole system per RT', '整个系统每冷吨'], F(model.total / ((me.chwLoad || R.cool.airKW) / K.RT_KW), 2) + ' kW/RT']);
+    var yT = 530 + 30 + rows.length * 21 + 22;
+    o += L.hot('coolEff', ['Cooling efficiency', '制冷能效'], 1506, 520, 330, 292, L.dbox(1512, 530, 320, ['Cooling power at full IT load', '满载制冷功率'], rows, '#0B6F88') + L.text(1520, yT, ['Annual PUE ' + F(R.eff.pue, 2) + ' | design day ' + F(R.eff.puePeak, 2), '年均PUE ' + F(R.eff.pue, 2) + ' | 设计日' + F(R.eff.puePeak, 2)], 'tc-lt', ' style="font-size:14px"') + L.text(1520, yT + 22, ['COP, kW/RT, IPLV → click for the parameters', 'COP、kW/RT、IPLV → 点击查看参数'], 'tc-ls', ' style="font-size:12.5px;font-weight:700;fill:#0B6F88"'),
+      ['COP, kW/RT, IPLV, NSenCOP, CLF — the efficiency parameters and a COP calculator', 'COP、kW/RT、IPLV、NSenCOP、CLF——能效参数及COP计算器']);
+    /* instrumentation (ISA 5.1 tags): TT temperature, FT flow, JT power, PDT differential pressure, AT conductivity, MT humidity */
+    var bub = function (x, y, tx, col, sx, sy) { return (sx !== undefined ? '<path d="M' + x + ' ' + y + 'L' + sx + ' ' + sy + '" stroke="#17153F" stroke-width="1.4"/>' : '') + '<circle cx="' + x + '" cy="' + y + '" r="12.5" fill="#fff" stroke="' + (col || '#17153F') + '" stroke-width="2"/>' + L.text(x, y + 3.6, tx, 'tc-lt', ' text-anchor="middle" style="font-size:9.5px"'); };
+    var ins = bub(1426, 560, 'TT', '#0B6F88', 1446, 560) + bub(1426, 608, 'FT', '#0B6F88', 1446, 608) + bub(1490, 560, 'TT', '#B0302A', 1468, 560) + bub(1378, 604, 'JT', '#B8740B', 1378, 650) + bub(873, 449, 'PDT', '#5D6280');
+    if (wet) ins += bub(980, 584, 'TT', '#D9776A', 980, 604) + bub(476, 780, 'TT', '#4A6FD0', 476, 798) + bub(792, 728, 'AT', '#16A34A') + bub(500, 650, 'MT', '#5D6280');
+    o += L.hot('instr', ['Instrumentation', '仪表计量'], 1410, 544, 94, 82, ins, ['TT temperature (matched pairs), FT flow, JT power, PDT differential pressure, AT conductivity, MT outdoor humidity — they turn the plant into measured COP, kW/RT, CLF and WUE', 'TT温度（配对）、FT流量、JT电功率、PDT压差、AT电导率、MT室外湿度——将冷站转化为实测COP、kW/RT、CLF及WUE']);
     return o;
   }
   function pfd(c) {
@@ -156,7 +163,8 @@
       { k: ['makeup', 'wtreat'], t: ['Make-up & treatment', '补水与水处理'], d: ['Make-up water (' + F(me.waterStore) + ' m³ stored) replaces evaporation and blowdown; dosing and filtration hold 4–6 cycles of concentration and keep Legionella under control (ASHRAE 188).', '补水（储存' + F(me.waterStore) + ' m³）补充蒸发与排污；加药及过滤维持4–6倍浓缩并控制军团菌（ASHRAE 188）。'] });
     else s.push({ k: ['chiller', 'wue'], t: ['Heat to outdoor air', '热量排至室外'], d: ['The chillers are air-cooled: their condenser fans reject the heat to ' + F(R.L.db, 1) + ' °C outdoor air — no towers, no condenser water and almost no water use (WUE ' + F(R.eff.wue, 2) + '), at a higher power draw than a water-cooled plant.', '冷机为风冷：冷凝风机向' + F(R.L.db, 1) + ' °C室外空气散热——无冷却塔、无冷却水、几乎不耗水（WUE ' + F(R.eff.wue, 2) + '），但能耗高于水冷系统。'] });
     s.push({ k: ['bms'], t: ['Controls', '控制'], d: ['The BMS (≈ ' + F(R.fs.bmsPts) + ' points) stages chillers, pumps and fans to the load and holds the supply air at ' + k.sup + ' °C; every alarm reaches the NOC.', 'BMS（约' + F(R.fs.bmsPts) + '点）按负荷对冷机、水泵、风机进行台数控制，保持送风' + k.sup + ' °C；所有报警上传NOC。'] },
-      { k: ['pue'], t: ['Energy → PUE', '能耗 → PUE'], d: ['At full IT load the cooling system draws <b>' + F(model.total) + ' kW</b> (' + F(model.total / cap.itKW, 2) + ' kW per kW of IT); over the year that gives a PUE of <b>' + F(R.eff.pue, 2) + '</b>.', '满载时制冷系统耗电<b>' + F(model.total) + ' kW</b>（每kW IT ' + F(model.total / cap.itKW, 2) + ' kW）；全年PUE为<b>' + F(R.eff.pue, 2) + '</b>。'] });
+      { k: ['instr'], t: ['Measure COP and kW/RT', '计量COP与kW/RT'], d: ['Matched temperature pairs, flow meters and class 0.5S power meters on every chiller, thermal-energy meters per hall and outdoor conditions logged every minute turn the plant into <b>measured</b> COP, kW/RT and CLF (ASHRAE Guideline 22): with ± 0.1 K pairs on a ' + F(cp.chwDT) + ' K ΔT the COP is known within ≈ ' + F(Math.sqrt(Math.pow(Math.SQRT2 * 0.1 / cp.chwDT * 100, 2) + 0.5), 1) + ' %.', '每台冷机配置配对温度传感器、流量计及0.5S级电能表，每个机房配置冷量表，并每分钟记录室外工况，使冷站COP、kW/RT及CLF成为<b>实测</b>值（ASHRAE Guideline 22）：' + F(cp.chwDT) + ' K温差上采用±0.1 K配对传感器时，COP不确定度约' + F(Math.sqrt(Math.pow(Math.SQRT2 * 0.1 / cp.chwDT * 100, 2) + 0.5), 1) + '%。'] },
+      { k: ['coolEff'], t: ['Efficiency → PUE', '能效 → PUE'], d: ['At full IT load the cooling system draws <b>' + F(model.total) + ' kW</b> (' + F(model.total / cap.itKW, 2) + ' kW per kW of IT); over the year that gives a PUE of <b>' + F(R.eff.pue, 2) + '</b>.', '满载时制冷系统耗电<b>' + F(model.total) + ' kW</b>（每kW IT ' + F(model.total / cap.itKW, 2) + ' kW）；全年PUE为<b>' + F(R.eff.pue, 2) + '</b>。'] });
     return s;
   }
   function principleSvg() {

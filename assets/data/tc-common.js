@@ -823,6 +823,72 @@
         'AI训练集群在任务同步时可在数秒内波动数十兆瓦。通常按IT功率10–25%、时长1–2 h配置的储能可吸收波动、削减PLN峰值需量并稳定光伏。约3.5–5 MWh的LFP集装箱经UL 9540A测试，并按NFPA 855布置间距。'],
       formula: ['MWh = MW × hours | containers = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉', 'MWh = MW × 小时 | 集装箱 = ⌈MWh ÷ ' + K.BESS_MWH_BOX + '⌉'],
       ex: function (c) { var b = c.R.el.bess; return b ? ['This basis: <b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b> in ' + b.containers + ' containers, ≈ ' + usd(b.capex) + '. Basis of the proposal: ' + t(c.x.why.bessOn), '本基准：<b>' + F(b.mw, 1) + ' MW / ' + F(b.mwh, 1) + ' MWh</b>，' + b.containers + '个集装箱，约' + usd(b.capex) + '。建议依据：' + t(c.x.why.bessOn)] : ['No BESS is proposed for this basis: ' + t(c.x.why.bessOn), '本基准未建议储能：' + t(c.x.why.bessOn)]; } },
+    /* Rev. 19: cooling efficiency (COP, kW/RT, IPLV, plant metrics) and instrumentation — data in DCDB.coolEq (kb-core.js) */
+    coolEff: { title: ['Cooling efficiency — COP, kW/RT, IPLV and plant metrics', '制冷能效——COP、kW/RT、IPLV及冷站指标'],
+      body: ['A chiller lifts heat from the chilled water to the condenser; the work it needs depends on the <b>lift</b> between the evaporating and condensing temperatures. The ideal (Carnot) COP is T<sub>evap</sub> ÷ lift; real chillers reach ≈ 70 % of it (water-cooled centrifugal) or ≈ 50–55 % (air-cooled). Warmer chilled water (16–20 °C instead of 7 °C) and colder condenser water therefore raise the COP by ≈ 3 % per kelvin, and every rating must state its conditions (AHRI 550/590, EN 14511). Part load is rated by IPLV / ESEER, the computer-room units by NSenCOP, the whole plant by kW/RT and the cooling share of the PUE by CLF.',
+        '冷机将热量由冷冻水提升至冷凝侧，所需功取决于蒸发与冷凝温度之间的<b>提升温差</b>。理想（卡诺）COP为T<sub>蒸发</sub>÷提升温差；实际冷机可达其约70%（水冷离心）或约50–55%（风冷）。因此提高冷冻水温度（16–20 °C替代7 °C）及降低冷却水温度，每开尔文可提高COP约3%，所有额定值都必须注明工况（AHRI 550/590、EN 14511）。部分负荷以IPLV/ESEER评价，机房空调以NSenCOP评价，整个冷站以kW/RT评价，制冷在PUE中的占比以CLF评价。'],
+      formula: ['COP = Q ÷ P = 3.517 ÷ (kW/RT) = EER ÷ 3.412\nCOP Carnot = T evap (K) ÷ (T cond − T evap)   COP ≈ η × COP Carnot\nIPLV = 0.01 A + 0.42 B + 0.45 C + 0.12 D   CLF = E cooling ÷ E IT',
+        'COP = Q ÷ P = 3.517 ÷ (kW/RT) = EER ÷ 3.412\nCOP卡诺 = T蒸发 (K) ÷ (T冷凝 − T蒸发)   COP ≈ η × COP卡诺\nIPLV = 0.01 A + 0.42 B + 0.45 C + 0.12 D   CLF = E制冷 ÷ E IT'],
+      ex: function (c) {
+        var R = c.R, me = R.me, cp = me.cp || E.COOLDEF, md = me.model || {}, Q = DB.coolEq;
+        if (!Q || !me.chN) return ['This basis has no chiller plant; the efficiency classes below still apply to its residual-air and support cooling.', '本基准无冷站；下列能效类型仍适用于其余热风冷及辅助制冷。'];
+        var ac = R.cool.airTech === 'ACCH', tc = ac ? R.L.db : (md.cws || R.L.wb + cp.twAppr), r = Q.cop(ac ? 'AMAG' : 'WMAG', cp.chws, tc, 100), rt = (me.chwLoad || R.cool.airKW) / K.RT_KW;
+        return ['This design: chilled water ' + F(cp.chws) + ' → ' + F(cp.chws + cp.chwDT) + ' °C, ' + (ac ? 'ambient ' : 'condenser water ') + F(tc, 1) + ' °C. A ' + (ac ? 'magnetic-bearing air-cooled' : 'magnetic-bearing water-cooled') + ' chiller reaches <b>COP ≈ ' + F(r.cop, 1) + ' (' + F(r.kwrt, 2) + ' kW/RT)</b> at full load. The assessment engine plans with COP ' + F(md.cop, 1) + ' — an as-operated value (≈ ' + (ac ? '0.4' : '0.5') + ' × Carnot) that also covers fouling, part-load control and ageing; with pumps, towers and air-side fans the whole cooling system draws ' + F(md.total / rt, 2) + ' kW/RT at full IT load.',
+          '本设计：冷冻水' + F(cp.chws) + '→' + F(cp.chws + cp.chwDT) + ' °C，' + (ac ? '环境' : '冷却水') + F(tc, 1) + ' °C。' + (ac ? '风冷磁悬浮' : '水冷磁悬浮') + '冷机满负荷<b>COP约' + F(r.cop, 1) + '（' + F(r.kwrt, 2) + ' kW/RT）</b>。评估引擎按COP ' + F(md.cop, 1) + '规划——为运行值（约' + (ac ? '0.4' : '0.5') + '×卡诺），已考虑结垢、部分负荷控制及老化；计入水泵、冷却塔及末端风机，满IT负载时整个制冷系统为' + F(md.total / rt, 2) + ' kW/RT。'];
+      },
+      visual: function (c) {
+        var Q = DB.coolEq, R = c.R, me = R.me, cp = me.cp || E.COOLDEF, md = me.model || {}, tw = md.cws || R.L.wb + 4, ta = R.L.db, ser = [['WMAG', '#0B6F88'], ['WSCR', '#0EA5C6'], ['AMAG', '#E5806E'], ['ASCR', '#B0302A']];
+        var x0 = 52, x1 = 540, y0 = 196, y1 = 20, X = function (v) { return x0 + (v - 6) / 18 * (x1 - x0); }, Y = function (v) { return y0 - v / 16 * (y0 - y1); }, o = '';
+        for (var g2 = 0; g2 <= 16; g2 += 2) o += '<path d="M' + x0 + ' ' + Y(g2).toFixed(1) + 'H' + x1 + '" stroke="#E4E6F3"/>' + L.text(x0 - 8, Y(g2) + 4, String(g2), 'tc-ls', ' text-anchor="end" style="font-size:11px"');
+        for (var gx = 6; gx <= 24; gx += 2) o += L.text(X(gx), y0 + 16, String(gx), 'tc-ls', ' text-anchor="middle" style="font-size:11px"');
+        o += L.text(x1, y0 + 32, ['chilled-water supply (°C)', '冷冻水供水（°C）'], 'tc-ls', ' text-anchor="end" style="font-size:11.5px;font-weight:700"') + L.text(x0 - 40, 12, 'COP', 'tc-ls', ' style="font-size:11.5px;font-weight:700"');
+        var xd = X(cp.chws); o += '<path d="M' + xd.toFixed(1) + ' ' + y1 + 'V' + y0 + '" stroke="#3F3CBB" stroke-dasharray="4 3"/>' + L.text(xd + 4, y1 + 10, ['this design', '本设计'], 'tc-ls', ' style="font-size:11px;fill:#3F3CBB;font-weight:700"');
+        ser.forEach(function (s, i) {
+          var q = Q.cls.filter(function (z) { return z.k === s[0]; })[0], d = '';
+          for (var v = 6; v <= 24; v += 1) { var r = Q.cop(s[0], v, q.air ? ta : tw, 100); d += (v === 6 ? 'M' : 'L') + X(v).toFixed(1) + ' ' + Y(Math.min(16, r.cop)).toFixed(1); }
+          o += '<path d="' + d + '" fill="none" stroke="' + s[1] + '" stroke-width="2.6"/>' + L.R(64, 26 + i * 17, 14, 4, s[1]) + L.text(84, 31 + i * 17, [q.en.split(' (')[0].replace('centrifugal, ', '').replace('Water-cooled', 'water-cooled').replace('Air-cooled', 'air-cooled'), q.zh.split('（')[0]], 'tc-ls', ' style="font-size:10.5px"');
+        });
+        o += L.text(x1, y0 - 6, [(R.cool.airTech === 'ACCH' ? '' : 'condenser water ' + F(tw, 1) + ' °C | ') + 'ambient ' + F(ta, 1) + ' °C', (R.cool.airTech === 'ACCH' ? '' : '冷却水' + F(tw, 1) + ' °C | ') + '环境' + F(ta, 1) + ' °C'], 'tc-ls', ' text-anchor="end" style="font-size:10.5px"');
+        return L.illSvg(o, '0 0 560 236');
+      },
+      table: function (c) {
+        var Q = DB.coolEq; if (!Q) return '';
+        var h = '<div><h3>' + L.te(['Efficiency metrics', '能效指标']) + '</h3>' + L.ptable([['Metric', '指标'], ['What it measures', '含义'], ['Formula', '公式'], ['Typical in data centres | standard', '数据中心典型值 | 标准']], Q.metrics.map(function (m) { return ['<b>' + L.te(m[0]) + '</b><br><span class="tc-src">' + L.e(m[3]) + '</span>', L.te(m[1]), L.e(m[2]), L.te(m[4]) + '<br><span class="tc-src">' + L.e(m[5]) + '</span>']; })) + '</div>';
+        h += '<div><h3>' + L.te(['Chiller classes for data centres', '数据中心冷机类型']) + '</h3>' + L.ptable([['Class', '类型'], ['Capacity', '容量'], ['COP at AHRI', 'AHRI工况COP'], ['IPLV', 'IPLV'], ['COP at data-centre conditions', '数据中心工况COP'], ['Max. leaving CHW °C', '最高冷冻水出水°C'], ['Restart', '重启']],
+          Q.cls.map(function (q) { return ['<b>' + L.te([q.en, q.zh]) + '</b><br><span class="tc-src">' + L.e(q.ref) + '</span>', q.cap, L.te(q.copA), L.te(q.iplv), L.te(q.copDC), L.te(q.lwt), L.te(q.restart)]; })) + '</div>';
+        h += '<div><h3>' + L.te(['Minimum efficiency — ASHRAE 90.1-2019 (Path A)', '最低能效——ASHRAE 90.1-2019（Path A）']) + '</h3>' + L.ptable([['Chiller', '冷机'], ['Full load', '满负荷'], ['IPLV', 'IPLV']], Q.ashrae.map(function (a) { return [L.te(a[0]), a[1], a[2]]; })) + '</div>';
+        h += '<div><h3>' + L.te(['Part load of a 1,320 RT magnetic-bearing chiller (chilled water 30 → 20 °C, condenser water 30.6 °C)', '1,320冷吨磁悬浮冷机部分负荷（冷冻水30→20 °C，冷却水30.6 °C）']) + '</h3>' + L.ptable([['Load %', '负荷%'], ['COP', 'COP'], ['kW/RT', 'kW/RT']], Q.partLoad.map(function (p) { return [String(p[0]), F(p[1], 2), F(p[2], 3)]; })) + '</div>';
+        h += '<div><h3>' + L.te(['Chiller plants in Indonesian data centres (manufacturer references)', '印尼数据中心冷站（厂商案例）']) + '</h3>' + L.ptable([['Site', '场地'], ['Year', '年份'], ['Chillers', '冷机'], ['kW/RT (≤)', 'kW/RT（≤）'], ['COP (≥)', 'COP（≥）']],
+          Q.refs.map(function (r) { return [L.te(r[0]) + (r[4] && r[4][0] ? '<br><span class="tc-src">' + L.te(r[4]) + '</span>' : ''), L.te(r[1]), L.te(r[2]), F(r[3], 2), F(3.517 / r[3], 1)]; })) + '</div>';
+        return h + '<p class="tc-src">' + L.te(Q.src) + '</p>';
+      },
+      rel: [['instr', ['Instrumentation', '仪表计量']], { eq: 'ME-01', label: ['Chiller specification & TPG', '冷机规范及TPG'] }] },
+    instr: { title: ['Instrumentation — measuring COP, kW/RT and PUE', '仪表计量——测量COP、kW/RT与PUE'],
+      body: ['Efficiency that is not measured is not kept. A chilled-water plant needs matched temperature pairs, flow meters and power meters on every chiller, thermal-energy meters per hall, outdoor conditions and water meters, all logged every minute (ASHRAE Guideline 22). The weak point is the temperature difference: two sensors of ± 0.5 K on an 8 K ΔT make the measured load — and the COP — uncertain by ≈ 9 %, a calibrated matched pair (± 0.1 K) by less than 2 %. IT energy is metered at the UPS output or the rack PDUs so the PUE and the cooling share (CLF) come from real data.',
+        '无法测量的能效无法保持。冷站需在每台冷机配置配对温度传感器、流量计及电能表，每个机房配置冷量表，并测量室外工况及用水，全部每分钟记录（ASHRAE Guideline 22）。薄弱环节在温差：8 K温差上两只±0.5 K传感器会使测得的冷负荷及COP不确定度约9%，经配对校准（±0.1 K）则低于2%。IT能耗在UPS输出或机柜PDU计量，使PUE及制冷占比（CLF）来自实测数据。'],
+      formula: ['Q (kW) = flow (L/s) × 4.186 × ΔT\nu(COP) = √(u flow² + (√2 · u T ÷ ΔT)² + u power²)', 'Q（kW）= 流量（L/s）× 4.186 × ΔT\nu(COP) = √(u流量² + (√2 · u温度 ÷ ΔT)² + u功率²)'],
+      ex: function (c) {
+        var dt = (c.R.me.cp || E.COOLDEF).chwDT, a = Math.SQRT2 * 0.1 / dt * 100, b = Math.SQRT2 * 0.5 / dt * 100;
+        return ['This design (ΔT ' + F(dt) + ' K): ± 0.1 K sensors → ΔT ± ' + F(a, 1) + ' %, COP ± ' + F(Math.sqrt(a * a + 0.5), 1) + ' %; ± 0.5 K sensors → ΔT ± ' + F(b, 1) + ' %, COP ± ' + F(Math.sqrt(b * b + 0.5), 1) + ' % (flow and power ± 0.5 % each).',
+          '本设计（温差' + F(dt) + ' K）：±0.1 K传感器 → 温差±' + F(a, 1) + '%，COP ±' + F(Math.sqrt(a * a + 0.5), 1) + '%；±0.5 K传感器 → 温差±' + F(b, 1) + '%，COP ±' + F(Math.sqrt(b * b + 0.5), 1) + '%（流量及功率各±0.5%）。'];
+      },
+      visual: function () {
+        var o = '', bub = function (x, y, tx, col) { return '<circle cx="' + x + '" cy="' + y + '" r="15" fill="#fff" stroke="' + (col || '#17153F') + '" stroke-width="2"/>' + L.text(x, y + 4, tx, 'tc-lt', ' text-anchor="middle" style="font-size:10.5px"'); };
+        o += L.R(170, 70, 220, 96, '#EFF1F8', ' rx="10" stroke="#8E95AE"') + L.text(280, 112, ['chiller', '冷机'], 'tc-lt', ' text-anchor="middle" style="font-size:14px"') + L.text(280, 132, ['evaporator | condenser', '蒸发器 | 冷凝器'], 'tc-ls', ' text-anchor="middle" style="font-size:11px"');
+        o += '<path d="M20 92H170M170 146H20" stroke="#0EA5C6" stroke-width="7"/><path d="M390 92H540M540 146H390" stroke="#4A6FD0" stroke-width="7"/>';
+        o += '<path d="M20 146H170" stroke="#E5806E" stroke-width="7"/><path d="M390 146H540" stroke="#D9776A" stroke-width="7"/>';
+        o += bub(60, 60, 'TT') + bub(110, 60, 'FT', '#0B6F88') + bub(60, 178, 'TT') + bub(440, 60, 'TT') + bub(500, 178, 'TT') + bub(280, 40, 'JT', '#B8740B') + bub(500, 60, 'PDT', '#5D6280');
+        o += '<path d="M60 75V88M110 75V88M60 163V150M440 75V88M500 163V150M280 55V70M500 75V88" stroke="#17153F" stroke-width="1.5"/>';
+        o += L.text(20, 214, ['TT temperature (matched pair) | FT flow | JT power | PDT differential pressure', 'TT温度（配对）| FT流量 | JT电功率 | PDT压差'], 'tc-ls', ' style="font-size:11px"');
+        o += L.text(20, 82, ['chilled water', '冷冻水'], 'tc-ls', ' style="font-size:10.5px;fill:#0B7F99"') + L.text(540, 82, ['condenser water', '冷却水'], 'tc-ls', ' text-anchor="end" style="font-size:10.5px;fill:#4A6FD0"');
+        return L.illSvg(o, '0 0 560 226');
+      },
+      table: function () {
+        var Q = DB.coolEq; if (!Q) return '';
+        return '<div><h3>' + L.te(['What to measure', '计量内容']) + '</h3>' + L.ptable([['Measurement', '测量项'], ['Instrument', '仪表'], ['Accuracy', '精度'], ['Gives', '用途']], Q.instr.map(function (r) { return ['<b>' + L.te(r[0]) + '</b>', L.te(r[1]), L.te(r[2]), L.te(r[3])]; })) + '</div>' +
+          '<p class="tc-src">' + L.te(['PUE categories (ISO/IEC 30134-2): 1 = IT energy at the UPS output, 2 = at the PDU output, 3 = at the IT equipment input — the higher the category, the closer to the real IT load.', 'PUE类别（ISO/IEC 30134-2）：1 = UPS输出处计量IT能耗，2 = PDU输出处，3 = IT设备输入处——类别越高越接近实际IT负载。']) + '</p>';
+      },
+      rel: [['coolEff', ['Cooling efficiency', '制冷能效']], { eq: 'ME-23', label: ['Instrumentation specification & TPG', '仪表规范及TPG'] }] },
     cracrah: { title: ['CRAC or CRAH? — the units that cool the air', 'CRAC还是CRAH？——冷却空气的末端设备'],
       body: ['Both stand in or next to the white space and blow cold air to the servers; they differ in where the cold comes from. A <b>CRAC</b> (computer room air conditioner) is a self-contained direct-expansion unit: its own compressor and refrigerant circuit cool the coil and reject the heat to an outdoor condenser. A <b>CRAH</b> (computer room air handler) has no compressor: a chilled-water coil and EC fans take their cold from a central chiller plant — fan walls and chilled-water in-row coolers are bigger or closer-coupled members of the same family. A data center does not need both: it uses the family that suits its size, rack density, climate and water, and the standards regulate the result — temperatures, redundancy, efficiency, refrigerants — not the unit type. "Chilled-water air cooling" (the CHW simulation) means exactly the CRAH route: the servers are cooled by air, and that air is cooled by chilled water.',
         '二者都位于白区内或旁边，向服务器送冷风；区别在于冷量来源。<b>CRAC</b>（机房精密空调）为自带压缩机的直膨机组：机内压缩机与冷媒回路冷却盘管，并将热量排至室外冷凝器。<b>CRAH</b>（机房空气处理机）无压缩机：冷冻水盘管与EC风机的冷量来自集中冷站——风墙及冷冻水列间空调是同一类中更大或更靠近热源的形式。数据中心无需二者兼用：按规模、机柜密度、气候及水资源选择其一，标准规定的是结果——温湿度、冗余、能效、冷媒——而非末端类型。“冷冻水风冷”（CHW模拟）正是CRAH路线：服务器由空气冷却，空气再由冷冻水冷却。'],

@@ -431,7 +431,43 @@
         ups: { b: B.scale, f: function (v, c) { return Math.max(1, Math.round(c.R.el.upsTotal * v.it / c.R.cap.itMW)); } },
         bw: { b: B.scale, f: function (v, c) { return Math.round(c.R.el.busways * v.it / c.R.cap.itMW); } } },
       b: { it: { k: 'itMW' } },
-      f: OLD.points.f }
+      f: OLD.points.f },
+    /* Rev. 19: chiller COP at the reader's conditions (DCDB.coolEq model, calibrated to manufacturer data) and the measurement uncertainty of COP */
+    coolEff: { i: [['cls', ['Chiller class', '冷机类型'], '', 1, 6, 1, function (c) { return c.R.cool.airTech === 'ACCH' ? 4 : 1; }, DB.coolEq.cls.map(function (q, i) { return [i + 1, [q.en, q.zh]]; })],
+        ['tw', ['Chilled-water supply', '冷冻水供水'], '°C', 5, 25, .5, function (c) { return (c.R.me.cp || E.COOLDEF).chws; }],
+        ['tc', ['Condenser water in (water-cooled) | ambient (air-cooled)', '冷却水进水（水冷）| 环境温度（风冷）'], '°C', 12, 50, .5, function (c) { var md = c.R.me.model || {}; return c.R.cool.airTech === 'ACCH' ? c.R.L.db : (md.cws || c.R.L.wb + 4); }],
+        ['ld', ['Load', '负荷'], '%', 10, 100, 5, function () { return 100; }]],
+      f: function (v, c) {
+        var Q = DB.coolEq, q = Q.cls[Math.max(1, Math.min(Q.cls.length, Math.round(v.cls))) - 1], r = Q.cop(q.k, v.tw, v.tc, v.ld), full = Q.cop(q.k, v.tw, v.tc, 100);
+        var ah = Q.cop(q.k, 6.7, q.air ? 35 : 29.4, 100), mn = q.air ? 2.96 : 6.28, up = Q.cop(q.k, v.tw + 1, v.tc, v.ld), md = c.R.me.model || {}, el = 1000 * v.ld / 100 / r.cop;
+        return [[['Evaporating temperature', '蒸发温度'], F(v.tw, 1) + ' − 1 K', F(r.tev, 1) + ' °C'],
+          [['Condensing temperature', '冷凝温度'], q.air ? F(v.tc, 1) + ' + 14 K' : [F(v.tc, 1) + ' + 5.5 K range + 1 K', F(v.tc, 1) + ' + 5.5 K温差 + 1 K'], F(r.tcond, 1) + ' °C'],
+          [['Lift', '提升温差'], F(r.tcond, 1) + ' − ' + F(r.tev, 1), F(r.lift, 1) + ' K'],
+          [['Carnot COP (ideal)', '卡诺COP（理想）'], '(' + F(r.tev, 1) + ' + 273.15) ÷ ' + F(r.lift, 1), F(r.carnot, 2)],
+          [['Full-load COP of this class', '该类型满负荷COP'], F(q.eta, 2) + ' × ' + F(r.carnot, 2), F(full.cop, 2) + ' | ' + F(full.kwrt, 3) + ' kW/RT'],
+          [['Part-load factor (measured VSD curve)', '部分负荷系数（实测变频曲线）'], [F(v.ld) + ' % load', F(v.ld) + '%负荷'], '× ' + F(r.pl, 3)],
+          [['COP at this load', '该负荷COP'], F(full.cop, 2) + ' × ' + F(r.pl, 3), F(r.cop, 2) + ' | ' + F(r.kwrt, 3) + ' kW/RT | EER ' + F(r.eer, 1)],
+          [['1 K warmer chilled water', '冷冻水升高1 K'], F(up.cop, 2) + ' ÷ ' + F(r.cop, 2) + ' − 1', '+ ' + F((up.cop / r.cop - 1) * 100, 1) + ' %'],
+          [['At AHRI 550/590 rating conditions', 'AHRI 550/590额定工况'], q.air ? ['6.7 °C chilled water, 35 °C air', '冷冻水6.7 °C、空气35 °C'] : ['6.7 °C chilled water, 29.4 °C condenser water', '冷冻水6.7 °C、冷却水29.4 °C'], F(ah.cop, 2) + (ah.cop >= mn ? ' ✓' : ' ✗') + ' ASHRAE 90.1 ≥ ' + F(mn, 2)],
+          [['Rated range of the class (manufacturers)', '该类型额定范围（厂商）'], 'COP | IPLV', L.t(q.copA) + ' | ' + L.t(q.iplv)],
+          [['Electricity for 1,000 kW of cooling', '1,000 kW冷量耗电'], '1,000 × ' + F(v.ld) + ' % ÷ ' + F(r.cop, 2), F(el) + ' kW | ' + F(el * 8.76) + ' MWh/yr'],
+          [['Engine planning value (this design)', '评估引擎规划值（本设计）'], ['as operated, ≈ 0.5 × Carnot water-cooled', '运行值，水冷约0.5×卡诺'], md.cop ? 'COP ' + F(md.cop, 2) : '–']];
+      } },
+    instr: { i: [['dt', ['Design chilled-water ΔT', '设计冷冻水温差'], 'K', 3, 14, .5, function (c) { return (c.R.me.cp || E.COOLDEF).chwDT; }],
+        ['ut', ['Accuracy of each temperature sensor', '单个温度传感器精度'], 'K', .03, 1, .01, function () { return .1; }],
+        ['uf', ['Flow meter accuracy', '流量计精度'], '%', .2, 5, .1, function () { return .5; }],
+        ['up', ['Power meter accuracy', '电能表精度'], '%', .2, 3, .1, function () { return .5; }],
+        ['ld', ['Load', '负荷'], '%', 10, 100, 5, function () { return 50; }],
+        ['vf', ['Pump control', '水泵控制'], '', 0, 1, 1, function () { return 1; }, [[1, ['variable flow — ΔT held', '变流量——保持温差']], [0, ['constant flow — ΔT falls with load', '定流量——温差随负荷下降']]]]],
+      f: function (v) {
+        var dtl = v.vf ? v.dt : v.dt * v.ld / 100, udt = Math.SQRT2 * v.ut, rdt = udt / dtl * 100, uq = Math.sqrt(v.uf * v.uf + rdt * rdt), ucop = Math.sqrt(uq * uq + v.up * v.up);
+        return [[['ΔT at this load', '该负荷温差'], v.vf ? ['held by variable flow', '变流量保持'] : F(v.dt, 1) + ' × ' + F(v.ld) + ' %', F(dtl, 2) + ' K'],
+          [['Uncertainty of ΔT (two independent sensors)', '温差不确定度（两只独立传感器）'], '√2 × ' + F(v.ut, 2), '± ' + F(udt, 2) + ' K = ± ' + F(rdt, 1) + ' %'],
+          [['Uncertainty of the cooling load', '冷负荷不确定度'], '√(' + F(v.uf, 1) + '² + ' + F(rdt, 1) + '²)', '± ' + F(uq, 1) + ' %'],
+          [['Uncertainty of COP and kW/RT', 'COP及kW/RT不确定度'], '√(' + F(uq, 1) + '² + ' + F(v.up, 1) + '²)', '± ' + F(ucop, 1) + ' %'],
+          [['On a plant of 0.40 kW/RT', '对0.40 kW/RT的冷站'], '0.40 × ' + F(ucop, 1) + ' %', '± ' + F(0.4 * ucop / 100, 3) + ' kW/RT'],
+          [['Good-practice target', '良好实践目标'], ['plant efficiency within ≈ 5 % (ASHRAE Guideline 22 lets the owner set the level)', '冷站能效不确定度约5%以内（ASHRAE Guideline 22由业主确定等级）'], ucop <= 5 ? ['✓ met', '✓ 满足'] : ['✗ use matched pairs and better meters', '✗ 改用配对传感器及更高精度仪表']]];
+      } }
   };
   function mvaOf(v, c) { var md = chg(c, 'mdKVA'); return md ? md / 1000 : demandFrom(v.it, pkOf(v, c), c) / K.PF / 1000; }
   Object.keys(CALC).forEach(function (k) { X.CALC[k] = CALC[k]; });

@@ -38,7 +38,7 @@
     U('firezone', { id: 'firezone', no: '11', rel: [FSM] }),
     U('monzone', { id: 'monzone', no: '12', rel: [FSM] }),
     U('tower', { id: 'tower', no: '13', rel: [CHW] }),
-    U('chiller', { id: 'chiller', no: '14', rel: [CHW, ['pue', ['PUE', 'PUE']], CR] }),
+    U('chiller', { id: 'chiller', no: '14', rel: [CHW, ['coolEff', ['Chiller efficiency', '冷机能效']], ['pue', ['PUE', 'PUE']], CR] }),
     U('pumps', { id: 'chwp', no: '15', name: ['Chilled-water pumps & storage', '冷冻水泵与蓄冷'], rel: [CHW, ['tes', ['Thermal storage', '蓄冷罐']]] }),
     U('tes', { id: 'tes', no: '15', rel: [CHW] }),
     U('cdu', { id: 'cdu', no: '14', rel: [DLC] }),
@@ -317,6 +317,8 @@
       var P = UNITS.map(function (u) { return L.unitPanel(u, c); });
       ['pue', 'tier', 'dens', 'mva', 'gimp', 'space'].forEach(function (k, i) { P.push(L.theoryPanel(X.TH[k], 'T' + (i + 1), c)); });
       if (X.TH.cracrah) P.push(L.theoryPanel(Object.assign({}, X.TH.cracrah, { id: 'cracrah' }), 'T7', c));
+      if (X.TH.coolEff) P.push(L.theoryPanel(Object.assign({}, X.TH.coolEff, { id: 'coolEff' }), 'T8', c));
+      if (X.TH.instr) P.push(L.theoryPanel(Object.assign({}, X.TH.instr, { id: 'instr' }), 'T9', c));
       P.push(refsPanel(c)); P.push(L.faqPanel(card));
       return P;
     }
