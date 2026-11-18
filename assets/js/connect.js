@@ -34,7 +34,7 @@
     m('P', 'ibt', ['EHV/HV transformers', '超高压/高压联络变压器'], hv.ibt ? hv.ibt.total + ' × ' + hv.ibt.mva + ' MVA ' + hv.ibt.ratio : '–');
     m('P', 'ht', ['HV/MV transformers', '高压/中压主变压器'], hv.ht ? hv.ht.total + ' × ' + hv.ht.mva + ' MVA ' + hv.ht.ratio + ' | uk ' + hv.ht.uk + ' %' : '–');
     m('P', 'mv', ['20 kV switchgear', '20 kV开关柜'], hv.mv.boards + ' × ' + F(hv.mv.busA) + ' A | ' + hv.mv.ik + ' kA');
-    m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + ')');
+    m('P', 'tx', ['MV/LV transformers', '中/低压变压器'], el.txTotal + ' × ' + F(el.txSize) + ' kVA (' + el.txLabel + (el.txSU ? ' | ' + el.txSU.k + ' GPU SU / block' : '') + ')');
     m('P', 'lv', ['LV main breaker | fault level', '低压主断路器 | 短路水平'], F(el.lv.acb) + ' A | ' + el.lv.icw + ' kA');
     m('P', 'gen', ['Generators', '发电机'], el.genTotal + ' × ' + F(el.genSize) + ' kWe (' + el.genLabel + ') | ' + (el.genV === 'MV' ? '20 kV' : (el.lvV || 400) + ' V'));
     m('P', 'fuel', ['Fuel storage', '燃油储存'], F(el.fuelL / 1000) + ' m³ | ' + el.tanks + ' × ' + el.tankSize + ' m³ | ' + p.fuelH + ' h');
@@ -100,6 +100,7 @@
       { g: 'P', k: 'lvV', l: ['LV system voltage', '低压系统电压'], o: [[400, ['230/400 V — IEC 60038 / SNI standard', '230/400 V——IEC 60038/SNI标准']], [415, ['240/415 V', '240/415 V']], [480, ['277/480 V — 4,000 kVA units', '277/480 V——4,000 kVA单台']], [690, ['400/690 V — mechanical; IT via 690/400 V', '400/690 V——机械负荷；IT经690/400 V']]], v: el.lvV || 400, r: 400 },
       { g: 'P', k: 'txKVA', l: ['MV/LV transformer rating (20 kV / LV)', '中/低压变压器容量（20 kV/低压）'], u: 'kVA', min: 100, max: 6300, st: 5, v: el.txSize, r: el.txRule },
       { g: 'P', k: 'txArch', l: ['MV/LV redundancy configuration', '中/低压变压器冗余配置'], o: [['N1', ['N+1 — one reserve transformer per block', 'N+1——每个模块一台备用变压器']], ['DR', ['3N/2 — any two of three carry the load', '3N/2——三台中任意两台可带全部负荷']], ['2N', ['2N — A / B', '2N——A/B']]], v: el.txArch, r: p.tier >= 4 ? '2N' : 'N1' },
+      { g: 'P', k: 'txSU', l: ['MV/LV blocks aligned with GPU scalable units', '中/低压模块与GPU可扩展单元对齐'], o: [['SU', ['aligned — each block carries whole SUs', '对齐——每个模块承载整数个可扩展单元']], ['OFF', ['not aligned — fewest transformers', '不对齐——变压器台数最少']]], v: el.txSU ? 'SU' : 'OFF', r: el.txSURule ? 'SU' : 'OFF', off: !el.txSUOk },
       { g: 'P', k: 'chV', l: ['Chiller supply voltage', '冷机供电电压'], o: [['LV', ['chillers on the LV system', '冷机接低压系统']], ['MV', ['6.6 kV chillers via 20/6.6 kV transformers', '经20/6.6 kV变压器的6.6 kV冷机']]], v: el.chV, r: el.chVRule, off: !(el.chKWe > 0) },
       { g: 'P', k: 'txLoad', l: ['Transformer loading limit', '变压器负载率上限'], u: '%', min: 50, max: 100, st: 1, v: Math.round(el.txLoad * 100), r: K.TX_LOAD * 100 },
       { g: 'P', k: 'genKW', l: ['Generator rating (continuous)', '发电机容量（持续功率）'], o: kOpts([300, 500, 800, 1000, 1250, 1500, 2000, 2500, 3000, 3500], 'kWe'), v: el.genSize, r: el.genRule },
@@ -164,6 +165,7 @@
     txLoad: ['Number of MV/LV transformers', '中/低压变压器台数'],
     chV: ['Load on the LV system → number of MV/LV transformers, ACBs and LV feeders; 20/6.6 kV transformers and a 6.6 kV chiller switchboard; chiller motors and starters', '低压系统负荷→中/低压变压器、框架断路器及低压馈线数量；20/6.6 kV变压器及6.6 kV冷机配电；冷机电机及启动方式'],
     lvV: ['Largest economic MV/LV unit (400 / 415 V: 3,150 kVA; 480 V: 4,000 kVA; 690 V: 5,000 kVA), number of transformers and LV switchboards, LV main breaker and busbar current, fault level, busway currents; 690 V adds 690/400 V transformers in the IT path', '最大经济中/低压单台容量（400/415 V：3,150 kVA；480 V：4,000 kVA；690 V：5,000 kVA）、变压器及低压配电柜数量、低压主断路器及母线电流、短路水平、母线槽电流；690 V时IT路径增加690/400 V变压器'],
+    txSU: ['MV/LV blocks of the AI hall sized for whole GPU scalable units (vendor reference architecture, e.g. 8 NVL72 racks per SU): blocks, transformers, UPS and generator blocks, GPU racks per block', 'AI机房的中/低压模块按整数个GPU可扩展单元（厂商参考架构，如每单元8个NVL72机柜）配置：模块数、变压器、UPS及发电机模块、每模块GPU机柜数'],
     txArch: ['Number of MV/LV transformers and LV line-ups, their normal and failure loading, transformer losses, LV room and yard area', '中/低压变压器及低压配电柜组数、正常及故障负载率、变压器损耗、低压配电室及场地面积'],
     genKW: ['Number of generators, paralleling, yard area', '发电机台数、并机、场地面积'],
     genV: ['20 kV generator incomers or LV ATS, MV switchgear panels', '20 kV发电机进线或低压ATS、中压开关柜面数'],

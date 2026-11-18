@@ -54,6 +54,7 @@
   function asmTxt(h) { return h.asm.c === 'std' ? ['✓ standard solution', '✓ 标准方案'] : (h.asm.c === 'opt' ? ['△ possible — see conditions', '△ 可行——见条件'] : ['✗ not practical', '✗ 不可行']); }
   var LLC = { std: ['standard load (< 75 MW)', '常规负荷（<75 MW）'], large: ['large load 75–300 MW: ride-through study', '大负荷75–300 MW：穿越研究'], vlarge: ['very large load > 300 MW: dynamic and EMT studies', '超大负荷>300 MW：动态及电磁暂态研究'] };
   var B = {
+    cblTa: ['Ambient: ground ≈ 30 °C at 1 m depth in lowland Indonesia (IEC 60287-3-1 lets the purchaser state it); air 40 °C in cable trenches and tray rooms; IEC 60502-2 rating tables use 20 °C ground and 30 °C air.', '环境温度：印尼低地1 m深处土壤约30 °C（IEC 60287-3-1由买方规定）；电缆沟及桥架间空气40 °C；IEC 60502-2载流量表按土壤20 °C、空气30 °C。'],
     hu: ['HV/MV impedance uk: AUTO = max(typical for the rating — 10 % up to 40 MVA, 12.5 % up to 100 MVA, 13 % above — and the value that keeps the 20 kV fault level ≤ 80 % of the board rating); PLN 60 MVA units ≈ 12.5 %, large data-center units 14.5–24 % (BIC 120 MVA 14.5 %, Deltamas 150 MVA 24 %). A lower impedance raises the 20 kV fault level and the board rating (25 → 31.5 → 40 kA) and improves voltage regulation.', '主变短路阻抗uk：自动值=max（按容量的典型值——40 MVA以下10%、100 MVA以下12.5%、以上13%——与使20 kV短路电流≤开关柜额定90%的值）；PLN 60 MVA约12.5%，大型数据中心主变14.5–24%（BIC 120 MVA 14.5%，德尔塔马斯150 MVA 24%）。阻抗越低，20 kV短路电流及开关柜额定越高（25→31.5→40 kA），电压调整率越好。'],
     chv: ['Chiller supply voltage: large water-cooled centrifugal chillers (≥ 3,517 kW ≈ 1,000 TR, plants above ≈ 20 MW of cooling) are commonly MV — 6.6 kV motors with MV drives or soft starters fed by 20/6.6 kV transformers (N + 1); their compressors leave the LV system, so fewer MV/LV transformers, ACBs and LV feeders are needed. Smaller chillers stay on the LV system.', '冷机供电电压：大型水冷离心冷机（≥3,517 kW约1,000冷吨，制冷量约20 MW以上的冷站）通常采用中压——6.6 kV电机配中压变频或软启动，由20/6.6 kV变压器（N+1）供电；压缩机不再占用低压系统，中/低压变压器、框架断路器及低压馈线减少。较小冷机仍接低压系统。'],
     tariff: ['PLN tariff class follows the connection voltage (Q4 2026): 20 kV (TM) → B-3 / I-3, ≈ Rp' + F(DB.idTariffs[0].eff, 1) + '/kWh blended 24/7; 70 kV and above (TT / TET) → I-4, Rp' + F(DB.idTariffs[2].eff, 2) + '/kWh.',
@@ -62,6 +63,7 @@
       '接入规则：≤30 MVA接入20 kV（PLN中压），≤300 MVA接入150 kV（高压）；更大时爪哇-巴厘接入500 kV，苏门答腊、加里曼丹、苏拉威西接入275 kV（≤900 MVA），否则采用多座150 kV变电站。220/230 kV为国际等级，非PLN电压。'],
     hm: ['IEC 60076 / SPLN T3.007-2:2016 power transformers: PLN standard 150/20 kV units are 30 and 60 MVA (ONAN/ONAF); customer substations use 30 MVA up to ≈ 25 MVA of demand, 60 MVA up to 150 MVA, 100 MVA up to 400 MVA, 150 MVA up to 800 MVA and 265 MVA split-winding units above (three 3,150 A sections per unit, as in the 1,050 MVA reference); above ≈ 300 MVA a 150/20 kV unit is not practical — 500 MVA is the 500/150 kV interbus stage; 70/20 kV 20–30 MVA; manufacturers build 20–250 MVA and more — any rating can be entered. Redundancy: PLN N-1 (RUPTL 2025–2034: normal loading ≤ 80 %, any one unit out ≤ 100 %) at every Tier — Uptime Tiers rely on the generators, not the utility.',
       'IEC 60076/SPLN T3.007-2:2016电力变压器：PLN标准150/20 kV主变为30及60 MVA（ONAN/ONAF）；用户变电站需量约25 MVA以内用30 MVA，150 MVA以内用60 MVA，400 MVA以内用100 MVA，更大时用150 MVA（100 MVA以上每台带两段20 kV母线）；70/20 kV为20–30 MVA；制造商可供20–250 MVA及以上——可输入任意容量。冗余：PLN N-1准则（RUPTL 2025–2034：正常负载率≤80%，任一台退出≤100%），各Tier相同——Uptime Tier以发电机而非市电为可靠电源。'],
+    su: ['GPU scalable units: vendor reference architectures build AI clusters from scalable units (NVIDIA DGX SuperPOD: 8 GB200 / GB300 NVL72 racks = 576 GPUs, ≈ 1.2 MW; 32 DGX H100 / H200 = 256 GPUs; 64 DGX B300 = 512 GPUs). In an AI-dominant hall (GPU racks ≥ 50 % of the IT load) the N+1 blocks are sized for a whole number of SUs, so an SU is never split between two blocks — one fault and maintenance domain per block; it can cost a few transformers.', 'GPU可扩展单元：厂商参考架构以可扩展单元（SU）构建AI集群（NVIDIA DGX SuperPOD：8个GB200/GB300 NVL72机柜=576颗GPU，约1.2 MW；32台DGX H100/H200=256颗GPU；64台DGX B300=512颗GPU）。在以AI为主的机房（GPU机柜≥IT负荷的50%）中，N+1模块按整数个SU配置，使一个SU不跨两个模块——每个模块为一个故障及维护域；可能多用几台变压器。'],
     arch: ['MV/LV redundancy: block redundant N+1 — identical blocks (data halls / LV rooms) of N duty units + 1 reserve (catcher) unit, N = 2–6 chosen for the fewest units, written “10 × (5+1)” for ten blocks of five duty + one reserve (Tier III, the leanest; a block is never uneven such as 50 + 9); distributed redundant 3N/2 — any two of three carry the load (e.g. Schneider Electric RD101: six 2.5 MVA units per 9.36 MW hall); 2N (A / B, Tier IV). 4,000 kVA units at 400 V need 6,300 A ACBs and 100 kA switchboards.', '中/低压冗余：块冗余N+1——相同的块（数据机房/低压配电室），每块N台工作+1台备用（备用母线），N取2–6中台数最少者，10块记为“10 × (5+1)”（十块，每块五用一备；Tier III，最省；不采用50+9之类不均匀的分组）；分布式冗余3N/2——三台中任意两台可承担负荷（如施耐德RD101每个9.36 MW机房6台2.5 MVA）；2N（A/B，Tier IV）。400 V下4,000 kVA需6,300 A框架断路器及100 kA配电柜。'],
     ik: ['Planning fault level at the connection point (Grid Code: PLN states the actual value on request): 500 kV ≈ 40 kA, 275 kV ≈ 20 kA, 150 kV ≈ 25 kA in Java–Bali and ≈ 15 kA elsewhere, 20 kV ≈ 10 kA. The switchgear short-time rating must be at least this value.',
       '接入点规划短路电流（电网规范：实际值由PLN应要求提供）：500 kV约40 kA，275 kV约20 kA，150 kV爪哇-巴厘约25 kA、其他地区约15 kA，20 kV约10 kA。开关设备短时耐受电流不得低于该值。'],
@@ -97,6 +99,38 @@
   };
   var BESS_ON = function () { return { bessOn: true }; };
 
+  /* IEC 60287-1-1 / 60287-2-1 steady-state rating (100 % load factor) of 12/20 (24) kV single-core XLPE cables in trefoil — direct buried, in PE ducts (one cable per duct)
+     or in air (shaded tray). Typical construction per IEC 60502-2: compacted round conductor, 0.8 mm conductor screen, 5.5 mm insulation, 1.0 mm insulation screen,
+     25 mm² Cu wire screen, PE oversheath 0.035 D + 1 mm. Groups: mutual heating by superposition with image sources (buried); IEC 60364-5-52 B.52.21 factors (air). */
+  var CBL_S = [95, 120, 150, 185, 240, 300, 400, 500, 630];
+  var CBL_DC = { 95: 11.6, 120: 13.0, 150: 14.4, 185: 16.0, 240: 18.4, 300: 20.6, 400: 23.6, 500: 26.6, 630: 30.2 };
+  var CBL_R20 = { 1: { 95: 0.193, 120: 0.153, 150: 0.124, 185: 0.0991, 240: 0.0754, 300: 0.0601, 400: 0.047, 500: 0.0366, 630: 0.0283 },
+    2: { 95: 0.32, 120: 0.253, 150: 0.206, 185: 0.164, 240: 0.125, 300: 0.1, 400: 0.0778, 500: 0.0605, 630: 0.0469 } };   /* IEC 60228 class 2, Ω/km at 20 °C */
+  function cblFeeder(c) { try { var q = E.mvPlan(c.R).feeders; return q && q.length ? q[0] : null; } catch (e) { return null; } }
+  function iec287(o) {
+    var s = CBL_S.indexOf(o.s) >= 0 ? o.s : pick(CBL_S, o.s), dc = CBL_DC[s] / 1000, cu = o.mat !== 2, a20 = cu ? 0.00393 : 0.00403, w = 2 * Math.PI * 50, inst = Math.round(o.inst);
+    var t1 = 0.0073, Di = dc + 2 * t1, ds = Di + 0.001, Da = Di + 0.0026, t3 = Math.max(0.0018, 0.035 * Da + 0.001), De = Da + 2 * t3;
+    var Do = De <= 0.055 ? 0.11 : 0.16, dw = Do === 0.11 ? 0.0066 : 0.0095, sAx = inst === 2 ? Do : De;
+    var R0 = CBL_R20[cu ? 1 : 2][s] / 1000, R1 = R0 * (1 + a20 * 70), x2 = 8 * Math.PI * 50 / R1 * 1e-7;
+    var ys = x2 * x2 / (192 + 0.8 * x2 * x2), fp = Math.pow(x2 * 0.8, 2) / (192 + 0.8 * Math.pow(x2 * 0.8, 2)), q = dc / sAx;
+    var yp = fp * q * q * (0.312 * q * q + 1.18 / (fp + 0.27)), R = R1 * (1 + ys + yp);
+    var Rs = 0.727e-3 * (1 + 0.00393 * 60), X = 2 * w * 1e-7 * Math.log(2 * sAx / ds), l1 = Math.round(o.bond) === 2 ? 0 : (Rs / R) / (1 + Math.pow(Rs / X, 2));
+    var T1 = 3.5 / (2 * Math.PI) * Math.log(1 + 2 * t1 / dc), T3 = 3.5 / (2 * Math.PI) * Math.log(1 + 2 * t3 / Da);
+    var nT = Math.max(1, Math.round(o.ng) * Math.round(o.np)), dth = 90 - o.ta, T4 = 0, T4a = 0, T4m = 0, fair = 1, u = 0, sp = 0;
+    if (inst === 3) {
+      var h = 0.96 / Math.pow(De, 0.2) + 1.25, KA = Math.PI * De * h / (1 + l1) * (T1 + (1 + l1) * T3), g4 = 2;
+      for (var it = 0; it < 40; it++) { var n4 = Math.pow(Math.max(0.1, dth) / (1 + KA * g4), 0.25); if (Math.abs(n4 - g4) < 1e-7) { g4 = n4; break; } g4 = n4; }
+      T4 = 1 / (Math.PI * De * h * g4); fair = nT <= 1 ? 1 : (nT === 2 ? 0.98 : (nT === 3 ? 0.96 : 0.95));
+    } else {
+      var L0 = o.dep, Dg = inst === 2 ? Do : De; sp = Math.max(o.sp, 2 * Dg);
+      u = 2 * L0 / Dg; T4 = 1.5 / Math.PI * o.rho * (Math.log(2 * u) - 0.630);
+      if (inst === 2) T4a = 1.87 / (1 + 0.1 * (0.312 + 0.0037 * 50) * De * 1000) + 3.5 / (2 * Math.PI) * Math.log(Do / (Do - 2 * dw));
+      var p = Math.floor((nT - 1) / 2);
+      for (var j = 0; j < nT; j++) if (j !== p) { var x = Math.abs(j - p) * sp; T4m += 3 * o.rho / (2 * Math.PI) * Math.log(Math.sqrt(4 * L0 * L0 + x * x) / x); }
+    }
+    var T4t = T4 + T4a + T4m, I = dth > 0 ? Math.sqrt(dth / (R * T1 + R * (1 + l1) * (T3 + T4t))) * fair : 0;
+    return { s: s, cu: cu, dc: dc, De: De, Do: Do, R0: R0, R1: R1, ys: ys, yp: yp, R: R, l1: l1, T1: T1, T3: T3, T4: T4, T4a: T4a, T4m: T4m, T4t: T4t, u: u, sp: sp, I: I, nT: nT, fair: fair, sAx: sAx, dth: dth, inst: inst };
+  }
   var CALC = {
     pue: { i: [['it', ['IT load', 'IT负载'], 'MW', .1, 1000, .1, function (c) { return c.R.cap.itMW; }], ['mech', ['Cooling overhead', '制冷附加'], ['× IT', '× IT'], 0, 1, .01, function (c) { return +c.R.eff.mech.toFixed(2); }],
       ['elec', ['Electrical losses', '电气损耗'], ['× IT', '× IT'], 0, .2, .005, function (c) { return c.R.eff.elec; }], ['misc', ['Lighting & other', '照明及其他'], ['× IT', '× IT'], 0, .1, .005, function (c) { return c.R.eff.misc; }],
@@ -188,18 +222,21 @@
       ['hm', ['HV/MV transformer rating feeding the 20 kV boards (e.g. 60 MVA = 60,000 kVA)', '供20 kV母线的高压/中压主变容量（如60 MVA=60,000 kVA）'], 'MVA', 10, 500, 1, function (c) { var h = c.R.el.hv; return h.ht ? h.ht.mva : 60; }],
       ['uk', ['Impedance uk', '短路阻抗uk'], '%', 4, 8, .5, function (c) { return c.R.el.lv.uk; }],
       ['chv', ['Chillers on MV (6.6 kV)', '冷机采用中压（6.6 kV）'], '', 0, 1, 1, function (c) { return c.R.el.chV === 'MV' ? 1 : 0; }, [[0, ['No — chillers on the LV system', '否——冷机接低压系统']], [1, ['Yes — 6.6 kV via 20/6.6 kV transformers', '是——经20/6.6 kV变压器供6.6 kV']]]],
-      ['arch', ['Redundancy configuration', '冗余配置'], '', 1, 3, 1, function (c) { return ({ N1: 1, DR: 2, '2N': 3 })[c.R.el.txArch] || 1; }, [[1, ['N+1 — one reserve transformer per block', 'N+1——每个模块一台备用变压器']], [2, ['3N/2 — any two of three carry the load', '3N/2——三台中任意两台可带全部负荷']], [3, ['2N — A / B', '2N——A/B']]]]],
-      a: { lv: { b: B.lv, f: function () { return 1; } }, size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld, LVV[Math.round(v.lv) - 1]); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
+      ['arch', ['Redundancy configuration', '冗余配置'], '', 1, 3, 1, function (c) { return ({ N1: 1, DR: 2, '2N': 3 })[c.R.el.txArch] || 1; }, [[1, ['N+1 — one reserve transformer per block', 'N+1——每个模块一台备用变压器']], [2, ['3N/2 — any two of three carry the load', '3N/2——三台中任意两台可带全部负荷']], [3, ['2N — A / B', '2N——A/B']]]],
+      ['su', ['GPU scalable units in the MV/LV blocks', '中/低压模块中的GPU可扩展单元'], '', 1, 2, 1, function (c) { return c.R.el.txSU ? 1 : 2; }, [[1, ['aligned — each block carries whole SUs', '对齐——每个模块承载整数个SU']], [2, ['not aligned — fewest transformers', '不对齐——变压器台数最少']]]]],
+      a: { su: { b: B.su, f: function (v, c) { return c.R.el.txSURule ? 1 : 2; } }, lv: { b: B.lv, f: function () { return 1; } }, size: { b: B.txSize, f: function (v) { return txSize(v.kva, v.ld, LVV[Math.round(v.lv) - 1]); } }, uk: { b: B.uk, f: function (v) { return ukRule(v.size); } },
         hm: { b: B.hm, f: function (v, c) { var h = conn(v.kva / 1000, T(v), chg(c, 'hvKV'), 0, c); return h.ht ? h.ht.rule : 60; } },
         arch: { b: B.arch, f: function (v) { return T(v) >= 4 ? 3 : 1; } }, chv: { b: B.chv, f: function (v, c) { return c.R.el.chVRule === 'MV' ? 1 : 0; } } },
-      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, lv: { k: 'lvV', map: [[1, 400], [2, 415], [3, 480], [4, 690]] }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, hm: { k: 'htMVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] }, chv: { k: 'chV', map: [[0, 'LV'], [1, 'MV']] } },
+      b: { kva: { k: 'mdKVA' }, tier: { k: 'tier' }, lv: { k: 'lvV', map: [[1, 400], [2, 415], [3, 480], [4, 690]] }, ld: { k: 'txLoad' }, size: { k: 'txKVA' }, hm: { k: 'htMVA' }, uk: { k: 'txUk' }, arch: { k: 'txArch', map: [[1, 'N1'], [2, 'DR'], [3, '2N']] }, su: { k: 'txSU', map: [[1, 'SU'], [2, 'OFF']] }, chv: { k: 'chV', map: [[0, 'LV'], [1, 'MV']] } },
       f: function (v, c) {
         var t = T(v), arch = ['N1', 'DR', '2N'][Math.round(v.arch) - 1] || 'N1', el0 = c.R.el, chOn = Math.round(v.chv) === 1 && el0.chKWe > 0, vv = LVV[Math.round(v.lv) - 1] || 400, mx = lvMax(vv);
         var chk = chOn ? v.kva * (el0.chKWe / 0.95) / Math.max(1, el0.demandKVA) : 0, lvk = Math.max(0.3 * v.kva, v.kva - chk), itShare = Math.min(1, el0.itKVA / Math.max(1, el0.demandKVA) * v.kva / Math.max(1, lvk));
         var cn = chOn ? Math.max(1, Math.ceil(chk / 8000)) : 0, cs = chOn ? pick([2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000], chk / (cn * 0.8)) : 0, cr = chOn ? (t >= 4 ? cn : (t >= 2 ? 1 : 0)) : 0;
         function count(sz, ar) { return E.txBlocks(Math.ceil(lvk / (sz * v.ld / 100)), ar, t); }
         function iOf(sz, u) { return sz * 1000 / (1.732 * u); }
-        var k = count(v.size, arch), n = k.n, tot = k.t, duty = arch === 'N1' && t >= 3 && k.per > 1 ? k.b * (k.per - 1) : (arch === '2N' ? n : tot);
+        var k = count(v.size, arch), cp = c.R.cap, hsu = c.R.hdP && c.R.hdP.su && cp.hdR > 0 ? c.R.hdP.su : null, suS = hsu ? cp.hdR / hsu.racks : 0, aiF = hsu ? Math.min(1, cp.hdR * cp.hd / Math.max(1, cp.itKW)) : 0, k0 = k, suOn = false;
+        if (Math.round(v.su) === 1 && hsu && arch === 'N1' && t >= 3) { var ks = E.suBlocks(lvk, aiF, suS, v.size, v.ld / 100); if (ks) { k = ks; suOn = true; } }
+        var n = k.n, tot = k.t, duty = arch === 'N1' && t >= 3 && k.per > 1 ? k.b * (k.per - 1) : (arch === '2N' ? n : tot);
         var iFL = iOf(v.size, vv), acb = pick(ACB, iFL), ik = iFL / (v.uk / 100) / 1000, icw = pick([50, 65, 80, 100], ik), ld0 = lvk / (duty * v.size) * 100;
         var fail = arch === '2N' ? [['the other side carries the whole load', '另一侧承担全部负荷'], [F(Math.min(200, ld0 * 2)) + ' % of one side', '单侧' + F(Math.min(200, ld0 * 2)) + '%']]
           : (arch === 'DR' ? [['the two other units of the group share its load', '同组另两台分担其负荷'], [F(ld0 * 1.5) + ' %' + (ld0 * 1.5 > 100 ? ' ✗' : ' ✓'), F(ld0 * 1.5) + '%' + (ld0 * 1.5 > 100 ? ' ✗' : ' ✓')]]
@@ -212,6 +249,9 @@
           [['How the load is distributed', '负荷如何分配'], ['each transformer feeds one LV main switchboard; its busbar distributes the load to UPS, mechanical and building feeders — loads are not assigned one per transformer', '每台变压器供一面低压总配电柜，其母线向UPS、机械及建筑馈线分配负荷——负荷并非按一台变压器一路分配'], ['1 main switchboard per transformer', '每台变压器1面总配电柜']],
           [['Duty transformers', '工作变压器'], '⌈' + F(lvk) + ' ÷ (' + F(v.size) + ' × ' + F(v.ld / 100, 2) + ')⌉', F(n)],
           [['Configuration', '配置'], (function () { var rl = t >= 4 ? '2N' : (t >= 3 ? 'N+1' : 'N'); return arch === (t >= 4 ? '2N' : 'N1') ? ['design criterion for Tier ' + roman(t) + ': ' + rl + ' — change it in “Redundancy configuration”', 'Tier ' + roman(t) + '设计准则：' + rl + '——可在“冗余配置”中修改'] : ['selected manually; the design criterion for Tier ' + roman(t) + ' is ' + rl, '手动选择；Tier ' + roman(t) + '设计准则为' + rl]; })(), cfgTxt(k, arch, t)],
+          [['GPU scalable units (' + (hsu ? hsu.racks + ' racks = ' + hsu.gpus + ' GPUs per SU' : 'no vendor SU data') + ')', 'GPU可扩展单元（' + (hsu ? '每SU ' + hsu.racks + '个机柜=' + hsu.gpus + '颗GPU' : '无厂商SU数据') + '）'],
+            hsu ? ['⌈' + F(cp.hdR) + ' GPU racks ÷ ' + hsu.racks + '⌉ = ' + Math.ceil(suS) + ' SUs; GPU share of IT ' + F(aiF * 100) + ' %', '⌈' + F(cp.hdR) + '个GPU机柜÷' + hsu.racks + '⌉ = ' + Math.ceil(suS) + '个SU；GPU占IT ' + F(aiF * 100) + '%'] : ['blocks follow the load only', '模块仅按负荷配置'],
+            suOn ? [k.su + ' SUs (' + k.su * hsu.racks + ' racks) per block, ' + k.b + ' blocks; ' + (tot - k0.t > 0 ? '+' + (tot - k0.t) + ' units' : 'no extra unit') + ' vs not aligned', '每模块' + k.su + '个SU（' + k.su * hsu.racks + '个机柜），共' + k.b + '个模块；较不对齐' + (tot - k0.t > 0 ? '多' + (tot - k0.t) + '台' : '不增加台数')] : (hsu && arch === 'N1' && t >= 3 ? ['not aligned — an SU may span two blocks', '不对齐——一个SU可能跨两个模块'] : ['–', '–'])],
           [['Installed', '安装'], F(tot) + ' × ' + F(v.size) + ' kVA', F(tot * v.size / 1000, 1) + ' MVA'],
           [['Loading of each duty unit', '每台工作变压器负载率'], F(lvk) + ' ÷ (' + F(duty) + ' × ' + F(v.size) + ')', F(ld0) + ' %'],
           [['On a transformer failure', '一台变压器故障时'], fail[0], fail[1]],
@@ -467,6 +507,36 @@
           [['Uncertainty of COP and kW/RT', 'COP及kW/RT不确定度'], '√(' + F(uq, 1) + '² + ' + F(v.up, 1) + '²)', '± ' + F(ucop, 1) + ' %'],
           [['On a plant of 0.40 kW/RT', '对0.40 kW/RT的冷站'], '0.40 × ' + F(ucop, 1) + ' %', '± ' + F(0.4 * ucop / 100, 3) + ' kW/RT'],
           [['Good-practice target', '良好实践目标'], ['plant efficiency within ≈ 5 % (ASHRAE Guideline 22 lets the owner set the level)', '冷站能效不确定度约5%以内（ASHRAE Guideline 22由业主确定等级）'], ucop <= 5 ? ['✓ met', '✓ 满足'] : ['✗ use matched pairs and better meters', '✗ 改用配对传感器及更高精度仪表']]];
+      } },
+    cbl: { i: [['i', ['Design current per circuit (with the partner feeder out)', '每回路设计电流（对侧馈线退出时）'], 'A', 10, 5000, 5, function (c) { var q = cblFeeder(c); return Math.round(q ? q.iD : 400); }],
+      ['mat', ['Conductor', '导体'], '', 1, 2, 1, function () { return 1; }, [[1, ['Copper', '铜']], [2, ['Aluminium', '铝']]]],
+      ['s', ['Cross-section', '截面'], 'mm²', 95, 630, 1, function (c) { var q = cblFeeder(c); return q && q.cbl ? q.cbl.s : 240; }, CBL_S.map(function (x) { return [x, x + ' mm²']; })],
+      ['np', ['Cables in parallel per phase', '每相并联电缆数'], '', 1, 4, 1, function (c) { var q = cblFeeder(c); return q && q.cbl ? q.cbl.n : 1; }],
+      ['inst', ['Installation', '敷设方式'], '', 1, 3, 1, function () { return 2; }, [[1, ['Direct buried, trefoil touching', '直埋，品字形紧贴']], [2, ['In PE ducts (one cable per duct), trefoil', '穿PE管（每管一根），品字形']], [3, ['In air on a tray, trefoil, shaded', '空气中桥架，品字形，遮阴']]]],
+      ['ng', ['Circuits side by side (trench / duct bank / tray)', '并列回路数（电缆沟/排管/桥架）'], '', 1, 12, 1, function () { return 2; }],
+      ['sp', ['Spacing between circuit centres', '回路中心间距'], 'm', 0.1, 2, 0.05, function () { return 0.3; }],
+      ['dep', ['Depth to the cable (group) centre', '电缆（组）中心埋深'], 'm', 0.5, 3, 0.05, function () { return 1.0; }],
+      ['rho', ['Soil thermal resistivity', '土壤热阻系数'], 'K·m/W', 0.5, 3, 0.05, function () { return 1.2; }],
+      ['ta', ['Ambient temperature (ground if buried, air if on a tray)', '环境温度（直埋为土壤，桥架为空气）'], '°C', 10, 50, 1, function () { return 30; }],
+      ['bond', ['Screen bonding', '屏蔽层接地方式'], '', 1, 2, 1, function () { return 1; }, [[1, ['Both ends (solid bonding)', '两端接地']], [2, ['Single point or cross-bonded', '单端接地或交叉互联']]]],
+      ['km', ['Route length', '路径长度'], 'km', 0.01, 20, 0.01, function () { return 0.5; }],
+      ['ik', ['Fault level at the switchboard', '开关柜短路电流'], 'kA', 5, 63, 0.5, function (c) { var q = 0; try { q = E.mvPlan(c.R).ikC; } catch (e) { q = 0; } return Math.round((q || c.R.el.hv.mv.ik || 25) * 2) / 2; }]],
+      a: { ta: { b: B.cblTa, f: function (v) { return Math.round(v.inst) === 3 ? 40 : 30; } } },
+      f: function (v, c) {
+        var r = iec287({ s: v.s, mat: Math.round(v.mat), inst: v.inst, ng: v.ng, np: v.np, sp: v.sp, dep: v.dep, rho: v.rho, ta: v.ta, bond: v.bond }), np = Math.max(1, Math.round(v.np));
+        var Ic = r.I * np, use = v.i / Math.max(1, Ic) * 100, Rk = r.R * 1000, Xk = 2 * Math.PI * 50 * (0.05 + 0.2 * Math.log(2 * r.sAx / r.dc)) * 1e-3, sin = Math.sqrt(1 - 0.95 * 0.95);
+        var dU = 1.732 * v.i * v.km * (Rk * 0.95 + Xk * sin) / np, dUp = dU / 20000 * 100, Pl = 3 * v.i * v.i * Rk * (1 + r.l1) * v.km / np / 1000, K2 = r.cu ? 143 : 94, smin = v.ik * 1000 * Math.SQRT1_2 / K2;
+        var eng = E.cable20 ? E.cable20(v.i, v.ik) : null, ins = [['direct buried, trefoil', '直埋，品字形'], ['PE duct ' + F(r.Do * 1000) + ' mm per cable, trefoil', '每根穿' + F(r.Do * 1000) + ' mm PE管，品字形'], ['in air on a tray, trefoil', '空气中桥架，品字形']][r.inst - 1];
+        return [[['Cable (IEC 60502-2, 12/20 (24) kV)', '电缆（IEC 60502-2，12/20 (24) kV）'], [np + ' × 3 × 1C ' + r.s + ' mm² ' + (r.cu ? 'Cu' : 'Al') + ' XLPE, 25 mm² Cu screen, PE sheath; ' + ins[0], np + ' × 3 × 1C ' + r.s + ' mm² ' + (r.cu ? '铜' : '铝') + ' XLPE，25 mm²铜屏蔽，PE护套；' + ins[1]], ['Ø ≈ ' + F(r.De * 1000, 1) + ' mm', '外径约' + F(r.De * 1000, 1) + ' mm']],
+          [['AC resistance at 90 °C (skin + proximity effect)', '90 °C交流电阻（集肤及邻近效应）'], F(r.R0 * 1000, 4) + ' × (1 + ' + (r.cu ? '0.00393' : '0.00403') + ' × 70) × (1 + ' + F(r.ys, 4) + ' + ' + F(r.yp, 4) + ')', F(Rk, 4) + ' Ω/km'],
+          [['Screen loss factor λ1', '屏蔽损耗系数λ1'], Math.round(v.bond) === 2 ? ['no circulating current (single point / cross-bonded)', '无环流（单端接地/交叉互联）'] : ['circulating current, both ends bonded: (Rs ÷ R) ÷ (1 + (Rs ÷ X)²)', '两端接地环流：(Rs÷R)÷(1+(Rs÷X)²)'], F(r.l1, 3)],
+          [['Thermal resistances T1 | T3 | T4 (K·m/W)', '热阻T1 | T3 | T4（K·m/W）'], [r.inst === 3 ? 'insulation | sheath | air (shaded, h for trefoil)' : 'insulation | sheath | soil ρ ' + F(v.rho, 2) + ', u = 2L ÷ D = ' + F(r.u, 1) + (r.T4a ? ' + air in duct and duct wall' : '') + (r.T4m ? ' + ' + (r.nT - 1) + ' other circuit(s) at ' + F(r.sp, 2) + ' m' : ''), r.inst === 3 ? '绝缘 | 护套 | 空气（遮阴，品字形h）' : '绝缘 | 护套 | 土壤ρ ' + F(v.rho, 2) + '，u = 2L÷D = ' + F(r.u, 1) + (r.T4a ? ' + 管内空气及管壁' : '') + (r.T4m ? ' + 其他' + (r.nT - 1) + '回（间距' + F(r.sp, 2) + ' m）' : '')], F(r.T1, 3) + ' | ' + F(r.T3, 3) + ' | ' + F(r.T4t, 3)],
+          [['Rating (IEC 60287-1-1, conductor 90 °C, ambient ' + F(v.ta) + ' °C)', '载流量（IEC 60287-1-1，导体90 °C，环境' + F(v.ta) + ' °C）'], '√[' + F(r.dth) + ' ÷ (R·T1 + R(1 + λ1)(T3 + T4))]' + (r.fair < 1 ? ' × ' + F(r.fair, 2) : ''), [F(r.I) + ' A per cable' + (np > 1 ? ' → ' + F(Ic) + ' A per circuit' : ''), '每根' + F(r.I) + ' A' + (np > 1 ? '→每回路' + F(Ic) + ' A' : '')]],
+          [['Design current vs rating', '设计电流与载流量'], F(v.i) + ' ÷ ' + F(Ic) + ' A', use <= 100 ? [F(use) + ' % ✓', F(use) + '% ✓'] : [F(use) + ' % ✗ — larger section, more parallel cables or wider spacing', F(use) + '% ✗——增大截面、增加并联或加大间距']],
+          [['Engine planning value (current table × 0.8 grouping)', '引擎规划值（载流表×0.8分组系数）'], eng ? eng.txt : '–', eng ? [eng.n * 3 + ' cables, ' + eng.s + ' mm²', eng.n * 3 + '根，' + eng.s + ' mm²'] : '–'],
+          [['Voltage drop at the design current, cos φ 0.95', '设计电流下电压降，cos φ 0.95'], '√3 × ' + F(v.i) + ' A × ' + F(v.km, 2) + ' km × (' + F(Rk / np, 3) + ' × 0.95 + ' + F(Xk / np, 3) + ' × 0.31) Ω/km', F(dU) + ' V = ' + F(dUp, 2) + ' %' + (dUp <= 1 ? ' ✓' : ' △')],
+          [['Losses at the design current', '设计电流下损耗'], '3 × I² × R × (1 + λ1) × length', F(Pl, 1) + ' kW'],
+          [['Short circuit (IEC 60949 adiabatic, 0.5 s)', '短路校验（IEC 60949绝热，0.5 s）'], F(v.ik) + ' kA × √0.5 ÷ ' + K2, smin <= r.s ? F(smin) + ' mm² ≤ ' + r.s + ' mm² ✓' : F(smin) + ' mm² > ' + r.s + ' mm² ✗']];
       } }
   };
   function mvaOf(v, c) { var md = chg(c, 'mdKVA'); return md ? md / 1000 : demandFrom(v.it, pkOf(v, c), c) / K.PF / 1000; }

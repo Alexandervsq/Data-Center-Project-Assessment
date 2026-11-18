@@ -208,6 +208,20 @@
     for (var N = Math.min(6, n); N >= 2; N--) { var B = ceil(n / N), t = B * (N + 1); if (!best || t < best.t) best = { N: N, B: B, t: t }; }
     return { n: n, r: best.t - n, t: best.t, b: best.B, per: best.N + 1, lab: best.B > 1 ? best.B + ' × (' + best.N + '+1)' : 'N+1' };
   }
+  /* N+1 blocks sized for whole GPU scalable units (vendor reference architectures, e.g. NVIDIA DGX SuperPOD: 8 NVL72 racks per SU): each block carries k SUs, so no
+     SU is split between two blocks (one fault and maintenance domain per block). lvKVA = LV load, aiF = GPU share of the IT load, S = SUs needed (may be fractional),
+     sz × ld = usable kVA per duty unit. The non-GPU load is shared by all blocks. Blocks stay uniform (N = 2 … 6 duty + 1 reserve); returns the txBlocks result with su = k. */
+  function suBlocks(lvKVA, aiF, S, sz, ld) {
+    if (!(S > 0) || !(sz > 0) || !(ld > 0)) return null;
+    var nReq = ceil(lvKVA / (sz * ld)), perSU = lvKVA * aiF / S, non = lvKVA * (1 - aiF), best = null;
+    for (var k = 1; k <= ceil(S); k++) {
+      var B = ceil(S / k), N = ceil((k * perSU + non / B) / (sz * ld));
+      if (N < 2 || N > 6) continue;
+      var t = B * (N + 1); if (!best || t < best.t || (t === best.t && k > best.k)) best = { k: k, B: B, N: N, t: t };
+    }
+    if (!best) return null;
+    return { n: nReq, r: best.t - nReq, t: best.t, b: best.B, per: best.N + 1, su: best.k, lab: best.B > 1 ? best.B + ' × (' + best.N + '+1)' : 'N+1' };
+  }
   function redLabel(n, r, kind) {
     if (!r) return 'N';
     if (kind === 'term' && r > 2 && r < n) return 'N+' + Math.round(r / n * 100) + ' %';
@@ -562,7 +576,12 @@
        DR = distributed redundant 3N/2 (any two of three carry the load, e.g. Schneider Electric reference design RD101: six 2.5 MVA units per 9.36 MW data hall); 2N = A/B pairs */
     var txArch = ['N1', 'DR', '2N'].indexOf(p.txArch) >= 0 ? p.txArch : (p.tier >= 4 ? '2N' : 'N1');
     function txCount(sz, ld, arch) { return txBlocks(ceil(lvKVA / (sz * ld)), arch, p.tier); }
-    var txc = txCount(txSize, txLoad, txArch), txN = txc.n, txR = txc.r;
+    var txc = txCount(txSize, txLoad, txArch);
+    /* GPU scalable units: in an AI-dominant hall (GPU racks ≥ 50 % of the IT load) with vendor SU data the N+1 blocks carry whole SUs (rule; p.txSU 'SU' / 'OFF' overrides) */
+    var hsu = cap.hdR > 0 && hp.su && hp.su.racks > 0 ? hp.su : null, aiF = hsu ? Math.min(1, cap.hdR * cap.hd / Math.max(1, cap.itKW)) : 0;
+    var suRule = !!(hsu && aiF >= 0.5), suOk = !!(hsu && txArch === 'N1' && p.tier >= 3), suOn = suOk && (p.txSU === 'SU' || (p.txSU !== 'OFF' && suRule)), txSU = null;
+    if (suOn) { var sb = suBlocks(lvKVA, aiF, cap.hdR / hsu.racks, txSize, txLoad); if (sb) { txSU = { racks: hsu.racks, gpus: hsu.gpus, S: ceil(cap.hdR / hsu.racks), k: sb.su, base: txc.t, extra: sb.t - txc.t, aiF: aiF }; txc = sb; } }
+    var txN = txc.n, txR = txc.r;
     var txAlt = [2500, 3150, 4000].map(function (sz) { return { kva: sz, N1: txCount(sz, txLoad, 'N1').t, DR: txCount(sz, txLoad, 'DR').t, '2N': txCount(sz, txLoad, '2N').t }; });
     var itKVA = (itKW + mechUPS) * (1 + K.UPS_LOSS) / K.PF, txIT = Math.min(txN, ceil(itKVA / (txSize * txLoad)));
     /* LV side of one transformer: full-load current → main ACB (IEC 60947-2), fault level → switchboard rating (IEC 61439-2) */
@@ -627,11 +646,15 @@
       mvdb = { n: nB, blocks: kB, txPer: tpB, genPer: 0, mva: mvaB, feeders: 2 * nB };
     }
     /* generators back each other only on a common bus — an LV block, a building 20 kV board or one 20 kV section (sections of different transformers are not
-       paralleled): Tier III groups carry their own reserve, B × (N+1); Tier IV keeps 2N */
+       paralleled): Tier III groups carry their own reserve, B × (N+1); Tier IV keeps 2N. The generator blocks follow the MV/LV architecture chosen for Tier III:
+       2N transformers (A / B) → 2N generators, each side carrying its group; DR (3N/2) with LV generators → one set per LV board of every group of three,
+       any two of three carrying the group (3N/2); MV generators on 20 kV boards stay B × (N+1) for N+1 and DR blocks. */
     var genLab = null, genGrp = 1;
     if (p.tier === 3 && genR > 0) {
-      var gGrp = genV === 'MV' ? (mvdb ? mvdb.n : Math.max(1, hv.mv.boards)) : (txArch === 'N1' ? txc.b : 1);
-      if (gGrp > 1) { var gpg = ceil(demandKW / gGrp / (genSize * K.GEN_LOAD)); genN = gGrp * gpg; genR = gGrp; genLab = gGrp + ' × (' + gpg + '+1)'; genGrp = gGrp; }
+      var gGrp = genV === 'MV' ? (mvdb ? mvdb.n : Math.max(1, hv.mv.boards)) : (txArch === 'N1' || txArch === 'DR' ? txc.b : 1), gpg;
+      if (txArch === '2N') { gpg = ceil(demandKW / Math.max(1, gGrp) / (genSize * K.GEN_LOAD)); genN = Math.max(1, gGrp) * gpg; genR = genN; genLab = gGrp > 1 ? gGrp + ' × 2 × ' + gpg + ' (2N)' : '2N'; genGrp = Math.max(1, gGrp); }
+      else if (txArch === 'DR' && genV !== 'MV' && gGrp >= 1) { var hk = ceil(demandKW / gGrp / 2 / (genSize * K.GEN_LOAD)); genN = gGrp * 2 * hk; genR = gGrp * hk; genLab = (gGrp > 1 ? gGrp + ' × ' : '') + '3 × ' + hk + ' (3N/2)'; genGrp = gGrp; }
+      else if (gGrp > 1) { gpg = ceil(demandKW / gGrp / (genSize * K.GEN_LOAD)); genN = gGrp * gpg; genR = gGrp; genLab = gGrp + ' × (' + gpg + '+1)'; genGrp = gGrp; }
     }
     if (mvdb) { mvdb.genPer = genV === 'MV' ? ceil((genN + genR) / mvdb.n) : 0; mvdb.busA = pick([1250, 2000, 2500, 3150], Math.max(mvdb.mva, mvdb.genPer * genSize / 800) * 1000 / (1.732 * 20) * 1.05); mvdb.ikGen = mvdb.genPer * genSize / 0.8 / 1000 / (0.15 * 1.732 * 20); mvdb.ik = Math.max(25, pick([25, 31.5, 40, 50], hv.mv.ikCalc + mvdb.ikGen));
       mvdb.panels = 2 + 2 + 2 + mvdb.txPer + mvdb.genPer + 1; }   /* 2 incomers, bus section + riser, 2 bus VT, transformer feeders, generator incomers, 1 spare */
@@ -642,7 +665,7 @@
              fuelQ: fuelQ, fuelLph: fuelLph, fuelL: fuelL, tankSize: tankSize, tankRule: tankRule, tanks: tanks, upsSize: upsSize, upsRule: upsRule, upsN: upsN, upsR: upsR, upsTotal: upsN + upsR,
              battAge: battAge, battKWh: battKWh, rows: rows, rackRow: rackRow, rowStd: nStd, rowHd: nHd, rowsStd: rowsStd, rowsHd: rowsHd, useBusway: useBusway, bwA: bwA, bwHdA: bwHdA, busways: busways,
              pdus: pdus, rpdus: rpdus, rStd: rStd, rHd: rHd,
-             feedsPerRack: feedsPerRack, txLabel: txc.lab, txBlk: { b: txc.b, per: txc.per }, genGrp: genGrp, upsGrp: upsGrp, genLabel: genLab || redLabel(genN, genR, 'block'), upsLabel: upsLab || redLabel(upsN, upsR, 'block'),
+             feedsPerRack: feedsPerRack, txLabel: txc.lab, txBlk: { b: txc.b, per: txc.per, su: txc.su || 0 }, txSU: txSU, txSURule: suRule, txSUOk: suOk, genGrp: genGrp, upsGrp: upsGrp, genLabel: genLab || redLabel(genN, genR, 'block'), upsLabel: upsLab || redLabel(upsN, upsR, 'block'),
              gridOK: !(p.gridMVA > 0 && p.gridMVA < mva), bess: bess, mvdb: mvdb };
 
     /* ------------------------------------------------ mechanical */
@@ -1096,7 +1119,7 @@
     }).sort(function (a, b) { return a.d - b.d; }).slice(0, 4).map(function (x) { return x.r; });
   }
 
-  g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, txBlocks: txBlocks, find: find, mvPlan: mvPlan, gpuDist: gpuDist, cable20: cable20, capacity: capacity, coolingMatrix: coolingMatrix,
+  g.DCEngine = { assess: assess, defaults: defaults, fmt: fmt, redLabel: redLabel, txBlocks: txBlocks, suBlocks: suBlocks, find: find, mvPlan: mvPlan, gpuDist: gpuDist, cable20: cable20, capacity: capacity, coolingMatrix: coolingMatrix,
                  loc: loc, plat: plat, redundancy: redundancy, ID_CAPEX: ID_CAPEX, BESS_USD_KWH: BESS_USD_KWH, K: K,
                  KV: KV, KV_GRID: KV_GRID, kvRule: kvRule, kvName: kvName, connection: connection, connAssess: connAssess, HT_STD: HT_STD, htUk: htUk,
                  COOLDEF: COOLDEF, coolParams: coolParams, coolModel: coolModel, gridImpact: gridImpact, GRID_CODE: GRID_CODE, REF_STUDIES: REF_STUDIES, PLN_STDS: PLN_STDS, TDD_TBL: TDD_TBL, THDV_LIM: THDV_LIM, CLEAR_MS: CLEAR_MS, tddLimitOf: tddLimitOf, hEff: hEff, CABLE_C: CABLE_C };

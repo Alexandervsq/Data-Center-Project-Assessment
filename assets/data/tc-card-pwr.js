@@ -32,9 +32,9 @@
     U('earth', { id: 'earth', no: '11' }),
     U('epms', { id: 'epms', no: '12', rel: [{ card: 'FSM', label: ['Monitoring', '监控'] }] }),
     U('fuel', { id: 'fuelsys', no: 'A', rel: [['fuel', ['Fuel autonomy', '燃油自持']]] }),
-    U('harm', { id: 'harm', no: 'B' }), U('ldb', { id: 'ldb', no: 'C' }), U('cable', { id: 'cable', no: 'D' })
+    U('harm', { id: 'harm', no: 'B' }), U('ldb', { id: 'ldb', no: 'C' }), U('cable', { id: 'cable', no: 'D', rel: [['cbl', ['Cable rating (IEC 60287)', '电缆载流量（IEC 60287）']]] })
   ];
-  var THEORY = [['tier', 'tier'], ['mva', 'mva'], ['gimp', 'gimp'], ['batt', 'batt'], ['fuel', 'fuel'], ['bwyT', 'bwy'], ['bessT', 'bess']];
+  var THEORY = [['tier', 'tier'], ['mva', 'mva'], ['gimp', 'gimp'], ['batt', 'batt'], ['fuel', 'fuel'], ['bwyT', 'bwy'], ['bessT', 'bess'], ['cbl', 'cbl']];
   var FAQ = [
     [['Why do data centers need both UPS and generators?', '为什么数据中心既需要UPS又需要发电机？'], ['The UPS bridges seconds to minutes with batteries and conditions the power; generators then run for hours or days on stored diesel. A BESS can shave peaks and buffer AI load swings but does not replace either.', 'UPS用电池桥接数秒至数分钟并调理电能；随后由发电机依靠储存的柴油运行数小时乃至数天。储能可削峰并缓冲AI负荷波动，但不能替代二者。']],
     [['Why is 5 minutes of battery enough?', '为什么5分钟电池后备就够了？'], ['Generators start and carry the load in ≈ 10–15 s. Five minutes leaves time for several restart attempts and manual intervention. VRLA batteries are usually sized for 10–15 minutes because their capacity is less certain at end of life.', '发电机约10–15 s启动并带载。5分钟可容纳数次重启尝试及人工干预。阀控铅酸电池寿命末期容量不确定性更大，通常按10–15分钟配置。']],

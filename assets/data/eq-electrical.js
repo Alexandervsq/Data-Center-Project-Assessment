@@ -714,6 +714,7 @@
       ['Cross-linked polyethylene insulation, LSZH outer sheath inside buildings.', '交联聚乙烯绝缘，建筑内采用低烟无卤外护套。'],
       ['Diverse routing of A/B feeders in separate trenches/fire compartments.', 'A/B路馈线分设电缆沟/防火分区，路径分离。'],
       ['Cable sizing to include grouping, soil thermal resistivity and short-circuit withstand.', '截面选择应计及成组敷设、土壤热阻及短路耐受。'],
+      ['IEC 60287-1-1 / -2-1 rating study for the installed route: soil thermal resistivity measured on site (IEEE 442 needle probe; design ≥ 1.2 K·m/W unless measured lower), ground temperature (≈ 30 °C at 1 m in lowland Indonesia), depth, ducts or air, grouping with the other circuits, screen bonding (both ends, single point or cross-bonded); voltage drop ≤ 1 % on 20 kV feeders; adiabatic short-circuit check per IEC 60949.', '按实际路径进行IEC 60287-1-1/-2-1载流量研究：现场实测土壤热阻（IEEE 442针式探头；未实测时设计值≥1.2 K·m/W）、土壤温度（印尼低地1 m深约30 °C）、埋深、穿管或空气敷设、与其他回路成组、屏蔽层接地方式（两端、单端或交叉互联）；20 kV馈线电压降≤1%；按IEC 60949进行绝热短路校验。'],
       ['150 kV cables: charging power ≈ U² ω C ≈ 1.6 MVAr per km per circuit (0.231 µF/km) — included in the load flow and in the reactive-power balance at the connection point; main protection line current differential (87L) with distance back-up (EL-24).', '150 kV电缆：充电功率≈U²ωC≈每回每公里1.6 MVAr（0.231 µF/km）——计入潮流及接入点无功平衡；主保护线路差动（87L）并以距离保护后备（EL-24）。']
     ],
     tpg: [
@@ -724,6 +725,8 @@
       ['Screen short-circuit rating', '屏蔽短路容量', 'kA / s', 'Per earth fault study'],
       ['Flame retardance', '阻燃性能', '-', 'IEC 60332-3 Cat. A'],
       ['Partial discharge (routine)', '局部放电(例行)', 'pC', '≤ 5 at 1.73 U0'],
+      ['Current rating basis (installed)', '载流量依据（敷设条件）', '-', 'IEC 60287 study: ρ soil, θ ground, depth, grouping, bonding'],
+      ['Voltage drop on 20 kV feeders', '20 kV馈线电压降', '%', '≤ 1'],
       {g: ['150 kV cable (IEC 60840) — Deltamas data-center connection data', '150 kV电缆（IEC 60840）——德尔塔马斯数据中心接入数据']},
       ['Type / conductor', '型号/导体', '-', 'N2XCAS2Y, Cu 1,000 mm² (1,200 mm² at crossings)'],
       ['AC resistance at 90 °C', '90 °C交流电阻', 'Ω/km', '0.0232 (1,000) | 0.0201 (1,200)'],
@@ -732,7 +735,7 @@
       ['Current-carrying capacity per circuit', '每回载流量', 'A', '787 | 773 (river crossing)'],
       ['Conductor short-circuit capacity (1 s)', '导体短路容量（1 s）', 'kA', '143.0 | 171.6']
     ],
-    std: ['IEC 60502-2', 'GB/T 12706.2', 'IEC 60332-3', 'IEC 60840 (HV)'],
+    std: ['IEC 60502-2', 'IEC 60287-1-1 / -2-1 / -3-1', 'IEC 60949', 'GB/T 12706.2', 'IEC 60332-3', 'IEC 60840 (HV)'],
     t: [['Site VLF/AC withstand test and sheath test after installation.', '安装后现场超低频/交流耐压试验及护套试验。']] },
 
   /* ------------------------------------------------------------------ */

@@ -1,7 +1,7 @@
 /* IT rack platform & cabinet reference database.
  * kw = design (nominal) kW per rack used for planning; kwPeak = peak / provisioning value.
  * cool: AIR | RDHX (air + rear-door HX) | DLC (direct-to-chip liquid) | IMM (immersion)
- * liq = share of heat to liquid. Figures from OEM / vendor documentation and trade press —
+ * liq = share of heat to liquid; su = vendor scalable unit (racks, GPUs) used to align MV/LV blocks. Figures from OEM / vendor documentation and trade press —
  * confirm with the IT vendor's site-readiness guide before freezing the design. */
 (function (g) {
   var D = g.DCDB || (g.DCDB = { systems: [], equipment: [] });
@@ -9,13 +9,13 @@
   D.platforms = [
     { id: 'NV-GB300', cat: 'AI', vendor: 'NVIDIA (HPE, Dell, Supermicro, Foxconn, Inventec …)', year: 2025,
       en: 'NVIDIA GB300 NVL72 (Blackwell Ultra) rack-scale system', zh: 'NVIDIA GB300 NVL72（Blackwell Ultra）机架级系统',
-      kw: 135, kwPeak: 155, cool: 'DLC', liq: 0.9, w: 600, d: 1068, u: 48, kg: 1500, gpu: 72, spr: 1,
+      kw: 135, kwPeak: 155, cool: 'DLC', liq: 0.9, w: 600, d: 1068, u: 48, kg: 1500, gpu: 72, spr: 1, su: { racks: 8, gpus: 576, en: 'DGX SuperPOD scalable unit: 8 NVL72 racks = 576 GPUs (≈ 1.1–1.2 MW)', zh: 'DGX SuperPOD可扩展单元：8个NVL72机柜=576颗GPU（约1.1–1.2 MW）', src: 'https://docs.nvidia.com/dgx/dgxgb200-user-guide/' },
       note: ['72 GPUs + 36 Grace CPUs in one NVLink domain; ≈ 132–142 kW nominal, ≈ 155 kW peak; OEMs suggest provisioning ≈ 190 kW busway per rack; 50 V DC busbar fed by 8 × 33 kW power shelves; in-row CDU (e.g. 1.3 MW serves ≈ 8 racks).',
              '单一NVLink域内72颗GPU+36颗Grace CPU；额定约132–142 kW，峰值约155 kW；OEM建议每柜按约190 kW配置母线；由8个33 kW电源架供电至50 V直流母排；列间CDU（如1.3 MW可服务约8柜）。'],
       src: 'https://www.hpe.com/us/en/collaterals/collateral.a50009244enw.html' },
     { id: 'NV-GB200', cat: 'AI', vendor: 'NVIDIA (OEM / ODM)', year: 2024,
       en: 'NVIDIA GB200 NVL72 (Blackwell) rack-scale system', zh: 'NVIDIA GB200 NVL72（Blackwell）机架级系统',
-      kw: 132, kwPeak: 145, cool: 'DLC', liq: 0.85, w: 600, d: 1068, u: 48, kg: 1360, gpu: 72, spr: 1,
+      kw: 132, kwPeak: 145, cool: 'DLC', liq: 0.85, w: 600, d: 1068, u: 48, kg: 1360, gpu: 72, spr: 1, su: { racks: 8, gpus: 576, en: 'DGX SuperPOD scalable unit: 8 DGX GB200 NVL72 racks = 576 GPUs, TDP ≈ 1.2 MW', zh: 'DGX SuperPOD可扩展单元：8个DGX GB200 NVL72机柜=576颗GPU，TDP约1.2 MW', src: 'https://docs.nvidia.com/dgx-superpod/reference-architecture-scalable-infrastructure-gb200/latest/dgx-superpod-architecture.html' },
       note: ['First-generation NVL72; ≈ 120–132 kW design, ≈ 145 kW peak; direct-to-chip liquid cooling with residual air.', '第一代NVL72；设计约120–132 kW，峰值约145 kW；冷板液冷并有余热风冷。'],
       src: 'https://www.tomshardware.com/tech-industry/artificial-intelligence/huaweis-new-ai-cloudmatrix-cluster-beats-nvidias-gb200-by-brute-force-uses-4x-the-power' },
     { id: 'NV-VR', cat: 'AI', vendor: 'NVIDIA (announced)', year: 2026, provisional: true,
@@ -30,17 +30,17 @@
       src: 'https://www.sdxcentral.com/news/nvidia-pushes-kyber-release-to-2028-following-manufacturing-concerns-report/' },
     { id: 'NV-B300L', cat: 'AI', vendor: 'NVIDIA HGX (Gigabyte, Supermicro, Dell …)', year: 2025,
       en: 'NVIDIA HGX B300 8-GPU servers — liquid-cooled rack', zh: 'NVIDIA HGX B300 8卡服务器——液冷机柜',
-      kw: 100, kwPeak: 110, cool: 'DLC', liq: 0.85, w: 600, d: 1200, u: 48, kg: 1300, gpu: 64, spr: 8,
+      kw: 100, kwPeak: 110, cool: 'DLC', liq: 0.85, w: 600, d: 1200, u: 48, kg: 1300, gpu: 64, spr: 8, su: { racks: 8, gpus: 512, en: 'DGX SuperPOD B300 scalable unit: 64 systems = 512 GPUs (8 racks of 8 liquid-cooled nodes)', zh: 'DGX SuperPOD B300可扩展单元：64台系统=512颗GPU（8个机柜，每柜8台液冷节点）', src: 'https://docs.nvidia.com/dgx-superpod/reference-architecture/scalable-infrastructure-b300-xdr/latest/dgx-superpod-architecture.html' },
       note: ['8 × 8-GPU nodes per rack; OEM liquid-cooled racks list up to ≈ 109 kW with in-rack CDU.', '每柜8台8卡节点；OEM液冷机柜标称可达约109 kW，配机架式CDU。'],
       src: 'https://gigabyte.com/Enterprise/GIGAPOD-Rack-Scale/AI-DLC-Rack_NVIDIA-HGX-B300' },
     { id: 'NV-B300A', cat: 'AI', vendor: 'NVIDIA DGX / HGX', year: 2025,
       en: 'NVIDIA DGX/HGX B300 — air-cooled (4 systems/rack, rear-door HX)', zh: 'NVIDIA DGX/HGX B300——风冷（每柜4台，配背板换热）',
-      kw: 58, kwPeak: 62, cool: 'RDHX', liq: 0.6, w: 600, d: 1200, u: 48, kg: 1100, gpu: 32, spr: 4,
+      kw: 58, kwPeak: 62, cool: 'RDHX', liq: 0.6, w: 600, d: 1200, u: 48, kg: 1100, gpu: 32, spr: 4, su: { racks: 16, gpus: 512, en: 'DGX SuperPOD B300 scalable unit: 64 DGX B300 = 512 GPUs (16 racks of 4 systems)', zh: 'DGX SuperPOD B300可扩展单元：64台DGX B300=512颗GPU（16个机柜，每柜4台）', src: 'https://docs.nvidia.com/dgx-superpod/reference-architecture/scalable-infrastructure-b300-xdr/latest/dgx-superpod-architecture.html' },
       note: ['DGX B300 ≈ 14.5 kW each (10U, air ≈ 1,500 CFM); 4 per rack ≈ 58 kW requires rear-door heat exchangers or in-row cooling; 2 per rack (≈ 30 kW) fits air-only halls.', 'DGX B300每台约14.5 kW（10U，风量约1,500 CFM）；每柜4台约58 kW需背板换热或列间空调；每柜2台（约30 kW）可用于纯风冷机房。'],
       src: 'https://www.amcompute.com/site-evaluation/b300-gb300-power-and-cooling' },
     { id: 'NV-H200', cat: 'AI', vendor: 'NVIDIA DGX / HGX (Hopper)', year: 2024,
       en: 'NVIDIA DGX/HGX H100–H200 — air-cooled (4 systems/rack)', zh: 'NVIDIA DGX/HGX H100–H200——风冷（每柜4台）',
-      kw: 41, kwPeak: 44, cool: 'RDHX', liq: 0.5, w: 600, d: 1200, u: 48, kg: 950, gpu: 32, spr: 4,
+      kw: 41, kwPeak: 44, cool: 'RDHX', liq: 0.5, w: 600, d: 1200, u: 48, kg: 950, gpu: 32, spr: 4, su: { racks: 8, gpus: 256, en: 'DGX SuperPOD scalable unit: 32 DGX H100 / H200 = 256 GPUs (8 racks of 4 systems)', zh: 'DGX SuperPOD可扩展单元：32台DGX H100/H200=256颗GPU（8个机柜，每柜4台）', src: 'https://docs.nvidia.com/dgx-superpod/reference-architecture/scalable-infrastructure-h200/latest/dgx-superpod-architecture.html' },
       note: ['≈ 10.2 kW per 8-GPU system; ≈ 40 kW per rack typical for Hopper deployments.', '每台8卡系统约10.2 kW；Hopper部署通常约40 kW/柜。'],
       src: 'https://www.datacenterdynamics.com/en/analysis/nvidia-gtc-jensen-huang-data-center-rack-density/' },
     { id: 'AMD-MI355', cat: 'AI', vendor: 'AMD Instinct (OEM)', year: 2025, provisional: true,
