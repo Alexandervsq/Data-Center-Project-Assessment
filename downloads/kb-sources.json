@@ -1,9 +1,9 @@
 {
-    "rev":  19,
+    "rev":  20,
     "date":  "2026-11-18",
-    "slides":  104,
+    "slides":  49,
     "pages":  205,
-    "built":  "2026-11-18 10:55",
+    "built":  "2026-11-18 16:14",
     "hash":  "d64c205898ea4d03f4212ad78d9f986c4d7f66a12b61e2316920d82486c60638",
     "files":  [
                   "connect.js",
