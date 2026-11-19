@@ -3,10 +3,17 @@
    for three outputs. Every sheet becomes block definitions inserted in model space at 1:1 (mm):
      • the drawing of the sheet as one block (edit it with BEDIT),
      • the sheet frame with its zone marks as a block per sheet size,
-     • the title block (ISO 7200) as a block whose variable fields are attributes (ATTEDIT / EATTEDIT; definition in BEDIT).
-   Layers: DC-SLD, DC-SLD-TYPICAL (dashed), DC-SLD-FILL, DC-SLD-TEXT, DC-FRAME, DC-TITLE; colour 7, lineweights from the drawing.
-   Text: TrueType Arial / Arial Bold (metric-compatible with the Helvetica widths used for the layout); Chinese drawings SimHei
-   (simhei.ttf); characters outside ASCII as \U+ escapes. Tested by opening, auditing and plotting in AutoCAD 2021.
+     • the title block (ISO 7200) as a block whose variable fields are attributes (ATTEDIT / EATTEDIT; definition in BEDIT),
+     • every IEC 60617 symbol (breaker, disconnector, earthing switch, CT, VT, surge arrester, cable termination, transformers, machines …) as a
+       named block IEC60617-… nested in the sheet block, so that it can be reused (INSERT / DesignCenter) or redefined once for the whole drawing.
+   Paper space: one layout per sheet ('Sheet 1' …) with the paper of the sheet (DWG To PDF media names, A0 as portrait media turned 90°) and a
+   zoom-locked 1:1 viewport on the sheet in model space; layout blocks *Paper_Space (BLOCK entities *Paper_Space0 …) and viewport entity headers
+   (VX records) as AutoCAD 2021 writes them in R2000.
+   Layers: DC-SLD, DC-SLD-TYPICAL (dashed), DC-SLD-BOUNDARY (long dash – dot), DC-SLD-FILL, DC-SLD-TEXT, DC-FRAME, DC-TITLE; colour 7, lineweights
+   from the drawing.
+   Text: TrueType Arial / Arial Bold (metric-compatible with the Helvetica widths used for the layout); Chinese drawings the SHX engineering font
+   gbenor.shx with the GB big font gbcbig.shx (both ship with AutoCAD; offices that remap TrueType fonts keep the lettering) and code page ANSI_936;
+   characters outside ASCII as \U+ escapes. Tested by opening, auditing (0 errors), switching layouts and plotting every layout in AutoCAD 2021.
    Reference: Open Design Alliance, Open Design Specification for .dwg files v5.4.1 (R13–R15 file organisation, AcDb:Header, AcDb:Classes,
    AcDbObjects, object map). */
 (function (g) {
@@ -75,7 +82,7 @@
   var T = { TEXT: 1, ATTRIB: 2, ATTDEF: 3, BLOCK: 4, ENDBLK: 5, SEQEND: 6, INSERT: 7, ARC: 17, CIRCLE: 18, LINE: 19, SOLID: 31, DICTIONARY: 42,
     BLOCK_CONTROL: 48, BLOCK_HEADER: 49, LAYER_CONTROL: 50, LAYER: 51, STYLE_CONTROL: 52, STYLE: 53, LTYPE_CONTROL: 56, LTYPE: 57, VIEW_CONTROL: 60,
     UCS_CONTROL: 62, VPORT_CONTROL: 64, VPORT: 65, APPID_CONTROL: 66, APPID: 67, DIMSTYLE_CONTROL: 68, DIMSTYLE: 69, VX_CONTROL: 70, MLINESTYLE: 73, LWPLINE: 77,
-    DICTIONARYWDFLT: 500, PLACEHOLDER: 501, LAYOUT: 502 };
+    VIEWPORT: 34, VX: 71, DICTIONARYWDFLT: 500, PLACEHOLDER: 501, LAYOUT: 502 };
   var CLASSES = [['ACDBDICTIONARYWDFLT', 'AcDbDictionaryWithDefault'], ['ACDBPLACEHOLDER', 'AcDbPlaceHolder'], ['LAYOUT', 'AcDbLayout']];
   var LWV = [0, 0.05, 0.09, 0.13, 0.15, 0.18, 0.20, 0.25, 0.30, 0.35, 0.40, 0.50, 0.53, 0.60, 0.70, 0.80, 0.90, 1.00, 1.06, 1.20, 1.40, 1.58, 2.00, 2.11];
   var LW_BYLAYER = 29;
@@ -91,11 +98,17 @@
     /* group: null = the drawing, 'frame' = border and zones, 'title' = title block (base = its bottom-right corner, page coordinates) */
     P.group = function (gname, base) { this.grp = gname || null; if (gname === 'title' && base && !this.base) this.base = base; return this; };
     P.add = function (it) { it.g = this.grp; this.items.push(it); return this; };
-    P.line = function (x1, y1, x2, y2, o) { o = o || {}; return this.add({ k: 'L', x1: x1, y1: y1, x2: x2, y2: y2, w: o.w || 0.25, dash: !!o.dash }); };
-    P.poly = function (pts, o) { o = o || {}; if (!pts || !pts.length) return this; return this.add({ k: 'P', pts: pts.map(function (q) { return [q[0], q[1]]; }), close: !!(o.close || o.fill), fill: o.fill, stroke: o.stroke !== false, w: o.w || 0.25, dash: !!o.dash }); };
-    P.rect = function (x, y, w, h, o) { o = o || {}; return this.add({ k: 'R', x: x, y: y, w: w, h: h, fill: o.fill, stroke: o.stroke !== false, lw: o.w || 0.25, dash: !!o.dash }); };
+    /* dash: 0 continuous, 1 dashed (typical connection), 2 long dash – dot (site boundary: a pattern of four or more elements) */
+    function dk(d) { return !d ? 0 : (Array.isArray(d) && d.length > 2 ? 2 : 1); }
+    P.line = function (x1, y1, x2, y2, o) { o = o || {}; return this.add({ k: 'L', x1: x1, y1: y1, x2: x2, y2: y2, w: o.w || 0.25, dash: dk(o.dash) }); };
+    P.poly = function (pts, o) { o = o || {}; if (!pts || !pts.length) return this; return this.add({ k: 'P', pts: pts.map(function (q) { return [q[0], q[1]]; }), close: !!(o.close || o.fill), fill: o.fill, stroke: o.stroke !== false, w: o.w || 0.25, dash: dk(o.dash) }); };
+    P.rect = function (x, y, w, h, o) { o = o || {}; return this.add({ k: 'R', x: x, y: y, w: w, h: h, fill: o.fill, stroke: o.stroke !== false, lw: o.w || 0.25, dash: dk(o.dash) }); };
     P.circle = function (cx, cy, r, o) { o = o || {}; return this.add({ k: 'C', cx: cx, cy: cy, r: r, fill: o.fill, stroke: o.stroke !== false, w: o.w || 0.25 }); };
-    P.arc = function (cx, cy, r, a0, a1, o) { o = o || {}; return this.add({ k: 'A', cx: cx, cy: cy, r: r, a0: a0, a1: a1, w: o.w || 0.25, dash: !!o.dash }); };
+    P.arc = function (cx, cy, r, a0, a1, o) { o = o || {}; return this.add({ k: 'A', cx: cx, cy: cy, r: r, a0: a0, a1: a1, w: o.w || 0.25, dash: dk(o.dash) }); };
+    /* named symbol: the primitives drawn between sym() and endSym() become the block 'key' (base point x, y) and an INSERT of it; nested calls belong to
+       the outermost symbol */
+    P.sym = function (key, x, y) { this.sd = (this.sd || 0) + 1; if (this.sd === 1) this.ss = { key: String(key).replace(/[^A-Za-z0-9_-]+/g, '-').slice(0, 60), x: x, y: y, at: this.items.length }; return true; };
+    P.endSym = function () { if (--this.sd > 0) return; var r = this.ss; this.ss = null; var its = this.items.splice(r.at); if (its.length) this.add({ k: 'S', key: r.key, x: r.x, y: r.y, its: its }); };
     P.textW = function (s, h, b) { return PDF.textW(s, h, b); };
     P.text = function (x, y, str, o) { o = o || {}; str = String(str === undefined || str === null ? '' : str); if (!str && !o.tag) return this; return this.add({ k: 'T', x: x, y: y, s: str, h: o.h || 2.5, a: o.a, v: o.v, b: !!o.b, rot: o.rot || 0, tag: o.tag, prompt: o.prompt }); };
     function page(w, h, name) { var p = new Page(w || 420, h || 297, name); pages.push(p); return p; }
@@ -126,8 +139,11 @@
     function mask(m) { lines.forEach(function (ln) { if (ln.dead) return; var parts = [ln.seg]; parts = parts.reduce(function (acc, s) { return acc.concat(clipOut(s, m)); }, []); if (parts.length === 1 && parts[0] === ln.seg) return; ln.dead = true; parts.forEach(function (s) { var n = { t: 'LINE', layer: ln.layer, lw: ln.lw, seg: s }; ents.push(n); lines.push(n); }); }); }
     function lwp(pts, closed, lw, layer, width, bulges) { ents.push({ t: 'LWPLINE', layer: layer, lw: lw, pts: pts, closed: closed, width: width || 0, bulges: bulges }); }
     function solid(pts, layer) { var a = pts[0], b = pts[1], c = pts[2], d = pts[3] || pts[2]; ents.push({ t: 'SOLID', layer: layer, lw: LW_BYLAYER, pts: [a, b, d, c] }); }
+    function lyr(it) { return it.dash === 2 ? (lay.bnd || lay.typ) : (it.dash ? lay.typ : lay.line); }
     items.forEach(function (it) {
-      var dashL = it.dash ? lay.typ : lay.line;
+      var dashL = lyr(it);
+      /* named symbol: block definition at its first use, an INSERT here */
+      if (it.k === 'S') { if (lay.sym) ents.push({ t: 'INSERT', layer: lay.line, lw: LW_BYLAYER, b: lay.sym(it), x: X(it.x), y: Y(it.y) }); return; }
       if (it.k === 'L') { var n = { t: 'LINE', layer: dashL, lw: lwIndex(it.w), seg: [X(it.x1), Y(it.y1), X(it.x2), Y(it.y2)] }; ents.push(n); lines.push(n); return; }
       if (it.k === 'P') {
         var pts = it.pts.map(function (q) { return [X(q[0]), Y(q[1])]; });
@@ -146,7 +162,7 @@
           return;
         }
         if (it.fill && isPaper(it.fill)) mask({ x0: x0, x1: x1, y0: y0, y1: y1 });
-        if (it.stroke) lwp([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], true, lwIndex(it.lw), it.dash ? lay.typ : lay.line);
+        if (it.stroke) lwp([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], true, lwIndex(it.lw), dashL);
         return;
       }
       if (it.k === 'C') {
@@ -156,12 +172,12 @@
         if (it.stroke) ents.push({ t: 'CIRCLE', layer: lay.line, lw: lwIndex(it.w), cx: cx, cy: cy, r: it.r });
         return;
       }
-      if (it.k === 'A') { var a0 = Math.min(it.a0, it.a1), a1 = Math.max(it.a0, it.a1); ents.push({ t: 'ARC', layer: it.dash ? lay.typ : lay.line, lw: lwIndex(it.w), cx: X(it.cx), cy: Y(it.cy), r: it.r, a0: a0 * Math.PI / 180, a1: a1 * Math.PI / 180 }); return; }
+      if (it.k === 'A') { var a0 = Math.min(it.a0, it.a1), a1 = Math.max(it.a0, it.a1); ents.push({ t: 'ARC', layer: dashL, lw: lwIndex(it.w), cx: X(it.cx), cy: Y(it.cy), r: it.r, a0: a0 * Math.PI / 180, a1: a1 * Math.PI / 180 }); return; }
       if (it.k === 'T') {
         var h = it.h, tw = PDF.textW(it.s, h, it.b), dx = it.a === 'c' ? -tw / 2 : (it.a === 'r' ? -tw : 0), dy = it.v === 'm' ? 0.35 * h : (it.v === 't' ? 0.75 * h : 0);
         var rot = it.rot * Math.PI / 180, cs = Math.cos(rot), sn = Math.sin(rot), bx2 = it.x + dx * cs + dy * sn, by2 = it.y - dx * sn + dy * cs;
         var sx = X(bx2), sy = Y(by2), k = it.a === 'c' ? 0.5 : (it.a === 'r' ? 1 : 0);
-        ents.push({ t: it.tag ? 'ATTDEF' : 'TEXT', layer: lay.text, lw: LW_BYLAYER, x: sx, y: sy, ax: sx + k * tw * cs, ay: sy + k * tw * sn, halign: it.a === 'c' ? 1 : (it.a === 'r' ? 2 : 0), h: TXT_H * h, rot: rot, s: it.s, bold: it.b, tag: it.tag, prompt: it.prompt || it.tag });
+        ents.push({ t: it.tag ? 'ATTDEF' : 'TEXT', layer: lay.text, lw: LW_BYLAYER, x: sx, y: sy, ax: sx + k * tw * cs, ay: sy + k * tw * sn, halign: it.a === 'c' ? 1 : (it.a === 'r' ? 2 : 0), h: (lay.th || TXT_H) * h, rot: rot, s: it.s, bold: it.b, tag: it.tag, prompt: it.prompt || it.tag });
       }
     });
     return ents.filter(function (e) { return !e.dead; });
@@ -176,24 +192,27 @@
     /* handles */
     var hBlkC = H(), hLayC = H(), hStyC = H(), hLtC = H(), hViewC = H(), hUcsC = H(), hVpC = H(), hAppC = H(), hDimC = H(), hVxC = H();
     var hNod = H(), hDGroup = H(), hDMl = H(), hDLayout = H(), hDPlotSet = H(), hDPlotSty = H(), hPh = H(), hMl = H();
-    var LAYERS = [['0', 7, 25, 'C'], ['DC-SLD', 7, 35, 'C'], ['DC-SLD-TYPICAL', 7, 35, 'D'], ['DC-SLD-FILL', 7, 25, 'C'], ['DC-SLD-TEXT', 7, 25, 'C'], ['DC-FRAME', 7, 50, 'C'], ['DC-TITLE', 7, 35, 'C']].map(function (l) { return { name: l[0], color: l[1], lw: l[2], lt: l[3], h: H() }; });
+    var LAYERS = [['0', 7, 25, 'C'], ['DC-SLD', 7, 35, 'C'], ['DC-SLD-TYPICAL', 7, 35, 'D'], ['DC-SLD-FILL', 7, 25, 'C'], ['DC-SLD-TEXT', 7, 25, 'C'], ['DC-FRAME', 7, 50, 'C'], ['DC-TITLE', 7, 35, 'C'], ['DC-SLD-BOUNDARY', 7, 35, 'B']].map(function (l) { return { name: l[0], color: l[1], lw: l[2], lt: l[3], h: H() }; });
     var LY = {}; LAYERS.forEach(function (l) { LY[l.name] = l.h; });
-    var hLtByBlock = H(), hLtByLayer = H(), hLtCont = H(), hLtDash = H();
-    var STY = [['Standard', 'txt', ''], ['DC-SLD', zh ? 'simhei.ttf' : 'arial.ttf', ''], ['DC-SLD-BOLD', zh ? 'simhei.ttf' : 'arialbd.ttf', '']].map(function (s) { return { name: s[0], font: s[1], big: s[2], h: H() }; });
+    var hLtByBlock = H(), hLtByLayer = H(), hLtCont = H(), hLtDash = H(), hLtDashDot = H();
+    var STY = [['Standard', 'txt', ''], ['DC-SLD', zh ? 'gbenor.shx' : 'arial.ttf', zh ? 'gbcbig.shx' : ''], ['DC-SLD-BOLD', zh ? 'gbenor.shx' : 'arialbd.ttf', zh ? 'gbcbig.shx' : '']].map(function (s) { return { name: s[0], font: s[1], big: s[2], h: H() }; });
     var hStd = STY[0].h, hSty = STY[1].h, hStyB = STY[2].h;
     var hApp = H(), hDim = H(), hVp = H();
     var hBhModel = H(), hBhPaper = H(), hBlkModel = H(), hEndModel = H(), hBlkPaper = H(), hEndPaper = H(), hLayoutModel = H(), hLayoutPaper = H();
 
     /* blocks from the pages */
-    var lay = { line: LY['DC-SLD'], typ: LY['DC-SLD-TYPICAL'], fill: LY['DC-SLD-FILL'], text: LY['DC-SLD-TEXT'] };
-    var layF = { line: LY['DC-FRAME'], typ: LY['DC-FRAME'], fill: LY['DC-FRAME'], text: LY['DC-FRAME'] };
-    var layT = { line: LY['DC-TITLE'], typ: LY['DC-TITLE'], fill: LY['DC-TITLE'], text: LY['DC-TITLE'] };
+    /* text height = factor × em: Arial cap height 0.716 (widths as in the PDF); gbenor / gbcbig 0.8 (Chinese characters about as large as in the PDF) */
+    var TH = zh ? 0.8 : TXT_H, symBlocks = {};
+    function symOf(it) { var b = symBlocks[it.key]; if (!b) { b = symBlocks[it.key] = block(it.key, []); b.ents = entitiesOf(it.its, 0, it.x, -it.y, lay); } return b; }
+    var lay = { line: LY['DC-SLD'], typ: LY['DC-SLD-TYPICAL'], fill: LY['DC-SLD-FILL'], text: LY['DC-SLD-TEXT'], bnd: LY['DC-SLD-BOUNDARY'], th: TH, sym: symOf };
+    var layF = { line: LY['DC-FRAME'], typ: LY['DC-FRAME'], fill: LY['DC-FRAME'], text: LY['DC-FRAME'], th: TH, sym: symOf };
+    var layT = { line: LY['DC-TITLE'], typ: LY['DC-TITLE'], fill: LY['DC-TITLE'], text: LY['DC-TITLE'], th: TH, sym: symOf };
     var blocks = [], inserts = [], ox = 0, gap = 50, frames = {}, title = null, prefix = String(opt.block || 'DC-SLD').replace(/[^A-Za-z0-9_-]+/g, '-').slice(0, 60);
     function block(name, ents, hasAtt) { var b = { name: name, ents: ents, hasAtt: !!hasAtt, h: H(), hBlk: H(), hEnd: H(), inserts: [] }; blocks.push(b); return b; }
     var ext = [Infinity, Infinity, -Infinity, -Infinity];
     pages.forEach(function (pg, i) {
       var no = ('0' + (i + 1)).slice(-2), body = pg.items.filter(function (it) { return !it.g; }), fr = pg.items.filter(function (it) { return it.g === 'frame'; }), tb = pg.items.filter(function (it) { return it.g === 'title'; });
-      var bContent = block(prefix + '-' + no, entitiesOf(body, pg.H, 0, 0, lay));
+      pg.ox = ox; var bContent = block(prefix + '-' + no, entitiesOf(body, pg.H, 0, 0, lay));
       inserts.push({ b: bContent, x: ox, y: 0 });
       if (fr.length) { var fk = Math.round(pg.W) + 'x' + Math.round(pg.H); if (!frames[fk]) frames[fk] = block('DC-FRAME-' + (pg.name || fk), entitiesOf(fr, pg.H, 0, 0, layF)); inserts.push({ b: frames[fk], x: ox, y: 0 }); }
       if (tb.length) {
@@ -233,17 +252,19 @@
 
     /* control objects */
     function control(h, type, entries, extraHard, n) { add({ h: h, type: type, data: function (w) { w.bl(n === undefined ? entries.length : n); if (type === T.DIMSTYLE_CONTROL) w.rc(0); }, hnd: function (w) { entries.forEach(function (e) { w.h(2, e); }); (extraHard || []).forEach(function (e) { w.h(3, e); }); } }); }
-    var userBlocks = blocks.map(function (b) { return b.h; });
+    /* one paper-space layout per sheet ('Sheet 1' … on *Paper_Space, *Paper_Space0 …): the paper of the sheet and a zoom-locked 1:1 viewport on it */
+    var LAYS = pages.map(function (pg, i) { var f1 = i === 0; return { name: 'Sheet ' + (i + 1), tab: i + 1, pg: pg, first: f1, h: f1 ? hLayoutPaper : H(), bh: f1 ? hBhPaper : H(), hBlk: f1 ? hBlkPaper : H(), hEnd: f1 ? hEndPaper : H(), vp: [H(), H()], vx: f1 ? [H(), H()] : [0, 0], vx0: f1 ? H() : 0 }; });
+    var userBlocks = blocks.map(function (b) { return b.h; }).concat(LAYS.slice(1).map(function (l) { return l.bh; }));
     control(hBlkC, T.BLOCK_CONTROL, userBlocks, [hBhModel, hBhPaper]);
     control(hLayC, T.LAYER_CONTROL, LAYERS.map(function (l) { return l.h; }));
     control(hStyC, T.STYLE_CONTROL, STY.map(function (s) { return s.h; }));
-    control(hLtC, T.LTYPE_CONTROL, [hLtCont, hLtDash], [hLtByBlock, hLtByLayer]);
+    control(hLtC, T.LTYPE_CONTROL, [hLtCont, hLtDash, hLtDashDot], [hLtByBlock, hLtByLayer]);
     control(hViewC, T.VIEW_CONTROL, []);
     control(hUcsC, T.UCS_CONTROL, []);
     control(hVpC, T.VPORT_CONTROL, [hVp]);
     control(hAppC, T.APPID_CONTROL, [hApp]);
     control(hDimC, T.DIMSTYLE_CONTROL, [hDim]);
-    control(hVxC, T.VX_CONTROL, []);
+    control(hVxC, T.VX_CONTROL, [LAYS[0].vx0].concat(LAYS[0].vx));   /* viewport entity headers exist for the active layout only; AutoCAD creates them when a layout is activated */
 
     /* dictionaries */
     function dict(h, parent, names, items, type, def) {
@@ -252,7 +273,7 @@
     }
     dict(hNod, 0, ['ACAD_GROUP', 'ACAD_LAYOUT', 'ACAD_MLINESTYLE', 'ACAD_PLOTSETTINGS', 'ACAD_PLOTSTYLENAME'], [hDGroup, hDLayout, hDMl, hDPlotSet, hDPlotSty]);
     dict(hDGroup, hNod, [], []);
-    dict(hDLayout, hNod, ['Layout1', 'Model'], [hLayoutPaper, hLayoutModel]);
+    dict(hDLayout, hNod, ['Model'].concat(LAYS.map(function (l) { return l.name; })), [hLayoutModel].concat(LAYS.map(function (l) { return l.h; })));
     dict(hDMl, hNod, ['Standard'], [hMl]);
     dict(hDPlotSet, hNod, [], []);
     dict(hDPlotSty, hNod, ['Normal'], [hPh], T.DICTIONARYWDFLT, hPh);
@@ -262,7 +283,7 @@
     /* layers, linetypes, text styles, appid, dimstyle, viewport */
     LAYERS.forEach(function (l) {
       add({ h: l.h, type: T.LAYER, parent: hLayC, data: function (w) { tableEntry(l.name, w); w.bs(16 | (lwIndex(l.lw / 100) << 5)); w.bs(l.color); },
-        hnd: function (w) { w.h(5, 0); w.h(5, hPh); w.h(5, l.lt === 'D' ? hLtDash : hLtCont); } });
+        hnd: function (w) { w.h(5, 0); w.h(5, hPh); w.h(5, l.lt === 'D' ? hLtDash : (l.lt === 'B' ? hLtDashDot : hLtCont)); } });
     });
     function ltype(h, name, desc, dashes) {
       add({ h: h, type: T.LTYPE, parent: hLtC, data: function (w) {
@@ -273,6 +294,7 @@
     }
     ltype(hLtByBlock, 'ByBlock', '', []); ltype(hLtByLayer, 'ByLayer', '', []); ltype(hLtCont, 'Continuous', 'Solid line', []);
     ltype(hLtDash, 'DC_DASH', 'Typical connection __ __ __', [1.6, -1.0]);
+    ltype(hLtDashDot, 'DC_DASHDOT', 'Site boundary ____ . ____ .', [8, -1.5, 0, -1.5]);
     STY.forEach(function (s) { add({ h: s.h, type: T.STYLE, parent: hStyC, data: function (w) { tableEntry(s.name, w); w.b(0); w.b(0); w.bd(0); w.bd(1); w.bd(0); w.rc(0); w.bd(2.5); w.tv(s.font); w.tv(s.big); }, hnd: function (w) { w.h(5, 0); } }); });
     add({ h: hApp, type: T.APPID, parent: hAppC, data: function (w) { tableEntry('ACAD', w); w.rc(0); }, hnd: function (w) { w.h(5, 0); } });
     add({ h: hDim, type: T.DIMSTYLE, parent: hDimC, data: function (w) {
@@ -292,16 +314,24 @@
     }, hnd: function (w) { w.h(5, 0); w.h(5, 0); w.h(5, 0); } });
 
     /* layouts */
-    function layout(h, name, tab, flag, bh, vp, paper) {
+    /* plot settings + layout; paper layouts: full-bleed paper of the sheet (mm, no margins), plot type layout, scale 1:1, device chosen when plotting */
+    /* paper as the media names of DWG To PDF.pc3: A1–A3 landscape media; A0 exists as portrait media only, so it is stored as AutoCAD stores a
+       landscape sheet on portrait media (841 × 1189, plot rotation 90°); other sizes as a user size */
+    function media(W, Hh) {
+      var n = { '1189x841': 'A0', '841x594': 'A1', '594x420': 'A2', '420x297': 'A3' }[Math.round(W) + 'x' + Math.round(Hh)], f = function (a, b) { return '(' + a.toFixed(2) + '_x_' + b.toFixed(2) + '_MM)'; };
+      return n === 'A0' ? { w: Hh, h: W, rot: 1, name: 'ISO_full_bleed_A0_' + f(Hh, W) } : { w: W, h: Hh, rot: 0, name: (n ? 'ISO_full_bleed_' + n + '_' : 'User_') + f(W, Hh) };
+    }
+    function layout(h, name, tab, flag, bh, vp, paper, W, Hh) {
+      var m = paper ? media(W, Hh) : { w: 420, h: 297, rot: 0, name: 'ISO_A3_(420.00_x_297.00_MM)' };
       add({ h: h, type: T.LAYOUT, parent: hDLayout, reactors: [hDLayout], data: function (w) {
-        w.tv(''); w.tv('none_device'); w.bs(paper ? 688 : 1712); w.bd(7.5); w.bd(20); w.bd(7.5); w.bd(20); w.bd(420); w.bd(297); w.tv('ISO_A3_(420.00_x_297.00_MM)');
-        w.bd(0); w.bd(0); w.bs(1); w.bs(paper ? 1 : 0); w.bs(paper ? 5 : 0); w.bd(0); w.bd(0); w.bd(0); w.bd(0); w.tv(''); w.bd(1); w.bd(1); w.tv(''); w.bs(paper ? 16 : 0); w.bd(1); w.bd(0); w.bd(0);
-        w.tv(name); w.bl(tab); w.bs(flag); w.p3(0, 0, 0); w.p2(0, 0); w.p2(paper ? 420 : ext[2], paper ? 297 : ext[3]); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.bd(0); w.bs(0);
-        w.p3(paper ? 0 : ext[0], paper ? 0 : ext[1], 0); w.p3(paper ? 0 : ext[2], paper ? 0 : ext[3], 0);
+        w.tv(''); w.tv('none_device'); w.bs(paper ? 688 : 1712); w.bd(paper ? 0 : 7.5); w.bd(paper ? 0 : 20); w.bd(paper ? 0 : 7.5); w.bd(paper ? 0 : 20); w.bd(m.w); w.bd(m.h); w.tv(m.name);
+        w.bd(0); w.bd(0); w.bs(1); w.bs(m.rot); w.bs(paper ? 5 : 0); w.bd(0); w.bd(0); w.bd(0); w.bd(0); w.tv(''); w.bd(1); w.bd(1); w.tv(''); w.bs(paper ? 16 : 0); w.bd(1); w.bd(0); w.bd(0);
+        w.tv(name); w.bl(tab); w.bs(flag); w.p3(0, 0, 0); w.p2(0, 0); w.p2(paper ? W : ext[2], paper ? Hh : ext[3]); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.bd(0); w.bs(0);
+        w.p3(paper ? 0 : ext[0], paper ? 0 : ext[1], 0); w.p3(paper ? W : ext[2], paper ? Hh : ext[3], 0);
       }, hnd: function (w) { w.h(4, bh); w.h(4, vp || 0); w.h(5, 0); w.h(5, 0); } });
     }
     layout(hLayoutModel, 'Model', 0, 1, hBhModel, hVp, false);
-    layout(hLayoutPaper, 'Layout1', 1, 1, hBhPaper, 0, true);
+    LAYS.forEach(function (l) { layout(l.h, l.name, l.tab, 1, l.bh, l.vp[0], true, l.pg.W, l.pg.H); });
 
     /* entities */
     function ent(o) { o.ent = true; o.h = o.h || H(); return add(o); }
@@ -324,6 +354,8 @@
           w.p2(e.pts[0][0], e.pts[0][1]); for (var i = 1; i < e.pts.length; i++) { w.dd(e.pts[i][0], e.pts[i - 1][0]); w.dd(e.pts[i][1], e.pts[i - 1][1]); }
           if (e.bulges) e.bulges.forEach(function (b) { w.bd(b); });
         };
+      } else if (e.t === 'INSERT') {
+        o.type = T.INSERT; o.data = function (w) { w.p3(e.x, e.y, 0); w.bb(3); w.bd(0); w.p3(0, 0, 1); w.b(0); }; o.hnd = function (w) { w.h(5, e.b.h); };
       } else if (e.t === 'TEXT' || e.t === 'ATTDEF') {
         o.type = e.t === 'TEXT' ? T.TEXT : T.ATTDEF;
         o.data = function (w) { textData(e, w); if (e.t === 'ATTDEF') { w.tv(e.tag); w.bs(0); w.rc(0); w.tv(e.prompt || e.tag); } };
@@ -334,7 +366,7 @@
     function blockRecord(bh, name, hBlk, hEnd, ents, hasAtt, layoutH, insertHs) {
       /* BLOCK, the entities of the definition (owned by the block record), ENDBLK */
       ent({ h: hBlk, type: T.BLOCK, owner: bh, mode: 0, layer: LY['0'], data: function (w) { w.tv(name); } });
-      var es = ents.map(function (e) { return ent(geo(e, bh, 0)); });
+      var es = ents.map(function (e) { var o = ent(geo(e, bh, 0)); if (e.t === 'INSERT') e.b.inserts.push(o.h); return o; });
       chain(es);
       ent({ h: hEnd, type: T.ENDBLK, owner: bh, mode: 0, layer: LY['0'] });
       add({ h: bh, type: T.BLOCK_HEADER, parent: hBlkC, data: function (w) {
@@ -375,12 +407,33 @@
       ent({ h: hEndModel, type: T.ENDBLK, mode: 2, layer: LY['0'] });
       ent({ h: hBlkPaper, type: T.BLOCK, mode: 1, layer: LY['0'], data: function (w) { w.tv('*Paper_Space'); } });
       ent({ h: hEndPaper, type: T.ENDBLK, mode: 1, layer: LY['0'] });
-      function bh(h, name, hBlk, hEnd, first, last, lh) {
-        add({ h: h, type: T.BLOCK_HEADER, parent: hBlkC, data: function (w) { tableEntry(name, w); w.b(0); w.b(0); w.b(0); w.b(0); w.b(0); w.p3(0, 0, 0); w.tv(''); w.rc(0); w.tv(''); w.bl(0); },
+      function bh(h, name, hBlk, hEnd, first, last, lh, anon) {
+        add({ h: h, type: T.BLOCK_HEADER, parent: hBlkC, data: function (w) { tableEntry(name, w); w.b(anon ? 1 : 0); w.b(0); w.b(0); w.b(0); w.b(0); w.p3(0, 0, 0); w.tv(''); w.rc(0); w.tv(''); w.bl(0); },
           hnd: function (w) { w.h(5, 0); w.h(3, hBlk); w.h(4, first); w.h(4, last); w.h(3, hEnd); w.h(5, lh); } });
       }
       bh(hBhModel, '*Model_Space', hBlkModel, hEndModel, msEnts.length ? msEnts[0].h : 0, msEnts.length ? msEnts[msEnts.length - 1].h : 0, hLayoutModel);
-      bh(hBhPaper, '*Paper_Space', hBlkPaper, hEndPaper, 0, 0, hLayoutPaper);
+      /* viewports of a layout: 1 = the paper-space viewport (whole sheet), 2 = the sheet in model space at 1:1, display locked */
+      LAYS.forEach(function (l) {
+        var W = l.pg.W, Hh = l.pg.H, md = l.first ? 1 : 0, own = l.first ? undefined : l.bh, nm = l.first ? '*Paper_Space' : '*Paper_Space' + (l.tab - 2);
+        if (!l.first) ent({ h: l.hBlk, type: T.BLOCK, owner: l.bh, mode: 0, layer: LY['0'], data: function (w) { w.tv(nm); } });
+        var vps = [0, 1].map(function (k) {
+          var ov = k === 0, vw = ov ? W * 1.1 : W, vh = ov ? Hh * 1.1 : Hh, vcx = ov ? W / 2 : l.pg.ox + W / 2;
+          return ent({ h: l.vp[k], type: T.VIEWPORT, mode: md, owner: own, layer: LY['0'], data: function (w) {
+            w.p3(W / 2, Hh / 2, 0); w.bd(vw); w.bd(vh);                    /* centre (paper), width, height */
+            w.p3(0, 0, 0); w.p3(0, 0, 1); w.bd(0); w.bd(vh); w.bd(50); w.bd(0); w.bd(0); w.bd(0);   /* target, direction, twist, view height, lens, clips, snap angle */
+            w.p2(vcx, Hh / 2); w.p2(0, 0); w.p2(10, 10); w.p2(10, 10); w.bs(1000);   /* view centre, snap base / spacing, grid, circle zoom */
+            w.bl(0); w.bl(ov ? 819232 : 819296 | 16384); w.tv(''); w.rc(0); w.b(0); w.b(1); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.bd(0); w.bs(0);
+          }, hnd: function (w) { w.h(4, 0); w.h(5, l.vx[k]); w.h(5, 0); w.h(5, 0); } });
+        });
+        chain(vps);
+        /* VX table records (active layout only, as AutoCAD writes R2000): the model viewport (no name, end of the chain) and the paper-space
+           viewport (name '1', previous = the model viewport's record); ON flag set */
+        if (l.first) [1, 0].forEach(function (k) { add({ h: l.vx[k], type: T.VX, parent: hVxC, data: function (w) { tableEntry(k ? '' : '1', w); w.b(1); }, hnd: function (w) { w.h(5, 0); w.h(4, l.vp[k]); w.h(4, k ? 0 : l.vx[1]); } }); });
+        /* … preceded in the control object by an inactive record without a viewport, as in the files AutoCAD writes (without it the active layout has no current model-space viewport) */
+        if (l.first) add({ h: l.vx0, type: T.VX, parent: hVxC, data: function (w) { tableEntry('', w); w.b(0); }, hnd: function (w) { w.h(5, 0); w.h(4, 0); w.h(4, 0); } });
+        if (!l.first) { ent({ h: l.hEnd, type: T.ENDBLK, owner: l.bh, mode: 0, layer: LY['0'] }); }
+        bh(l.bh, '*Paper_Space', l.hBlk, l.hEnd, vps[0].h, vps[1].h, l.h);   /* AutoCAD names every layout block record *Paper_Space; the BLOCK entity carries *Paper_SpaceN */
+      });
     })();
 
     /* -------------------------------------------------------------- header variables */
@@ -403,7 +456,7 @@
       w.h(5, LY['0']); w.h(5, hStd); w.h(5, hLtByLayer); w.h(5, hDim); w.h(5, hMl);
       w.bd(0);                                                          /* PSVPSCALE */
       /* paper space */
-      w.p3(0, 0, 0); w.p3(1e20, 1e20, 1e20); w.p3(-1e20, -1e20, -1e20); w.p2(0, 0); w.p2(420, 297); w.bd(0); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.h(5, 0);
+      w.p3(0, 0, 0); w.p3(1e20, 1e20, 1e20); w.p3(-1e20, -1e20, -1e20); w.p2(0, 0); w.p2(pages.length ? pages[0].W : 420, pages.length ? pages[0].H : 297); w.bd(0); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.h(5, 0);
       w.h(5, 0); w.bs(0); w.h(5, 0); for (i = 0; i < 6; i++) w.p3(0, 0, 0);
       /* model space */
       w.p3(0, 0, 0); w.p3(ext[0], ext[1], 0); w.p3(ext[2], ext[3], 0); w.p2(0, 0); w.p2(ext[2], ext[3]); w.bd(0); w.p3(0, 0, 0); w.p3(1, 0, 0); w.p3(0, 1, 0); w.h(5, 0);
@@ -448,7 +501,7 @@
     /* file header */
     var fh = new Uint8Array(hdrEnd), sig = 'AC1015';
     for (var i = 0; i < 6; i++) fh[i] = sig.charCodeAt(i);
-    fh[0x0B] = 15; fh[0x0C] = 1; fh.set(le32(imgAddr), 0x0D); fh[0x11] = 0x17; fh.set(le16(30), 0x13); fh.set(le32(NREC), 0x15);
+    fh[0x0B] = 15; fh[0x0C] = 1; fh.set(le32(imgAddr), 0x0D); fh[0x11] = 0x17; fh.set(le16(zh ? 39 : 30), 0x13); fh.set(le32(NREC), 0x15);
     var recs = [[0, hdrEnd, secH.length], [1, hdrEnd + secH.length, secC.length], [2, omAddr, omBytes.length], [3, 0, 0], [4, tplAddr, tpl.length]], p = 0x19;
     recs.forEach(function (r) { fh[p] = r[0]; fh.set(le32(r[1]), p + 1); fh.set(le32(r[2]), p + 5); p += 9; });
     var hc = crc16(0, fh, 0, p) ^ 0x3CC4; fh[p] = hc & 0xFF; fh[p + 1] = hc >>> 8; fh.set(SN.fh, p + 2);

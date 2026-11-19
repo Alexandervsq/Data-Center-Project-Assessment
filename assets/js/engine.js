@@ -335,10 +335,12 @@
       while (p.tier >= 3 && (mva / ((hN + ht.r) * hm) > 0.8 || (hN + ht.r > 1 && mva / ((hN + ht.r - 1) * hm) > 1))) ht.r++;
       ht.total = ht.n + ht.r; ht.lab = ht.r ? 'N-1' : 'N'; ht.load = mva / (ht.total * hm) * 100; ht.loadOut = ht.total > 1 ? mva / ((ht.total - 1) * hm) * 100 : null;
     }
-    var n150 = kv > 20 ? (ibt ? ibt.total : circ) + (ht ? ht.total : 0) : 0, sect = kv > 20 && hi && (kv <= 150 || !!ibt) && n150 >= 8;
+    /* 150 kV link: the EHV substation (GITET) is a separate site whose own 150 kV GIS (interbus transformer incomers, cable feeders) feeds the data-center
+       substation over two separate cable routes, one energised and one standby, each carrying the whole demand (reference: each route 2 circuits of 525 MVA
+       with 2 × Cu 2,000 mm² per phase); every cable circuit has a feeder bay at the GITET and an incoming bay at the campus GIS */
+    var ugc = null; if (ibt) { var i150 = mva * 1000 / (1.732 * 150), cpr = Math.max(1, ceil(i150 / 2300)); ugc = { i: i150, routes: 2, circ: cpr, n: 2 * cpr, perPhase: 2, mm2: 2000, mvaC: mva / cpr }; }
+    var n150 = kv > 20 ? (ibt ? ugc.n : circ) + (ht ? ht.total : 0) : 0, sect = kv > 20 && hi && (kv <= 150 || !!ibt) && n150 >= 8;
     if (sect && kv <= 150) scheme = ['Double busbar, sectionalised (2 couplers + 2 bus sections, normally open)', '双母线分段（2台母联+2台分段，常开）'];
-    /* 150 kV link between the interbus transformers and the data-center substation (reference: two separate cable routes, one energised and one standby, each route 2 circuits of 525 MVA with 2 × Cu 2,000 mm² per phase) */
-    var ugc = null; if (ibt) { var i150 = mva * 1000 / (1.732 * 150), cpr = Math.max(1, ceil(i150 / 2300)); ugc = { i: i150, routes: 2, circ: cpr, perPhase: 2, mm2: 2000, mvaC: mva / cpr }; }
     /* 20 kV sections: per HV/MV transformer one section per ≤ 3,150 A (two LV windings above 150 MVA); a 20 kV PLN supply with two incomers (Tier III+) has
        two sections with a bus section, each sized for the whole load; the fault level of the whole transformer winding (+5 % motor / UPS contribution) applies */
     var sb = ht ? ht.mva / ht.sec : mva, boards = ht ? ht.total * ht.sec : (hi ? 2 : 1), mvI = sb * 1000 / (1.732 * 20);
@@ -1033,8 +1035,8 @@
       mp.mvdb.n + ' building 20 kV switchboards, main-tie-main: 2 incomers, bus section, 2 bus VT, ' + mp.mvdb.txPer + ' transformer feeders' + (mp.mvdb.genPer ? ', ' + mp.mvdb.genPer + ' generator incomers' : '') + ', 1 spare each (≤ ' + fmt(mp.mvdb.mva, 1) + ' MVA per board)',
       mp.mvdb.n + '套楼宇20 kV开关柜（双进线+分段）：每套2路进线、分段、2面PT、' + mp.mvdb.txPer + '回变压器馈线' + (mp.mvdb.genPer ? '、' + mp.mvdb.genPer + '路发电机进线' : '') + '、1面备用', '面');
     if (hv.kv > 20) {
-      var bays = hv.bays.lineBays + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 : 0) + (hv.sect ? 4 : (p.tier >= 3 ? 2 : 1));
-      add('EL-24', bays, 'bays', hv.name + ' (Ur ' + hv.ur + ' kV) | ' + hv.ik + ' kA | ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + 150 kV) + ' : '') + hv.ht.total + ' transformer + coupler bays | ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及150 kV）+' : '') + hv.ht.total + '个主变间隔+母联 | ' + hv.scheme[1], '个间隔');
+      var bays = hv.bays.lineBays + hv.ht.total + (hv.ibt ? hv.ibt.total * 2 + hv.ugc.n * 2 + 1 : 0) + (hv.sect ? 4 : (p.tier >= 3 ? 2 : 1));
+      add('EL-24', bays, 'bays', hv.name + ' (Ur ' + hv.ur + ' kV) | ' + hv.ik + ' kA | ' + fmt(hv.busA) + ' A', hv.circ + ' line + ' + (hv.ibt ? hv.ibt.total + ' interbus (EHV + GITET 150 kV) + 2 × ' + hv.ugc.n + ' cable-link (GITET feeders, campus incomers) + GITET coupler + ' : '') + hv.ht.total + ' transformer + coupler bays | ' + hv.scheme[0], hv.circ + '回线路+' + (hv.ibt ? hv.ibt.total + '个联络变间隔（超高压及GITET 150 kV）+2×' + hv.ugc.n + '个电缆联络间隔（GITET出线、园区进线）+GITET母联+' : '') + hv.ht.total + '个主变间隔+母联 | ' + hv.scheme[1], '个间隔');
       if (hv.ibt) add('EL-25', hv.ibt.total, 'no.', hv.ibt.mva + ' MVA ' + hv.ibt.ratio, 'Interbus transformers (single-phase banks)', '联络变压器（单相组）', '台');
       add('EL-25', hv.ht.total, 'no.', hv.ht.mva + ' MVA ' + hv.ht.ratio + ' (' + hv.ht.lab + ')' + ' | uk ' + hv.ht.uk + ' %', (hv.ht.split ? 'Split-winding, ' : '') + 'ONAN ' + hv.ht.onan + ' / ONAF ' + hv.ht.mva + ' MVA', (hv.ht.split ? '分裂绕组，' : '') + 'ONAN ' + hv.ht.onan + '/ONAF ' + hv.ht.mva + ' MVA', '台');
       add('EL-26', hv.ht.total * hv.ht.wind, 'no.', '40 Ω | 300 A | 10 s', hv.ht.wind > 1 ? 'One per 20 kV winding (two-winding LV units), with earthing transformer' : 'One per HV/MV transformer (20 kV neutral or earthing transformer)', hv.ht.wind > 1 ? '每个20 kV绕组一台（双低压绕组主变），配接地变' : '每台主变一台（20 kV中性点或接地变）', '台');
